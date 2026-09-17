@@ -24,18 +24,27 @@ export default function AdminSummaryPage() {
   if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Ringkasan Admin</h1>
 
 
       {summary && (
         <>
           {/* Redesain "Playful Creator": 4 metrik netral pakai StatCard bento
-              yang sama dipakai Ringkasan kreator. 2 kartu "tertunda" di
-              bawah SENGAJA TIDAK ikut jadi StatCard -- warna merah/amber di
-              situ SEMANTIK (perlu ditinjau admin), bukan aksen dekoratif,
-              dan keduanya harus tetap <Link> yang bisa diklik. */}
-          <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
+              yang sama dipakai Ringkasan kreator. 4 kartu "tertunda" di
+              bawah SENGAJA TIDAK ikut jadi StatCard -- warna merah/amber/
+              ungu di situ SEMANTIK (perlu ditinjau admin), bukan aksen
+              dekoratif, dan keempatnya harus tetap <Link> yang bisa
+              diklik -- TAPI "chrome"-nya (border tebal border-jeon-ink,
+              shadow-card, radius, padding, bentuk badge ikon) disamakan
+              PERSIS dengan StatCard di atasnya (audit UI/UX admin, 17
+              September 2026: sebelumnya pakai border tipis+shadow-refined
+              yang beda gaya sama sekali dari StatCard, terlihat seperti 2
+              sistem desain berbeda ditumpuk di satu grid). 8 kartu total
+              sekarang grid-cols-4 rapi 2 baris genap (sebelumnya
+              grid-cols-3 menyisakan lubang kosong 1 kolom di baris
+              terakhir). */}
+          <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard tone="blue" icon={<IconUsers className="h-4 w-4" />} label="Total Pengguna" value={String(summary.total_users)} sub="" />
             <StatCard tone="yellow" icon={<IconChart className="h-4 w-4" />} label="Baru (7 hari)" value={String(summary.new_users_7_days)} sub="" />
             <StatCard tone="lilac" icon={<IconChart className="h-4 w-4" />} label="Total Transaksi Lunas" value={String(summary.total_orders)} sub="" />
@@ -49,27 +58,27 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/reports"
-              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
+              className="flex items-center gap-3 rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card transition-transform hover:-translate-y-0.5"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-coral text-[#111111]">
                 <IconFlag className="h-4 w-4" />
               </span>
-              <span>
-                <span className="block text-xs font-semibold text-app-muted">Laporan Tertunda</span>
-                <span className="block font-serifDisplay text-2xl font-semibold text-red-600">{summary.pending_reports}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-app-ink/65">Laporan Tertunda</span>
+                <span className="block font-display text-2xl font-extrabold tracking-tight tabular-nums text-red-600">{summary.pending_reports}</span>
               </span>
             </Link>
 
             <Link
               href="/admin/payouts"
-              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-warning/40"
+              className="flex items-center gap-3 rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card transition-transform hover:-translate-y-0.5"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lime text-[#111111]">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lime text-[#111111]">
                 <IconWallet className="h-4 w-4" />
               </span>
-              <span>
-                <span className="block text-xs font-semibold text-app-muted">Penarikan Tertunda</span>
-                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-warning">{summary.pending_payouts}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-app-ink/65">Penarikan Tertunda</span>
+                <span className="block font-display text-2xl font-extrabold tracking-tight tabular-nums text-jeon-warning">{summary.pending_payouts}</span>
               </span>
             </Link>
 
@@ -79,14 +88,14 @@ export default function AdminSummaryPage() {
                 laporan/penarikan yang sudah tampil. */}
             <Link
               href="/admin/kyc"
-              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-purple/40"
+              className="flex items-center gap-3 rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card transition-transform hover:-translate-y-0.5"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-lavender/40 text-jeon-purple">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                 <IconShield className="h-4 w-4" />
               </span>
-              <span>
-                <span className="block text-xs font-semibold text-app-muted">KYC Tertunda</span>
-                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-purple">{summary.pending_kyc}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-app-ink/65">KYC Tertunda</span>
+                <span className="block font-display text-2xl font-extrabold tracking-tight tabular-nums text-jeon-purple">{summary.pending_kyc}</span>
               </span>
             </Link>
 
@@ -96,14 +105,14 @@ export default function AdminSummaryPage() {
                 /admin/support-chat. */}
             <Link
               href="/admin/support-chat"
-              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-purple/40"
+              className="flex items-center gap-3 rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card transition-transform hover:-translate-y-0.5"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-lavender/40 text-jeon-purple">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                 <MessageCircle className="h-4 w-4" />
               </span>
-              <span>
-                <span className="block text-xs font-semibold text-app-muted">Live Chat Tertunda</span>
-                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-purple">{summary.pending_support_chats}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-app-ink/65">Live Chat Tertunda</span>
+                <span className="block font-display text-2xl font-extrabold tracking-tight tabular-nums text-jeon-purple">{summary.pending_support_chats}</span>
               </span>
             </Link>
           </section>

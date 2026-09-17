@@ -8,6 +8,28 @@ import { useErrorToast } from "@/lib/use-error-toast";
 
 const PAGE_SIZE = 50;
 
+// RoleBadge/StatusBadge -- audit UI/UX admin (17 September 2026): role
+// sebelumnya teks abu-abu polos di bawah nama, gampang terlewat pas
+// nyisir banyak baris padahal admin/support adalah info penting (perlu
+// gampang dibedakan dari creator biasa). Warna semantik SENGAJA beda dari
+// role: role = identitas (netral kecuali admin/support), status = kondisi
+// akun (hijau/merah/abu sesuai baik/buruk).
+function RoleBadge({ role }: { role: string }) {
+  const style =
+    role === "admin"
+      ? "border-jeon-ink bg-jeon-lavender text-jeon-purple"
+      : role === "support"
+        ? "border-jeon-ink bg-blue-50 text-blue-700"
+        : "border-app-border bg-app-surface-2 text-app-muted";
+  return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold capitalize ${style}`}>{role}</span>;
+}
+
+function StatusBadge({ u }: { u: AdminUser }) {
+  if (u.deleted_at) return <span className="inline-flex rounded-full border border-app-border bg-app-surface-2 px-2 py-0.5 text-[11px] font-bold text-app-muted">Dihapus</span>;
+  if (u.suspended_at) return <span className="inline-flex rounded-full border border-jeon-ink bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">Ditangguhkan</span>;
+  return <span className="inline-flex rounded-full border border-jeon-ink bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-700">Aktif</span>;
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -92,7 +114,7 @@ export default function AdminUsersPage() {
   if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Pengguna</h1>
 
       <form onSubmit={handleFilter} className="mt-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap">
@@ -132,39 +154,60 @@ export default function AdminUsersPage() {
         Menampilkan {users.length} dari {total} pengguna.
       </p>
 
-      <div className="mt-2 flex flex-col gap-2">
-        {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 shadow-card">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
-                <IconUsers className="h-[18px] w-[18px]" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-app-ink">
-                  {u.username} <span className="font-normal text-app-muted">({u.email})</span>
-                </p>
-                <p className="truncate text-xs text-app-muted">
-                  {u.role}
-                  {u.deleted_at && " · dihapus"}
-                  {u.suspended_at && !u.deleted_at && " · ditangguhkan"}
-                </p>
-              </div>
-            </div>
-            {!u.deleted_at && u.role !== "admin" && (
-              <button
-                type="button"
-                onClick={() => handleToggleSuspend(u)}
-                className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
-                  u.suspended_at ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
-                }`}
-              >
-                {u.suspended_at ? "Aktifkan" : "Tangguhkan"}
-              </button>
-            )}
-          </div>
-        ))}
+      {/* Tabel ringkas (audit UI/UX admin, 17 September 2026) --
+          MENGGANTIKAN kartu penuh-border per baris sebelumnya: 24+
+          pengguna jadi kartu bertumpuk borosin ruang vertikal & tidak
+          scalable seiring jumlah pengguna bertambah -- pola sama yang
+          sudah dipakai /admin/traffic-sources (tabel), disamakan di sini. */}
+      <div className="mt-2 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b-2 border-jeon-ink bg-app-surface-2 text-left text-[11px] font-bold uppercase tracking-wide text-app-muted">
+              <th className="px-4 py-2.5 font-bold">Pengguna</th>
+              <th className="px-4 py-2.5 font-bold">Role</th>
+              <th className="px-4 py-2.5 font-bold">Status</th>
+              <th className="px-4 py-2.5 font-bold text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-app-border">
+            {users.map((u) => (
+              <tr key={u.id} className="hover:bg-app-surface-2/60">
+                <td className="min-w-0 px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
+                      <IconUsers className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-app-ink">{u.username}</p>
+                      <p className="truncate text-xs text-app-muted">{u.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-2.5">
+                  <RoleBadge role={u.role} />
+                </td>
+                <td className="px-4 py-2.5">
+                  <StatusBadge u={u} />
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  {!u.deleted_at && u.role !== "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSuspend(u)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+                        u.suspended_at ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
+                      }`}
+                    >
+                      {u.suspended_at ? "Aktifkan" : "Tangguhkan"}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         {users.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
+          <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             Tidak ada pengguna ditemukan.
           </div>

@@ -142,7 +142,7 @@ export default function AdminModerationPage() {
   if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Moderasi Tautan</h1>
       <p className="mt-1 text-sm text-app-muted">
         Kelola kata kunci &amp; reputasi domain yang dipakai memblokir tautan judi online/konten dewasa saat kreator menyimpan link.
@@ -202,35 +202,48 @@ export default function AdminModerationPage() {
           </button>
         </div>
 
-        <div className="mt-3 flex flex-col gap-1.5">
-          {keywords.map((k) => (
-            <div key={k.id} className="flex items-center justify-between rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-2">
-              <div className="flex items-center gap-2 text-sm text-app-ink">
-                <span className="font-mono">{k.keyword}</span>
-                <span className="rounded-full border-2 border-[#111111] bg-jeon-coral px-2 py-0.5 text-[11px] font-semibold text-[#111111]">
-                  {CATEGORY_LABELS[k.category] ?? k.category}
-                </span>
-                {k.match_type === "domain_exact" && (
-                  <span
-                    title={MATCH_TYPE_LABELS.domain_exact}
-                    className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[11px] font-semibold text-[#111111]"
-                  >
-                    Domain persis
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDeleteKeyword(k.id)}
-                title="Hapus kata kunci"
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
+      {/* Tabel ringkas (audit UI/UX admin, 17 September 2026) --
+          MENGGANTIKAN kartu penuh-border per baris: bisa tumbuh sampai
+          puluhan/ratusan kata kunci, pola kartu boros ruang & lebih
+          lambat disisir dibanding tabel padat -- pola sama yang sudah
+          dipakai /admin/traffic-sources & /admin/users. */}
+        <div className="mt-3 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface">
+          <table className="w-full min-w-[420px] border-collapse text-sm">
+            <tbody className="divide-y divide-app-border">
+              {keywords.map((k) => (
+                <tr key={k.id} className="hover:bg-app-surface-2/60">
+                  <td className="px-3 py-2 font-mono text-app-ink">{k.keyword}</td>
+                  <td className="px-3 py-2">
+                    <span className="rounded-full border-2 border-[#111111] bg-jeon-coral px-2 py-0.5 text-[11px] font-semibold text-[#111111]">
+                      {CATEGORY_LABELS[k.category] ?? k.category}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    {k.match_type === "domain_exact" && (
+                      <span
+                        title={MATCH_TYPE_LABELS.domain_exact}
+                        className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[11px] font-semibold text-[#111111]"
+                      >
+                        Domain persis
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteKeyword(k.id)}
+                      title="Hapus kata kunci"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {keywords.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
+            <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
               <IconInbox className="h-4 w-4 flex-shrink-0" />
               Belum ada kata kunci.
             </div>
@@ -294,38 +307,44 @@ export default function AdminModerationPage() {
           ))}
         </div>
 
-        <div className="mt-3 flex flex-col gap-1.5">
-          {domains.map((d) => (
-            <div key={d.id} className="flex items-center justify-between rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm text-app-ink">
-                  <span className="truncate font-mono">{d.domain}</span>
-                  <span
-                    className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      d.verdict === "blocked" ? "border-2 border-[#111111] bg-jeon-coral text-[#111111]" : "bg-green-50 text-[#111111]"
-                    }`}
-                  >
-                    {d.verdict === "blocked" ? "Diblokir" : "Diizinkan"}
-                  </span>
-                </div>
-                <p className="mt-0.5 truncate text-xs text-app-muted">
-                  {SOURCE_LABELS[d.source]}
-                  {d.category && ` · ${CATEGORY_LABELS[d.category]}`}
-                  {d.reason && ` · ${d.reason}`}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDeleteDomain(d.id)}
-                title="Hapus entri (dievaluasi ulang di percobaan berikutnya)"
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
+        <div className="mt-3 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface">
+          <table className="w-full min-w-[480px] border-collapse text-sm">
+            <tbody className="divide-y divide-app-border">
+              {domains.map((d) => (
+                <tr key={d.id} className="hover:bg-app-surface-2/60">
+                  <td className="min-w-0 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-mono text-app-ink">{d.domain}</span>
+                      <span
+                        className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          d.verdict === "blocked" ? "border-2 border-[#111111] bg-jeon-coral text-[#111111]" : "bg-green-50 text-[#111111]"
+                        }`}
+                      >
+                        {d.verdict === "blocked" ? "Diblokir" : "Diizinkan"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-app-muted">
+                      {SOURCE_LABELS[d.source]}
+                      {d.category && ` · ${CATEGORY_LABELS[d.category]}`}
+                      {d.reason && ` · ${d.reason}`}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDomain(d.id)}
+                      title="Hapus entri (dievaluasi ulang di percobaan berikutnya)"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {domains.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
+            <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
               <IconInbox className="h-4 w-4 flex-shrink-0" />
               Belum ada entri.
             </div>
