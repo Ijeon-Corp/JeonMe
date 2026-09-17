@@ -101,8 +101,13 @@ export default function NotificationBell() {
         className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconBell className="h-4 w-4" />
+        {/* Badge di POJOK LUAR tombol (-top/-right), bukan di dalam --
+            laporan langsung pengguna, 18 September 2026: badge 16px yang
+            ditaruh right-1/top-1 di dalam tombol 32px menutupi ikon
+            loncengnya sendiri. ring-2 warna permukaan memisahkan badge
+            dari border tombol. */}
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-app-surface">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}

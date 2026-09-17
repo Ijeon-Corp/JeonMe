@@ -116,6 +116,22 @@ export function ProdukBlockEditor({
   const [pickerCategory, setPickerCategory] = useState("");
   const pickerProducts = pickerCategory ? products.filter((p) => p.category === pickerCategory) : products;
   const showCategoryFilter = blockData?.show_category_filter === true;
+  // inactiveCount -- laporan langsung pengguna, 18 September 2026: "saya
+  // menambahkan 4 product tapi yang muncul hanya 3". Halaman publik HANYA
+  // memuat produk aktif (payload publik, page.go), jadi produk nonaktif
+  // (mis. produk digital yang filenya belum diunggah) diam-diam hilang dari
+  // blok tanpa penjelasan apa pun di editor. Sekarang ditandai eksplisit
+  // (badge + hitungan di subjudul), bukan dilarang dipilih -- kreator
+  // mungkin sengaja memilih dulu lalu mengaktifkan belakangan.
+  const inactiveCount = selectedProducts.filter((p) => !p.is_active).length;
+  const inactiveBadge = (
+    <span
+      title={t("dashboard.pages.linksBuilder.produkInactiveHint")}
+      className="flex-shrink-0 rounded-full border border-jeon-ink bg-jeon-coral px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111]"
+    >
+      {t("dashboard.pages.linksBuilder.produkInactiveBadge")}
+    </span>
+  );
 
   if (selectedProducts.length > 0 && !picking) {
     return (
@@ -123,11 +139,15 @@ export function ProdukBlockEditor({
         <BlockPanelHeader
           icon={IconShoppingBag}
           title={t("dashboard.components.builderAddComponentModal.typeProduk")}
-          subtitle={t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", String(selectedProducts.length))}
+          subtitle={
+            t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", String(selectedProducts.length)) +
+            (inactiveCount > 0 ? ` · ${t("dashboard.pages.linksBuilder.produkInactiveCount").replace("{n}", String(inactiveCount))}` : "")
+          }
         />
+        {inactiveCount > 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.produkInactiveHint")}</p>}
         <div className="flex flex-col gap-1.5">
           {selectedProducts.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-lg border-2 border-jeon-purple bg-jeon-lavender/40 p-1.5">
+            <div key={p.id} className={`flex items-center gap-2 rounded-lg border-2 p-1.5 ${p.is_active ? "border-jeon-purple bg-jeon-lavender/40" : "border-dashed border-app-border bg-app-surface-2 opacity-80"}`}>
               {p.cover_image_url ? (
                 // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
                 <Image src={p.cover_image_url} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
@@ -140,6 +160,7 @@ export function ProdukBlockEditor({
                 <span className="block truncate text-xs font-semibold text-app-ink">{p.name}</span>
                 <span className="block text-[11px] text-app-muted">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
               </span>
+              {!p.is_active && inactiveBadge}
               <button
                 type="button"
                 onClick={() => onToggleProduct(p.id)}
@@ -251,6 +272,7 @@ export function ProdukBlockEditor({
                   <span className="block truncate text-xs font-semibold text-app-ink">{p.name}</span>
                   <span className="block text-[11px] text-app-muted">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
                 </span>
+                {!p.is_active && inactiveBadge}
                 {isSelected && <IconCheck className="h-4 w-4 flex-shrink-0 text-jeon-purple" />}
               </button>
             );

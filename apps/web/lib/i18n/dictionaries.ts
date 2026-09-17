@@ -1281,6 +1281,11 @@ export const dictionaries = {
           // 2026, benchmark Linktree): subjudul dinamis di header panel
           // (BlockPanelHeader), jumlah produk yang sudah dipilih di blok ini.
           produkSelectedSubtitle: "{n} produk dipilih",
+          // produkInactive* -- penanda produk nonaktif di blok Produk (18
+          // September 2026): halaman publik hanya memuat produk aktif.
+          produkInactiveBadge: "Nonaktif",
+          produkInactiveCount: "{n} nonaktif (tidak tampil)",
+          produkInactiveHint: "Produk nonaktif tidak tampil di halaman publik -- aktifkan dulu di menu Produk (unggah file/sampul yang diminta).",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
           openDesignPage: "Buka Halaman Desain",
           settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
@@ -4434,6 +4439,9 @@ export const dictionaries = {
           produkDone: "Done",
           produkRemoveProduct: "Remove {name} from this block",
           produkSelectedSubtitle: "{n} products selected",
+          produkInactiveBadge: "Inactive",
+          produkInactiveCount: "{n} inactive (hidden)",
+          produkInactiveHint: "Inactive products are not shown on your public page -- activate them first in the Products menu (upload the required file/cover).",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
           openDesignPage: "Open Design Page",
           settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",
