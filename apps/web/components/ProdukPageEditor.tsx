@@ -250,6 +250,26 @@ export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "st
 // pengambilan data & pratinjau ke induk (dashboard/products/page.tsx) --
 // satu pratinjau Toko yang konsisten di SEMUA tab menu Produk, komponen
 // ini sekarang murni konten kolom kiri (terkontrol lewat props).
+// isBlockExpandable -- SATU sumber kebenaran dipakai bareng oleh cursor,
+// dan onClick baris header blok (permintaan langsung pengguna, 17
+// September 2026: "tanda panah > harusnya di blok nya langsung jadi ketika
+// blok di klik data nya keluar dan bisa diedit", pola & kondisi SAMA PERSIS
+// dashboard/links/page.tsx) -- kondisi SAMA PERSIS dgn yang menggerbang
+// tampil/tidaknya tombol panah kecil di bawah.
+function isBlockExpandable(link: LinkItem): boolean {
+  return Boolean(
+    link.block_type &&
+      link.block_type !== "link" &&
+      link.block_type !== "gallery" &&
+      link.block_type !== "audio" &&
+      link.block_type !== "file" &&
+      link.block_type !== "produk" &&
+      link.block_type !== "list" &&
+      link.block_type !== "image" &&
+      link.block_type !== "image_slider"
+  );
+}
+
 export default function ProdukPageEditor({
   loading,
   username,
@@ -1648,7 +1668,25 @@ function BlockSection({
             onDrop={() => handleDrop(link.id)}
             className="flex flex-col gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-3 shadow-card"
           >
-            <div className="flex items-center gap-2.5">
+            <div
+              // onClick baris ini -- permintaan langsung pengguna, 17
+              // September 2026, pola & alasan SAMA PERSIS dashboard/
+              // links/page.tsx (lihat catatan lengkap di sana): seluruh
+              // baris header jadi target klik, bukan cuma tombol panah
+              // kecil. SENGAJA bukan role="button"/tabIndex -- tombol
+              // panah di bawah (masih <button> asli + stopPropagation)
+              // tetap satu-satunya jalur keyboard-accessible, supaya
+              // tidak ada interactive control bersarang.
+              onClick={() => {
+                if (!isBlockExpandable(link)) return;
+                if (link.block_type === "catalog" || link.block_type === "faq") {
+                  setDrilldownBlockId(link.id);
+                } else {
+                  toggleContentEdit(link);
+                }
+              }}
+              className={`flex items-center gap-2.5 ${isBlockExpandable(link) ? "cursor-pointer" : ""}`}
+            >
               <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-app-ink">
@@ -1665,20 +1703,20 @@ function BlockSection({
                   accordion/dst SEBELUMNYA tidak bisa disunting lagi setelah
                   dibuat sama sekali). "catalog"/"faq" buka BlockDrilldownEditor
                   penuh layar, tipe lain buka panel accordion contentEditId. */}
-              {link.block_type &&
-                link.block_type !== "link" &&
-                link.block_type !== "gallery" &&
-                link.block_type !== "audio" &&
-                link.block_type !== "file" &&
-                link.block_type !== "produk" &&
-                link.block_type !== "list" &&
-                link.block_type !== "image" &&
-                link.block_type !== "image_slider" && (
+              {isBlockExpandable(link) && (
                 <button
                   type="button"
-                  onClick={() =>
-                    link.block_type === "catalog" || link.block_type === "faq" ? setDrilldownBlockId(link.id) : toggleContentEdit(link)
-                  }
+                  onClick={(e) => {
+                    // stopPropagation WAJIB -- lihat catatan lengkap di
+                    // dashboard/links/page.tsx (tombol ini sekarang anak
+                    // dari baris header yang juga onClick).
+                    e.stopPropagation();
+                    if (link.block_type === "catalog" || link.block_type === "faq") {
+                      setDrilldownBlockId(link.id);
+                    } else {
+                      toggleContentEdit(link);
+                    }
+                  }}
                   aria-expanded={contentEditId === link.id}
                   title={t("dashboard.pages.links.linkCard.editContent")}
                   className={`flex h-8 flex-shrink-0 items-center rounded-lg px-1.5 transition-colors ${
@@ -1688,7 +1726,14 @@ function BlockSection({
                   <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${contentEditId === link.id ? "rotate-90" : ""}`} />
                 </button>
               )}
-              <button type="button" onClick={() => handleDelete(link.id)} className="flex-shrink-0 rounded-lg p-1.5 text-app-muted hover:bg-red-50 hover:text-red-600">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(link.id);
+                }}
+                className="flex-shrink-0 rounded-lg p-1.5 text-app-muted hover:bg-red-50 hover:text-red-600"
+              >
                 <IconTrash className="h-4 w-4" />
               </button>
             </div>

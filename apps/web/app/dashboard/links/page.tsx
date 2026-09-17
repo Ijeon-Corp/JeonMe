@@ -290,6 +290,17 @@ function blockPreviewFor(link: LinkItem, t: (key: string) => string): string | n
   }
 }
 
+// isBlockExpandable -- SATU sumber kebenaran dipakai bareng oleh cursor,
+// role/aria-expanded, onClick, DAN onKeyDown baris header blok (permintaan
+// langsung pengguna, 17 September 2026: "tanda panah > harusnya di blok
+// nya langsung jadi ketika blok di klik data nya keluar dan bisa diedit")
+// -- kondisi SAMA PERSIS dgn yang dulu menggerbang tampil/tidaknya tombol
+// panah kecil. "link" & tipe tanpa isi (blockPreviewFor null) sengaja
+// TIDAK expandable, tidak ada apa pun yang bisa dibuka utk keduanya.
+function isBlockExpandable(link: LinkItem, t: (key: string) => string): boolean {
+  return link.block_type !== "link" && blockPreviewFor(link, t) !== null;
+}
+
 export type IconComponent = (props: { className?: string }) => React.ReactElement;
 
 // Modal "Tambah" ala Linktree (tangkapan layar pengguna): ganti trigger
@@ -2913,12 +2924,48 @@ export default function DashboardLinksPage() {
                 link.is_active ? "border-app-border" : "border-app-border opacity-60"
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div
+                // onClick baris ini -- permintaan langsung pengguna, 17
+                // September 2026 ("tanda panah > harusnya di blok nya
+                // langsung jadi ketika blok di klik data nya keluar dan
+                // bisa diedit"): SEBELUMNYA cuma tombol panah kecil (skrg
+                // jadi span dekoratif, lihat di bawah) yang bisa
+                // membuka/tutup accordion isi blok -- target klik sekecil
+                // itu gampang meleset & terjepit di antara chip klik/tombol
+                // Tools/Toggle. Sekarang SELURUH baris header (kecuali
+                // kontrol urutan ▲▼/drag & tombol/sakelar di ujung kanan,
+                // yang masing-masing sudah dipasang stopPropagation di
+                // bawah) jadi satu target klik besar. Kondisi SAMA PERSIS
+                // dgn yang menggerbang tampil/tidaknya panah di bawah --
+                // block_type "link" & tipe tanpa isi (blockPreviewFor null)
+                // sengaja tidak dapat cursor-pointer/onClick sama sekali,
+                // tidak ada apa pun yang bisa dibuka utk keduanya.
+                onClick={() => {
+                  // SENGAJA bukan role="button"/tabIndex di <div> ini --
+                  // tombol panah di bawah (masih <button> asli, sudah
+                  // dipasang stopPropagation) TETAP satu-satunya jalur
+                  // keyboard-accessible utk buka/tutup blok, supaya tidak
+                  // membuat "interactive control bersarang" (div role=button
+                  // yang di dalamnya ada <button> lain -- pelanggaran
+                  // aksesibilitas nested-interactive). onClick baris ini
+                  // MURNI perluasan target klik MOUSE, bukan pengganti.
+                  if (!isBlockExpandable(link, t)) return;
+                  if (link.block_type === "catalog" || link.block_type === "faq") {
+                    setDrilldownBlockId(link.id);
+                  } else {
+                    toggleContentEdit(link);
+                  }
+                }}
+                className={`flex items-center gap-3 ${isBlockExpandable(link, t) ? "cursor-pointer" : ""}`}
+              >
                 {/* Kontrol urutan -- grip = afordans drag mouse (kartu <li>
                     draggable), plus dua tombol ▲/▼ yang bisa difokus keyboard
                     sebagai ALTERNATIF drag (§22 "drag alternative move up/
-                    down"). Nonaktif di batas (item pertama/terakhir). */}
-                <div className="flex flex-shrink-0 flex-col items-center">
+                    down"). Nonaktif di batas (item pertama/terakhir).
+                    stopPropagation WAJIB sejak baris header jadi satu target
+                    klik besar di atas -- tanpa ini, klik ▲/▼ ikut membuka/
+                    tutup accordion isi blok juga. */}
+                <div className="flex flex-shrink-0 flex-col items-center" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => moveLinkByOffset(index, -1)}
@@ -3001,6 +3048,7 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                      onClick={(e) => e.stopPropagation()}
                       className="w-full rounded-md border border-jeon-purple px-2 py-1 text-sm font-bold text-app-ink focus:outline-none"
                     />
                   ) : (
@@ -3012,7 +3060,10 @@ export default function DashboardLinksPage() {
                           berlaku utk SEMUA block_type (updateLink sudah generik). */}
                       <button
                         type="button"
-                        onClick={() => startEditField(link, "title")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditField(link, "title");
+                        }}
                         className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
                         title={t("dashboard.pages.links.linkCard.editTitle")}
                       >
@@ -3068,11 +3119,19 @@ export default function DashboardLinksPage() {
                 {link.block_type !== "link" && blockPreviewFor(link, t) !== null && (
                   <button
                     type="button"
-                    onClick={() =>
-                      link.block_type === "catalog" || link.block_type === "faq"
-                        ? setDrilldownBlockId(link.id)
-                        : toggleContentEdit(link)
-                    }
+                    onClick={(e) => {
+                      // stopPropagation WAJIB -- tombol ini sekarang ANAK
+                      // dari baris header yang juga onClick (lihat catatan
+                      // di atas), tanpa ini klik di sini akan memicu toggle
+                      // DUA KALI (dari sini + dari bubble ke induk) yang
+                      // saling membatalkan (buka lalu langsung tutup lagi).
+                      e.stopPropagation();
+                      if (link.block_type === "catalog" || link.block_type === "faq") {
+                        setDrilldownBlockId(link.id);
+                      } else {
+                        toggleContentEdit(link);
+                      }
+                    }}
                     aria-expanded={contentEditId === link.id}
                     title={t("dashboard.pages.links.linkCard.editContent")}
                     className={`flex h-8 flex-shrink-0 items-center rounded-lg px-1.5 transition-colors ${
@@ -3084,7 +3143,10 @@ export default function DashboardLinksPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setToolsOpenId((v) => (v === link.id ? null : link.id))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setToolsOpenId((v) => (v === link.id ? null : link.id));
+                  }}
                   aria-expanded={toolsOpenId === link.id}
                   title={t("dashboard.pages.links.linkCard.manageTools")}
                   className={`flex h-8 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-bold transition-colors ${
@@ -3094,7 +3156,14 @@ export default function DashboardLinksPage() {
                   <IconSettings className="h-4 w-4" />
                   <IconChevronRight className={`h-3 w-3 transition-transform ${toolsOpenId === link.id ? "rotate-90" : ""}`} />
                 </button>
-                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
+                {/* Wrapper stopPropagation -- Toggle sendiri (Toggle.tsx)
+                    dipakai luas di banyak tempat lain yang tidak bersarang
+                    dlm baris yang klik-able, jadi stopPropagation ditaruh
+                    di sini (scoped ke pemakaian ini saja), bukan diubah di
+                    komponen bersama itu sendiri. */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
+                </div>
               </div>
 
               {(link.block_type === "link" || link.block_type === "image") && (
