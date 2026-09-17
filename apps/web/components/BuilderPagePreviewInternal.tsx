@@ -28,6 +28,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { PageTheme } from "@/lib/page-themes";
+import ProdukCategoryFilter from "@/components/ProdukCategoryFilter";
 import type { FaqItem } from "@/components/FaqBlock";
 import type { ListBlockItem } from "@/components/ListBlock";
 import BuyProductButton from "@/components/BuyProductButton";
@@ -572,18 +573,27 @@ function renderBuilderNode(
       // perlu pengaturan terpisah). PERSIS 1 produk tetap wrapper tunggal
       // lebar penuh SEPERTI SEBELUMNYA, TIDAK berubah sama sekali -- blok
       // lama (1 produk) visual IDENTIK dgn sebelum perubahan ini.
+      // useGrid dari JUMLAH TERPILIH (bukan hasil filter chip) -- lihat
+      // catatan yang sama di renderLinkOrBlock, PagePreview.tsx.
+      const useGrid = selectedProducts.length > 1;
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full rounded-xl${ring}`}>
           {selectedProducts.length === 0 ? (
             <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
               {node.title || "Produk"}
             </div>
-          ) : selectedProducts.length === 1 ? (
-            renderProduct(selectedProducts[0], theme, canBuy, ctx, trackProduct)
           ) : (
-            <div className="grid w-full grid-cols-2 gap-3">
-              {selectedProducts.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}
-            </div>
+            <ProdukCategoryFilter products={selectedProducts} enabled={node.blockData.show_category_filter === true} theme={theme}>
+              {(visible) =>
+                useGrid ? (
+                  <div className="grid w-full grid-cols-2 gap-3">
+                    {visible.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}
+                  </div>
+                ) : (
+                  renderProduct(visible[0], theme, canBuy, ctx, trackProduct)
+                )
+              }
+            </ProdukCategoryFilter>
           )}
         </div>
       );

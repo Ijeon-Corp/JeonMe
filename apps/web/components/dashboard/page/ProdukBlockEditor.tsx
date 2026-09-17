@@ -8,6 +8,7 @@ import { IconCheck, IconPlus, IconShoppingBag, IconX } from "@/components/icons"
 import { useLocale } from "@/lib/locale-context";
 import type { DashboardProduct } from "@/lib/api-client";
 import BlockPanelHeader from "@/components/dashboard/page/BlockPanelHeader";
+import Toggle from "@/components/Toggle";
 
 // CreateProductForm -- lihat catatan lengkap di komponen itu sendiri: blok
 // "produk" memakai form BUAT PRODUK BARU yang SAMA PERSIS dengan menu
@@ -70,12 +71,17 @@ export function ProdukBlockEditor({
   onToggleProduct,
   onProductCreated,
   onLayoutChange,
+  onShowCategoryFilterChange,
 }: {
   blockData: Record<string, unknown> | undefined;
   products: DashboardProduct[];
   onToggleProduct: (productId: string) => void;
   onProductCreated: (product: DashboardProduct) => void;
   onLayoutChange: (layout: ProdukBlockLayout) => void;
+  // onShowCategoryFilterChange -- block_data.show_category_filter (chip
+  // kategori utk pengunjung, lihat ProdukCategoryFilter.tsx); pola sama
+  // onLayoutChange, tiap pemanggil mem-patch block_data-nya sendiri.
+  onShowCategoryFilterChange: (show: boolean) => void;
 }) {
   const { t } = useLocale();
   const [creating, setCreating] = useState(false);
@@ -103,6 +109,13 @@ export function ProdukBlockEditor({
   // semuanya, supaya tidak perlu buka-tutup panel berkali-kali untuk tiap
   // produk.
   const [picking, setPicking] = useState(selectedIds.length === 0);
+  // pickerCategory -- filter kategori di daftar pilih-produk (permintaan
+  // langsung pengguna, 18 September 2026: "tambah filtering by kategori
+  // jika menggunakan blok produk", sisi kreator). Murni state lokal, pola
+  // sama dropdown kategori di dashboard/products/page.tsx.
+  const [pickerCategory, setPickerCategory] = useState("");
+  const pickerProducts = pickerCategory ? products.filter((p) => p.category === pickerCategory) : products;
+  const showCategoryFilter = blockData?.show_category_filter === true;
 
   if (selectedProducts.length > 0 && !picking) {
     return (
@@ -170,6 +183,20 @@ export function ProdukBlockEditor({
             ))}
           </div>
         </div>
+
+        {/* Filter kategori utk pengunjung -- block_data.show_category_filter,
+            dirender ProdukCategoryFilter.tsx di halaman publik (chip hanya
+            muncul kalau produk terpilih punya 2+ kategori, lihat hint). */}
+        <div className="flex flex-col gap-1.5 rounded-xl bg-app-surface-2 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.linksBuilder.produkCategoryFilterTitle")}</p>
+              <p className="mt-0.5 text-[11px] font-semibold text-app-ink">{t("dashboard.pages.linksBuilder.produkCategoryFilterToggle")}</p>
+            </div>
+            <Toggle checked={showCategoryFilter} onChange={() => onShowCategoryFilterChange(!showCategoryFilter)} label={t("dashboard.pages.linksBuilder.produkCategoryFilterToggle")} />
+          </div>
+          <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.produkCategoryFilterHint")}</p>
+        </div>
       </div>
     );
   }
@@ -182,11 +209,26 @@ export function ProdukBlockEditor({
         subtitle={t("dashboard.components.builderAddComponentModal.typeProdukDesc")}
       />
       <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkSelectExisting")}</p>
+      {categories.length > 0 && (
+        <select
+          value={pickerCategory}
+          onChange={(e) => setPickerCategory(e.target.value)}
+          aria-label={t("dashboard.pages.linksBuilder.produkPickerFilterLabel")}
+          className="rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+        >
+          <option value="">{t("dashboard.pages.products.allCategories")}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      )}
       {products.length === 0 ? (
         <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.produkNoProducts")}</p>
       ) : (
         <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
-          {products.map((p) => {
+          {pickerProducts.map((p) => {
             const isSelected = selectedIds.includes(p.id);
             return (
               <button

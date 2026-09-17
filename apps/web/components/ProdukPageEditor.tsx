@@ -2173,6 +2173,7 @@ function BlockSection({
                     handleBlockDataPatch(link, { product_ids: [...current, product.id] });
                   }}
                   onLayoutChange={(layout) => handleBlockDataPatch(link, { layout })}
+                  onShowCategoryFilterChange={(show) => handleBlockDataPatch(link, { show_category_filter: show })}
                 />
               </div>
             )}

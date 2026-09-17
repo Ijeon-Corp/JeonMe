@@ -875,6 +875,19 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				return "layout blok produk tidak dikenal", false
 			}
 		}
+		// show_category_filter -- permintaan langsung pengguna, 18 September
+		// 2026 ("tambah filtering by kategori jika menggunakan blok produk"):
+		// kalau true, halaman publik menampilkan chip kategori di atas blok
+		// (dari `category` produk-produk terpilih) supaya pengunjung bisa
+		// menyaring -- mengembalikan kemampuan tab kategori yang hilang saat
+		// grid produk otomatis dihapus (15 September 2026). Opsional, default
+		// false; murni preferensi tampilan, tidak mengubah produk mana yang
+		// dikirim ke payload publik.
+		if raw, ok := data["show_category_filter"]; ok {
+			if _, isBool := raw.(bool); !isBool {
+				return "show_category_filter wajib berupa true/false", false
+			}
+		}
 	case "gallery", "image_slider":
 		// "gallery" -- hasil analisa galeri tema kompetitor (17 Agustus
 		// 2026, folder theme/: template portofolio/wisata s.id memakai grid

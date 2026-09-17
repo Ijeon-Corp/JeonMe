@@ -1236,6 +1236,10 @@ export const dictionaries = {
           // HANYA tampilkan ringkasan produk terpilih (bukan daftar penuh
           // lagi) begitu sudah dipilih, + pilihan tata letak untuk blok ini.
           produkLayoutTitle: "Tata Letak",
+          produkCategoryFilterTitle: "Filter Kategori",
+          produkCategoryFilterToggle: "Tampilkan filter kategori ke pengunjung",
+          produkCategoryFilterHint: "Chip kategori (Semua / E-book / Kursus / ...) muncul di atas blok ini kalau produk terpilih punya 2 kategori atau lebih.",
+          produkPickerFilterLabel: "Saring daftar berdasarkan kategori",
           produkLayoutCardLarge: "Kartu Besar",
           produkLayoutCardSmall: "Kartu Kecil",
           produkLayoutRowWithImage: "Baris dengan Gambar",
@@ -4373,6 +4377,10 @@ export const dictionaries = {
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",
           produkLayoutTitle: "Layout",
+          produkCategoryFilterTitle: "Category Filter",
+          produkCategoryFilterToggle: "Show category filter to visitors",
+          produkCategoryFilterHint: "Category chips (All / E-book / Course / ...) appear above this block when the selected products span 2 or more categories.",
+          produkPickerFilterLabel: "Filter the list by category",
           produkLayoutCardLarge: "Large Card",
           produkLayoutCardSmall: "Small Card",
           produkLayoutRowWithImage: "Row with Image",

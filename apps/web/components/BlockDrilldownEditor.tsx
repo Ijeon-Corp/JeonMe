@@ -789,6 +789,7 @@ function EmbeddedBlockFrame({
             onUpdate({ block_data: { ...block.block_data, product_ids: [...current, product.id] } });
           }}
           onLayoutChange={(layout) => onUpdate({ block_data: { ...block.block_data, layout } })}
+          onShowCategoryFilterChange={(show) => onUpdate({ block_data: { ...block.block_data, show_category_filter: show } })}
         />
       )}
     </div>

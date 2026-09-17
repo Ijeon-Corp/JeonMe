@@ -10,6 +10,7 @@ import type { FaqItem } from "@/components/FaqBlock";
 import type { ListBlockItem } from "@/components/ListBlock";
 import BuyProductButton from "@/components/BuyProductButton";
 import LockedLinkButton from "@/components/LockedLinkButton";
+import ProdukCategoryFilter from "@/components/ProdukCategoryFilter";
 import TrackedLink from "@/components/TrackedLink";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
@@ -2401,14 +2402,24 @@ export function renderLinkOrBlock(
         ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
         : trackEvent(data.username, { event_type: "product_click", product_id: productClickId });
     const ctx = { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused };
+    // Grid vs kartu tunggal ditentukan dari JUMLAH TERPILIH (bukan hasil
+    // filter chip): kalau pengunjung menyaring sampai tersisa 1 produk,
+    // tata letak tetap grid supaya blok tidak melompat lebar.
+    const useGrid = selectedProducts.length > 1;
     return (
       <div key={link.id} className="w-full rounded-xl">
         {selectedProducts.length === 0 ? (
           <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>{link.title || "Produk"}</div>
-        ) : selectedProducts.length === 1 ? (
-          renderProduct(selectedProducts[0], theme, canBuy, ctx, trackProduct)
         ) : (
-          <div className="grid w-full grid-cols-2 gap-3">{selectedProducts.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}</div>
+          <ProdukCategoryFilter products={selectedProducts} enabled={link.blockData?.show_category_filter === true} theme={theme}>
+            {(visible) =>
+              useGrid ? (
+                <div className="grid w-full grid-cols-2 gap-3">{visible.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}</div>
+              ) : (
+                renderProduct(visible[0], theme, canBuy, ctx, trackProduct)
+              )
+            }
+          </ProdukCategoryFilter>
         )}
       </div>
     );

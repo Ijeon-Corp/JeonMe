@@ -1181,6 +1181,7 @@ function NodeFieldEditor({
           onUpdateNode(sel, { blockData: { product_ids: [...getBlockProductIds(node.blockData), product.id] } });
         }}
         onLayoutChange={(layout) => onUpdateNode(sel, { blockData: { layout } })}
+        onShowCategoryFilterChange={(show) => onUpdateNode(sel, { blockData: { show_category_filter: show } })}
       />
     );
   }
