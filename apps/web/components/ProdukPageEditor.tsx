@@ -1834,7 +1834,7 @@ function BlockSection({
                   <select
                     value={countdownProductId}
                     onChange={(e) => setCountdownProductId(e.target.value)}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                    className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   >
                     <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
                     {products.map((p) => (
@@ -2438,7 +2438,7 @@ function BlockSection({
                   <select
                     value={lockTypeInput}
                     onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
-                    className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                    className="bg-app-surface text-app-ink w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                   >
                     <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
                     <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
@@ -2639,7 +2639,7 @@ function BlockSection({
                       <select
                         value={editCountdownProductId}
                         onChange={(e) => setEditCountdownProductId(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                        className="bg-app-surface text-app-ink w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       >
                         <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
                         {products.map((p) => (

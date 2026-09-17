@@ -282,7 +282,7 @@ export default function DashboardTeamPage() {
             aria-label={t("dashboard.pages.team.newRoleAriaLabel")}
             value={role}
             onChange={(e) => setRole(e.target.value as TeamRole)}
-            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
+            className="bg-app-surface text-app-ink rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {ROLE_OPTIONS.map((r) => (
               <option key={r} value={r}>
@@ -364,7 +364,7 @@ export default function DashboardTeamPage() {
                   value={c.role}
                   onChange={(e) => handleRoleChange(c, e.target.value as TeamRole)}
                   disabled={c.status === "revoked"}
-                  className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
+                  className="bg-app-surface text-app-ink rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>

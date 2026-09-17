@@ -60,8 +60,12 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
 }
 
 const NEW_CATEGORY_VALUE = "__new__";
+// bg-app-surface text-app-ink -- laporan langsung pengguna, 18 September
+// 2026: "cek semua dropdown ketika dark mode masih ada yang font nya putih
+// sehingga tidak terlihat" -- <select> tanpa background eksplisit ikut
+// warna teks token (putih di dark mode) di atas latar bawaan browser.
 const CATEGORY_FIELD_CLASSNAME =
-  "w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
+  "w-full rounded-lg border border-app-border bg-app-surface px-3.5 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
 
 // CategoryField -- permintaan langsung pengguna, 13 September 2026 ("jika
 // creator sudah pernah membuat category produk tampil drop down untuk

@@ -171,7 +171,7 @@ export default function AdminModerationPage() {
           <select
             value={newKeywordCategory}
             onChange={(e) => setNewKeywordCategory(e.target.value as ModerationCategory)}
-            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -183,7 +183,7 @@ export default function AdminModerationPage() {
             value={newKeywordMatchType}
             onChange={(e) => setNewKeywordMatchType(e.target.value as ModerationMatchType)}
             title="Substring: cocok kalau kata ini muncul di mana pun dalam URL/judul (aman utk frasa spesifik multi-kata). Domain persis: HANYA cocok kalau domainnya PERSIS kata ini (aman utk kata generik satu-suku-kata spt 'slot')."
-            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(MATCH_TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -273,7 +273,7 @@ export default function AdminModerationPage() {
           <select
             value={newDomainCategory}
             onChange={(e) => setNewDomainCategory(e.target.value as ModerationCategory)}
-            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>

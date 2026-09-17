@@ -231,7 +231,7 @@ export default function DashboardAffiliatesPage() {
                 required
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+                className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               >
                 <option value="">{t("dashboard.pages.affiliates.productPlaceholder")}</option>
                 {products.map((p) => (

@@ -2441,7 +2441,7 @@ export default function DashboardLinksPage() {
                       | "embed"
                   )
                 }
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               >
                 <option value="video">{t("dashboard.pages.links.blockForm.options.video")}</option>
                 <option value="contact_form">{t("dashboard.pages.links.blockForm.options.contactForm")}</option>
@@ -2639,7 +2639,7 @@ export default function DashboardLinksPage() {
                   <select
                     value={blockCountdownProductId}
                     onChange={(e) => setBlockCountdownProductId(e.target.value)}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                    className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   >
                     <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
                     {products.map((p) => (
@@ -3730,7 +3730,7 @@ export default function DashboardLinksPage() {
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      className="bg-app-surface text-app-ink w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     >
                       <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
                       <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
@@ -3891,7 +3891,7 @@ export default function DashboardLinksPage() {
                         <select
                           value={editCountdownProductId}
                           onChange={(e) => setEditCountdownProductId(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                          className="bg-app-surface text-app-ink w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         >
                           <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
                           {products.map((p) => (
@@ -4203,7 +4203,7 @@ export default function DashboardLinksPage() {
               id="new-page-duplicate-from"
               value={duplicateFromId}
               onChange={(e) => setDuplicateFromId(e.target.value)}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+              className="bg-app-surface w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
             >
               <option value="">{t("dashboard.pages.links.createPageModal.blankPage")}</option>
               <option value="primary">{t("dashboard.pages.links.createPageModal.duplicateFromHome")}</option>

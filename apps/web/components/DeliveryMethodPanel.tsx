@@ -166,7 +166,7 @@ export default function DeliveryMethodPanel({
         value={product.delivery_method}
         disabled={saving}
         onChange={(e) => handleChangeMethod(e.target.value as DashboardProduct["delivery_method"])}
-        className="mt-1.5 w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
+        className="bg-app-surface text-app-ink mt-1.5 w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
       >
         {METHOD_OPTIONS.map((m) => (
           <option key={m.value} value={m.value}>

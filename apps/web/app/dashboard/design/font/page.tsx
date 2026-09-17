@@ -32,7 +32,7 @@ export default function DesignFontPage() {
           <select
             value={page.custom_font}
             onChange={(e) => handleStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+            className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -78,7 +78,7 @@ export default function DesignFontPage() {
           <select
             value={page.custom_title_font}
             onChange={(e) => handleStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+            className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>

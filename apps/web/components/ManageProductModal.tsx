@@ -506,7 +506,7 @@ export default function ManageProductModal({
                     <select
                       value={row.user_id}
                       onChange={(e) => onUpdateSplitRow(i, { user_id: e.target.value })}
-                      className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      className="bg-app-surface text-app-ink flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     >
                       <option value="">{t("dashboard.pages.products.manageModal.chooseCollaborator")}</option>
                       {activeCollaborators.map((c) => (

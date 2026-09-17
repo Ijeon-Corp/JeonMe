@@ -251,7 +251,7 @@ export default function DashboardVouchersPage() {
                 <select
                   value={discountType}
                   onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+                  className="bg-app-surface text-app-ink w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 >
                   <option value="percentage">{t("dashboard.pages.vouchers.discountTypePercentage")}</option>
                   <option value="fixed">{t("dashboard.pages.vouchers.discountTypeFixed")}</option>

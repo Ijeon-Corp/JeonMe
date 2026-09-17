@@ -128,7 +128,7 @@ export default function AdminUsersPage() {
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
+          className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
         >
           <option value="">Semua role</option>
           <option value="creator">Creator</option>
@@ -137,7 +137,7 @@ export default function AdminUsersPage() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
+          className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
         >
           <option value="">Semua status</option>
           <option value="active">Aktif</option>
