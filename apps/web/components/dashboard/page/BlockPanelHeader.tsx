@@ -1,4 +1,5 @@
 import { IconBox } from "@/components/icons";
+import type { LucideIcon } from "lucide-react";
 
 // BlockPanelHeader -- redesain panel edit blok (permintaan langsung
 // pengguna 13 September 2026, "saya mau redesign ui dan ux setiap blok
@@ -17,7 +18,7 @@ export default function BlockPanelHeader({
   title,
   subtitle,
 }: {
-  icon?: (p: { className?: string }) => React.ReactElement;
+  icon?: LucideIcon | ((p: { className?: string }) => React.ReactElement);
   title: string;
   subtitle?: string;
 }) {

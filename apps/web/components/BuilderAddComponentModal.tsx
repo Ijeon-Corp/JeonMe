@@ -1,32 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { IconClose, IconSearch } from "@/components/icons";
 import {
-  IconBox,
-  IconCamera,
-  IconCatalogTiles,
-  IconChevronRight,
-  IconClock,
-  IconClose,
-  IconColumns,
-  IconContactCard,
-  IconDivider,
-  IconExternal,
-  IconFaqBubble,
-  IconFileText,
-  IconIframe,
-  IconLink,
-  IconListCard,
-  IconMapPin,
-  IconMusicNote,
-  IconPhotoLibrary,
-  IconPlayCircle,
-  IconSearch,
-  IconShoppingBag,
-  IconSlideshow,
-  IconTextLines,
-  IconVideoImage,
-} from "@/components/icons";
+  ChevronDown,
+  Clapperboard,
+  ClipboardList,
+  Code2,
+  Columns3,
+  FileText as LucideFileText,
+  GalleryHorizontal,
+  Heading as LucideHeading,
+  HelpCircle,
+  Image as LucideImage,
+  Images as LucideImages,
+  LayoutGrid,
+  Link2,
+  List as LucideList,
+  MapPin as LucideMapPin,
+  MousePointerClick,
+  Music as LucideMusic,
+  Presentation,
+  Rows3,
+  SeparatorHorizontal,
+  ShoppingBag as LucideShoppingBag,
+  Timer,
+  Type as LucideType,
+  Video as LucideVideo,
+  type LucideIcon,
+} from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import type { EmbeddedBuilderBlock } from "@/lib/api-client";
 
@@ -70,7 +72,7 @@ export interface BuilderComponentTile {
   type: AddableBlockType;
   label: string;
   description: string;
-  Icon: (p: { className?: string }) => React.ReactElement;
+  Icon: LucideIcon | ((p: { className?: string }) => React.ReactElement);
 }
 
 function buildBuilderComponentCategories(
@@ -81,17 +83,17 @@ function buildBuilderComponentCategories(
       key: "general",
       label: t("dashboard.components.builderAddComponentModal.categoryGeneral"),
       tiles: [
-        { type: "text", label: t("dashboard.components.builderAddComponentModal.typeText"), description: t("dashboard.components.builderAddComponentModal.typeTextDesc"), Icon: IconTextLines },
+        { type: "text", label: t("dashboard.components.builderAddComponentModal.typeText"), description: t("dashboard.components.builderAddComponentModal.typeTextDesc"), Icon: LucideType },
         // "heading" -- Fase 4 (13 September 2026, "kenapa banyak blok blok
         // yang hilang"): sebelumnya tipe legacy landing-page saja, sama
         // sekali tidak bisa ditambahkan lewat UI mana pun -- sekarang jadi
         // blok Builder biasa (judul besar, mirip "text" tapi tampil sbg
         // heading di halaman publik).
-        { type: "heading", label: t("dashboard.components.builderAddComponentModal.typeHeading"), description: t("dashboard.components.builderAddComponentModal.typeHeadingDesc"), Icon: IconTextLines },
-        { type: "button", label: t("dashboard.components.builderAddComponentModal.typeButton"), description: t("dashboard.components.builderAddComponentModal.typeButtonDesc"), Icon: IconExternal },
-        { type: "divider", label: t("dashboard.components.builderAddComponentModal.typeDivider"), description: t("dashboard.components.builderAddComponentModal.typeDividerDesc"), Icon: IconDivider },
-        { type: "column", label: t("dashboard.components.builderAddComponentModal.typeColumn"), description: t("dashboard.components.builderAddComponentModal.typeColumnDesc"), Icon: IconColumns },
-        { type: "section", label: t("dashboard.components.builderAddComponentModal.typeSection"), description: t("dashboard.components.builderAddComponentModal.typeSectionDesc"), Icon: IconBox },
+        { type: "heading", label: t("dashboard.components.builderAddComponentModal.typeHeading"), description: t("dashboard.components.builderAddComponentModal.typeHeadingDesc"), Icon: LucideHeading },
+        { type: "button", label: t("dashboard.components.builderAddComponentModal.typeButton"), description: t("dashboard.components.builderAddComponentModal.typeButtonDesc"), Icon: MousePointerClick },
+        { type: "divider", label: t("dashboard.components.builderAddComponentModal.typeDivider"), description: t("dashboard.components.builderAddComponentModal.typeDividerDesc"), Icon: SeparatorHorizontal },
+        { type: "column", label: t("dashboard.components.builderAddComponentModal.typeColumn"), description: t("dashboard.components.builderAddComponentModal.typeColumnDesc"), Icon: Columns3 },
+        { type: "section", label: t("dashboard.components.builderAddComponentModal.typeSection"), description: t("dashboard.components.builderAddComponentModal.typeSectionDesc"), Icon: Rows3 },
       ],
     },
     {
@@ -101,15 +103,15 @@ function buildBuilderComponentCategories(
       key: "media",
       label: t("dashboard.components.builderAddComponentModal.categoryMedia"),
       tiles: [
-        { type: "image", label: t("dashboard.components.builderAddComponentModal.typeImage"), description: t("dashboard.components.builderAddComponentModal.typeImageDesc"), Icon: IconCamera },
-        { type: "gallery", label: t("dashboard.components.builderAddComponentModal.typeImageGrid"), description: t("dashboard.components.builderAddComponentModal.typeImageGridDesc"), Icon: IconPhotoLibrary },
-        { type: "video", label: t("dashboard.components.builderAddComponentModal.typeVideo"), description: t("dashboard.components.builderAddComponentModal.typeVideoDesc"), Icon: IconPlayCircle },
-        { type: "video_image", label: t("dashboard.components.builderAddComponentModal.typeVideoImage"), description: t("dashboard.components.builderAddComponentModal.typeVideoImageDesc"), Icon: IconVideoImage },
-        { type: "image_slider", label: t("dashboard.components.builderAddComponentModal.typeImageSlider"), description: t("dashboard.components.builderAddComponentModal.typeImageSliderDesc"), Icon: IconSlideshow },
+        { type: "image", label: t("dashboard.components.builderAddComponentModal.typeImage"), description: t("dashboard.components.builderAddComponentModal.typeImageDesc"), Icon: LucideImage },
+        { type: "gallery", label: t("dashboard.components.builderAddComponentModal.typeImageGrid"), description: t("dashboard.components.builderAddComponentModal.typeImageGridDesc"), Icon: LucideImages },
+        { type: "video", label: t("dashboard.components.builderAddComponentModal.typeVideo"), description: t("dashboard.components.builderAddComponentModal.typeVideoDesc"), Icon: LucideVideo },
+        { type: "video_image", label: t("dashboard.components.builderAddComponentModal.typeVideoImage"), description: t("dashboard.components.builderAddComponentModal.typeVideoImageDesc"), Icon: Clapperboard },
+        { type: "image_slider", label: t("dashboard.components.builderAddComponentModal.typeImageSlider"), description: t("dashboard.components.builderAddComponentModal.typeImageSliderDesc"), Icon: GalleryHorizontal },
         // "audio"/"file" -- Fase 4 (13 September 2026): dua blok klasik
         // lama, sebelumnya cuma bisa lewat Simple Mode.
-        { type: "audio", label: t("dashboard.components.builderAddComponentModal.typeAudio"), description: t("dashboard.components.builderAddComponentModal.typeAudioDesc"), Icon: IconMusicNote },
-        { type: "file", label: t("dashboard.components.builderAddComponentModal.typeFile"), description: t("dashboard.components.builderAddComponentModal.typeFileDesc"), Icon: IconFileText },
+        { type: "audio", label: t("dashboard.components.builderAddComponentModal.typeAudio"), description: t("dashboard.components.builderAddComponentModal.typeAudioDesc"), Icon: LucideMusic },
+        { type: "file", label: t("dashboard.components.builderAddComponentModal.typeFile"), description: t("dashboard.components.builderAddComponentModal.typeFileDesc"), Icon: LucideFileText },
       ],
     },
     {
@@ -119,11 +121,11 @@ function buildBuilderComponentCategories(
       key: "information",
       label: t("dashboard.components.builderAddComponentModal.categoryInformation"),
       tiles: [
-        { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconFaqBubble },
-        { type: "list", label: t("dashboard.components.builderAddComponentModal.typeList"), description: t("dashboard.components.builderAddComponentModal.typeListDesc"), Icon: IconListCard },
+        { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: HelpCircle },
+        { type: "list", label: t("dashboard.components.builderAddComponentModal.typeList"), description: t("dashboard.components.builderAddComponentModal.typeListDesc"), Icon: LucideList },
         // "accordion" -- Fase 4 (13 September 2026): satu judul, klik utk
         // buka isinya -- beda dari FAQ yang bisa banyak pertanyaan sekaligus.
-        { type: "accordion", label: t("dashboard.components.builderAddComponentModal.typeAccordion"), description: t("dashboard.components.builderAddComponentModal.typeAccordionDesc"), Icon: IconChevronRight },
+        { type: "accordion", label: t("dashboard.components.builderAddComponentModal.typeAccordion"), description: t("dashboard.components.builderAddComponentModal.typeAccordionDesc"), Icon: ChevronDown },
       ],
     },
     {
@@ -132,15 +134,15 @@ function buildBuilderComponentCategories(
       key: "conversion",
       label: t("dashboard.components.builderAddComponentModal.categoryConversion"),
       tiles: [
-        { type: "countdown", label: t("dashboard.components.builderAddComponentModal.typeCountdown"), description: t("dashboard.components.builderAddComponentModal.typeCountdownDesc"), Icon: IconClock },
+        { type: "countdown", label: t("dashboard.components.builderAddComponentModal.typeCountdown"), description: t("dashboard.components.builderAddComponentModal.typeCountdownDesc"), Icon: Timer },
         // "produk" -- permintaan langsung pengguna 10 September 2026
         // ("harusnya ada blok produk"): tampilkan SATU produk kreator di
         // lokasi bebas dalam layout, beda dari grid produk otomatis
         // Halaman Toko.
-        { type: "produk", label: t("dashboard.components.builderAddComponentModal.typeProduk"), description: t("dashboard.components.builderAddComponentModal.typeProdukDesc"), Icon: IconShoppingBag },
+        { type: "produk", label: t("dashboard.components.builderAddComponentModal.typeProduk"), description: t("dashboard.components.builderAddComponentModal.typeProdukDesc"), Icon: LucideShoppingBag },
         // "contact_form" -- Fase 4 (13 September 2026): ROOT-ONLY (lihat
         // catatan AddableBlockType/ROOT_ONLY_TYPES di atas).
-        { type: "contact_form", label: t("dashboard.components.builderAddComponentModal.typeContactForm"), description: t("dashboard.components.builderAddComponentModal.typeContactFormDesc"), Icon: IconContactCard },
+        { type: "contact_form", label: t("dashboard.components.builderAddComponentModal.typeContactForm"), description: t("dashboard.components.builderAddComponentModal.typeContactFormDesc"), Icon: ClipboardList },
       ],
     },
     {
@@ -150,22 +152,22 @@ function buildBuilderComponentCategories(
       key: "others",
       label: t("dashboard.components.builderAddComponentModal.categoryOthers"),
       tiles: [
-        { type: "embed_link", label: t("dashboard.components.builderAddComponentModal.typeEmbedLink"), description: t("dashboard.components.builderAddComponentModal.typeEmbedLinkDesc"), Icon: IconLink },
-        { type: "embed", label: t("dashboard.components.builderAddComponentModal.typeEmbed"), description: t("dashboard.components.builderAddComponentModal.typeEmbedDesc"), Icon: IconIframe },
-        { type: "maps", label: t("dashboard.components.builderAddComponentModal.typeMaps"), description: t("dashboard.components.builderAddComponentModal.typeMapsDesc"), Icon: IconMapPin },
+        { type: "embed_link", label: t("dashboard.components.builderAddComponentModal.typeEmbedLink"), description: t("dashboard.components.builderAddComponentModal.typeEmbedLinkDesc"), Icon: Link2 },
+        { type: "embed", label: t("dashboard.components.builderAddComponentModal.typeEmbed"), description: t("dashboard.components.builderAddComponentModal.typeEmbedDesc"), Icon: Code2 },
+        { type: "maps", label: t("dashboard.components.builderAddComponentModal.typeMaps"), description: t("dashboard.components.builderAddComponentModal.typeMapsDesc"), Icon: LucideMapPin },
         // "project_showcase" -- Fase 4 (13 September 2026): kartu proyek
         // unggulan (badge + gambar + deskripsi + tombol CTA).
         {
           type: "project_showcase",
           label: t("dashboard.components.builderAddComponentModal.typeProjectShowcase"),
           description: t("dashboard.components.builderAddComponentModal.typeProjectShowcaseDesc"),
-          Icon: IconCamera,
+          Icon: Presentation,
         },
         // "catalog" -- Fase 4 (13 September 2026, permintaan langsung
         // pengguna "harusnya ada blok katalog"): ROOT-ONLY (lihat catatan
         // AddableBlockType/ROOT_ONLY_TYPES di atas, keputusan v1 yang sudah
         // ada di backend, allowedBuilderEmbeddedBlockTypes/links.go).
-        { type: "catalog", label: t("dashboard.components.builderAddComponentModal.typeCatalog"), description: t("dashboard.components.builderAddComponentModal.typeCatalogDesc"), Icon: IconCatalogTiles },
+        { type: "catalog", label: t("dashboard.components.builderAddComponentModal.typeCatalog"), description: t("dashboard.components.builderAddComponentModal.typeCatalogDesc"), Icon: LayoutGrid },
       ],
     },
   ];

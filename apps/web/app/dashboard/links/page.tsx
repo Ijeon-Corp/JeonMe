@@ -55,37 +55,23 @@ import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import {
   IconCamera,
-  IconCatalogTiles,
   IconChart,
   IconChevronRight,
   IconSettings,
   IconClock,
   IconClose,
   IconColumns,
-  IconContactCard,
   IconCopy,
-  IconExternal,
-  IconFaqBubble,
   IconFileText,
   IconGrid,
   IconGripVertical,
-  IconIframe,
-  IconLink,
-  IconListCard,
   IconLock,
-  IconMapPin,
   IconMusicNote,
   IconPaintbrush,
   IconPencil,
-  IconPhotoLibrary,
-  IconPlayCircle,
   IconPlus,
-  IconShoppingBag,
-  IconSlideshow,
   IconStar,
-  IconTextLines,
   IconTrash,
-  IconVideoImage,
   IconX,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
@@ -96,7 +82,35 @@ import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
-import { LayoutGrid, TriangleAlert } from "lucide-react";
+import {
+  ChevronDown,
+  Clapperboard,
+  ClipboardList,
+  Code2,
+  Columns3,
+  FileText as LucideFileText,
+  GalleryHorizontal,
+  Heading as LucideHeading,
+  HelpCircle,
+  Image as LucideImage,
+  Images as LucideImages,
+  LayoutGrid,
+  Link as LucideLink,
+  Link2,
+  List as LucideList,
+  MapPin as LucideMapPin,
+  MousePointerClick,
+  Music as LucideMusic,
+  Presentation,
+  Rows3,
+  SeparatorHorizontal,
+  ShoppingBag as LucideShoppingBag,
+  Timer,
+  TriangleAlert,
+  Type as LucideType,
+  Video as LucideVideo,
+  type LucideIcon,
+} from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
@@ -302,7 +316,17 @@ function isBlockExpandable(link: LinkItem, t: (key: string) => string): boolean 
   return link.block_type !== "link" && blockPreviewFor(link, t) !== null;
 }
 
-export type IconComponent = (props: { className?: string }) => React.ReactElement;
+// IconComponent -- diperluas 17 September 2026 (permintaan langsung
+// pengguna: "ganti seperti icon icon seperti whatsapp instagram dll bukan
+// icon yang dibuat sendiri" -- susulan penolakan ikon hand-drawn baru di
+// components/icons.tsx yang sempat ditambahkan sesi ini) supaya bisa
+// menerima LucideIcon LANGSUNG, bukan cuma komponen fungsi biasa. Union
+// SAMA PERSIS dgn pola yang sudah ada di lib/icon-library.ts (galeri ikon
+// pilihan kreator) -- lucide-react memang SUDAH jadi satu-satunya sumber
+// ikon "representasi tipe konten ke pengguna" di proyek ini (lihat
+// PagePreview.tsx: HelpCircle utk FAQ, dst), components/icons.tsx sengaja
+// dibatasi ~44 ikon utk chrome UI dashboard sendiri saja.
+export type IconComponent = LucideIcon | ((props: { className?: string }) => React.ReactElement);
 
 // Modal "Tambah" ala Linktree (tangkapan layar pengguna): ganti trigger
 // polos jadi galeri pilihan berkategori. Cuma 2 kategori nyata yang bisa
@@ -357,24 +381,24 @@ export type ContentTile = {
 // deskripsinya ikut berganti bahasa, pola sama seperti buildBlockTypeLabel.
 function buildContentTiles(t: (key: string) => string): ContentTile[] {
   return [
-    { key: "link", label: t("dashboard.pages.links.contentTiles.link.label"), description: t("dashboard.pages.links.contentTiles.link.description"), Icon: IconLink },
-    { key: "video", label: t("dashboard.pages.links.contentTiles.video.label"), description: t("dashboard.pages.links.contentTiles.video.description"), Icon: IconPlayCircle },
-    { key: "faq", label: t("dashboard.pages.links.contentTiles.faq.label"), description: t("dashboard.pages.links.contentTiles.faq.description"), Icon: IconFaqBubble },
+    { key: "link", label: t("dashboard.pages.links.contentTiles.link.label"), description: t("dashboard.pages.links.contentTiles.link.description"), Icon: LucideLink },
+    { key: "video", label: t("dashboard.pages.links.contentTiles.video.label"), description: t("dashboard.pages.links.contentTiles.video.description"), Icon: LucideVideo },
+    { key: "faq", label: t("dashboard.pages.links.contentTiles.faq.label"), description: t("dashboard.pages.links.contentTiles.faq.description"), Icon: HelpCircle },
     // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
     // lalu keluar text, bukan hanya untuk faq saja" -- SATU judul klik-untuk-
     // buka bebas dari framing tanya-jawab (beda dari FAQ yang daftar Q&A),
     // cocok untuk kebijakan/detail/catatan tambahan apa pun.
-    { key: "accordion", label: t("dashboard.pages.links.contentTiles.accordion.label"), description: t("dashboard.pages.links.contentTiles.accordion.description"), Icon: IconChevronRight },
-    { key: "contact_form", label: t("dashboard.pages.links.contentTiles.contactForm.label"), description: t("dashboard.pages.links.contentTiles.contactForm.description"), Icon: IconContactCard },
+    { key: "accordion", label: t("dashboard.pages.links.contentTiles.accordion.label"), description: t("dashboard.pages.links.contentTiles.accordion.description"), Icon: ChevronDown },
+    { key: "contact_form", label: t("dashboard.pages.links.contentTiles.contactForm.label"), description: t("dashboard.pages.links.contentTiles.contactForm.description"), Icon: ClipboardList },
     // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
     // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
     // sebagai tautan langsung -- lihat "Link behavior" di form.
-    { key: "maps", label: t("dashboard.pages.links.contentTiles.maps.label"), description: t("dashboard.pages.links.contentTiles.maps.description"), Icon: IconMapPin },
+    { key: "maps", label: t("dashboard.pages.links.contentTiles.maps.label"), description: t("dashboard.pages.links.contentTiles.maps.description"), Icon: LucideMapPin },
     // Permintaan langsung pengguna (benchmark Lynk.id -- blok Teks sudah ada
     // di halaman utama mereka sejak awal, Jeonme sebelumnya cuma punya ini di
     // Halaman Tambahan). Paragraf polos, TANPA tautan/aksi -- murni konten
     // (pengumuman, deskripsi singkat, dsb) di antara blok-blok lain.
-    { key: "text", label: t("dashboard.pages.links.contentTiles.text.label"), description: t("dashboard.pages.links.contentTiles.text.description"), Icon: IconTextLines },
+    { key: "text", label: t("dashboard.pages.links.contentTiles.text.label"), description: t("dashboard.pages.links.contentTiles.text.description"), Icon: LucideType },
     // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
     // 2026 (template portofolio/wisata s.id pakai grid multi-foto, mockup
     // "Music" kompetitor lain pakai pemutar audio tertanam -- keduanya belum
@@ -382,41 +406,41 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
     // panel "Kelola foto"/"Kelola audio" yang muncul di kartu blok), bukan
     // lewat form pembuatan blok biasa -- beda dari tipe lain yang isinya
     // teks/URL, unggah file butuh multipart terpisah dari JSON create.
-    { key: "gallery", label: t("dashboard.pages.links.contentTiles.gallery.label"), description: t("dashboard.pages.links.contentTiles.gallery.description"), Icon: IconPhotoLibrary },
-    { key: "audio", label: t("dashboard.pages.links.contentTiles.audio.label"), description: t("dashboard.pages.links.contentTiles.audio.description"), Icon: IconMusicNote },
+    { key: "gallery", label: t("dashboard.pages.links.contentTiles.gallery.label"), description: t("dashboard.pages.links.contentTiles.gallery.description"), Icon: LucideImages },
+    { key: "audio", label: t("dashboard.pages.links.contentTiles.audio.label"), description: t("dashboard.pages.links.contentTiles.audio.description"), Icon: LucideMusic },
     // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
     // file pdf download". Pola upload sama seperti gallery/audio di atas
     // (file diunggah SETELAH blok dibuat, lewat panel "Kelola file" yang
     // muncul di kartu blok) -- beda dari produk digital berbayar di Toko,
     // blok ini gratis/lead-magnet (ebook, materi, template), tanpa checkout.
-    { key: "file", label: t("dashboard.pages.links.contentTiles.file.label"), description: t("dashboard.pages.links.contentTiles.file.description"), Icon: IconFileText },
+    { key: "file", label: t("dashboard.pages.links.contentTiles.file.label"), description: t("dashboard.pages.links.contentTiles.file.description"), Icon: LucideFileText },
     // "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
     // kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
     // Dev") -- gambar + badge + judul + deskripsi + tombol CTA, cocok utk
     // menonjolkan SATU karya/studi kasus di antara tautan biasa.
-    { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: IconCamera },
+    { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: Presentation },
     // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "ada blok
     // Jenis Rumah ketika di klik akan tampil semua blok dengan isi jenis
     // jenis rumah yang ada" -- blok drill-down 2 tingkat (daftar item ->
     // detail per item, gambar bisa multiple), lihat CatalogTakeoverView
     // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
     // (bukan buka tautan/expand di tempat seperti tipe lain).
-    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconCatalogTiles },
+    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: LayoutGrid },
     // 9 tile baru -- "full parity" mode Simple vs Builder (permintaan
     // langsung pengguna 12 September 2026, dikonfirmasi via
     // AskUserQuestion: "Full parity semua tipe blok"). Semua masuk kategori
     // "Lanjutan" (V2_TILE_KEYS.lanjutan, AddLinkModal.tsx) -- tipe yang
     // lebih jarang dipakai kreator awam, sama seperti project_showcase/
     // catalog yang sudah ada di kategori itu.
-    { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: IconExternal },
-    { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: IconCamera },
-    { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: IconVideoImage },
-    { key: "image_slider", label: t("dashboard.pages.links.contentTiles.imageSlider.label"), description: t("dashboard.pages.links.contentTiles.imageSlider.description"), Icon: IconSlideshow },
-    { key: "list", label: t("dashboard.pages.links.contentTiles.list.label"), description: t("dashboard.pages.links.contentTiles.list.description"), Icon: IconListCard },
-    { key: "countdown", label: t("dashboard.pages.links.contentTiles.countdown.label"), description: t("dashboard.pages.links.contentTiles.countdown.description"), Icon: IconClock },
-    { key: "produk", label: t("dashboard.pages.links.contentTiles.produk.label"), description: t("dashboard.pages.links.contentTiles.produk.description"), Icon: IconShoppingBag },
-    { key: "embed_link", label: t("dashboard.pages.links.contentTiles.embedLink.label"), description: t("dashboard.pages.links.contentTiles.embedLink.description"), Icon: IconLink },
-    { key: "embed", label: t("dashboard.pages.links.contentTiles.embed.label"), description: t("dashboard.pages.links.contentTiles.embed.description"), Icon: IconIframe },
+    { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: MousePointerClick },
+    { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: LucideImage },
+    { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: Clapperboard },
+    { key: "image_slider", label: t("dashboard.pages.links.contentTiles.imageSlider.label"), description: t("dashboard.pages.links.contentTiles.imageSlider.description"), Icon: GalleryHorizontal },
+    { key: "list", label: t("dashboard.pages.links.contentTiles.list.label"), description: t("dashboard.pages.links.contentTiles.list.description"), Icon: LucideList },
+    { key: "countdown", label: t("dashboard.pages.links.contentTiles.countdown.label"), description: t("dashboard.pages.links.contentTiles.countdown.description"), Icon: Timer },
+    { key: "produk", label: t("dashboard.pages.links.contentTiles.produk.label"), description: t("dashboard.pages.links.contentTiles.produk.description"), Icon: LucideShoppingBag },
+    { key: "embed_link", label: t("dashboard.pages.links.contentTiles.embedLink.label"), description: t("dashboard.pages.links.contentTiles.embedLink.description"), Icon: Link2 },
+    { key: "embed", label: t("dashboard.pages.links.contentTiles.embed.label"), description: t("dashboard.pages.links.contentTiles.embed.description"), Icon: Code2 },
   ];
 }
 
@@ -425,18 +449,24 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
 // badge di kartu daftar. Dipisah dari label (buildBlockTypeLabel di atas)
 // murni supaya ikonnya TIDAK perlu dihitung ulang tiap render bahasa
 // berganti (Icon component-nya konstan, cuma teksnya yang berubah).
+// BLOCK_TYPE_ICON -- SEMUA nilai migrasi ke lucide-react 17 September 2026
+// (permintaan langsung pengguna: "icon icon seperti whatsapp instagram
+// dll bukan icon yang dibuat sendiri", susulan penolakan ikon hand-drawn
+// baru di components/icons.tsx). Dipilih menyamai ikon yang SUDAH dipakai
+// PagePreview.tsx (halaman publik) di mana sudah ada persis (faq/video/
+// gallery/catalog), sisanya padanan lucide yang paling akurat.
 const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
-  video: IconPlayCircle,
-  faq: IconFaqBubble,
-  accordion: IconChevronRight,
-  contact_form: IconContactCard,
-  maps: IconMapPin,
-  text: IconTextLines,
-  gallery: IconPhotoLibrary,
-  audio: IconMusicNote,
-  file: IconFileText,
-  project_showcase: IconCamera,
-  catalog: IconCatalogTiles,
+  video: LucideVideo,
+  faq: HelpCircle,
+  accordion: ChevronDown,
+  contact_form: ClipboardList,
+  maps: LucideMapPin,
+  text: LucideType,
+  gallery: LucideImages,
+  audio: LucideMusic,
+  file: LucideFileText,
+  project_showcase: Presentation,
+  catalog: LayoutGrid,
   // Tipe blok landing (No.99) & Canvas Page Builder (migrasi 000096) --
   // bug dilaporkan pengguna 9 September 2026: blok "button" yang dibuat di
   // Canvas ikut tampil di daftar klasik ini (satu tabel `links` yang sama),
@@ -445,24 +475,24 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
   // links crash (bukan cuma satu baris). Semua tipe yang bisa ada di tabel
   // didaftarkan di sini; pemakaiannya di bawah TETAP punya fallback supaya
   // tipe baru di masa depan tidak pernah bisa menjatuhkan halaman lagi.
-  heading: IconTextLines,
+  heading: LucideHeading,
   // button/image/video_image/image_slider/list/countdown/embed_link/embed --
   // ikon disamakan dengan BuilderAddComponentModal.tsx (mode Builder) untuk
   // parity visual, bukan lagi placeholder generik defensif (produk BARU
   // ditambahkan di sini -- 8 tipe lain sudah didaftarkan lebih dulu sebagai
   // pencegahan crash, sekarang benar-benar dipakai membuat blok baru juga).
-  button: IconExternal,
-  image: IconCamera,
-  section: IconGrid,
-  column: IconColumns,
-  divider: IconGripVertical,
-  video_image: IconVideoImage,
-  embed_link: IconLink,
-  countdown: IconClock,
-  list: IconListCard,
-  image_slider: IconSlideshow,
-  embed: IconIframe,
-  produk: IconShoppingBag,
+  button: MousePointerClick,
+  image: LucideImage,
+  section: Rows3,
+  column: Columns3,
+  divider: SeparatorHorizontal,
+  video_image: Clapperboard,
+  embed_link: Link2,
+  countdown: Timer,
+  list: LucideList,
+  image_slider: GalleryHorizontal,
+  embed: Code2,
+  produk: LucideShoppingBag,
 };
 
 // FormField -- dipindahkan ke components/FormField.tsx (6 September 2026,

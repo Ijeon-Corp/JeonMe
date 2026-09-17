@@ -34,33 +34,39 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import {
-  IconCamera,
-  IconCatalogTiles,
   IconChevronRight,
-  IconClock,
   IconColumns,
-  IconContactCard,
   IconExternal,
-  IconFaqBubble,
-  IconFileText,
   IconGripVertical,
-  IconIframe,
-  IconLink,
-  IconListCard,
   IconLock,
-  IconMapPin,
-  IconMusicNote,
-  IconPhotoLibrary,
-  IconPlayCircle,
   IconPlus,
-  IconShoppingBag,
-  IconSlideshow,
   IconSparkle,
-  IconTextLines,
   IconTrash,
-  IconVideoImage,
   IconX,
 } from "@/components/icons";
+import {
+  ChevronDown,
+  Clapperboard,
+  Code2,
+  FileText as LucideFileText,
+  GalleryHorizontal,
+  HelpCircle,
+  Image as LucideImage,
+  Images as LucideImages,
+  LayoutGrid,
+  Link as LucideLink,
+  Link2,
+  List as LucideList,
+  MapPin as LucideMapPin,
+  MousePointerClick,
+  Music as LucideMusic,
+  Presentation,
+  ClipboardList,
+  ShoppingBag as LucideShoppingBag,
+  Timer,
+  Type as LucideType,
+  Video as LucideVideo,
+} from "lucide-react";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
@@ -154,27 +160,27 @@ function buildWhatsappButtonUrl(number: string, message: string): string {
 // sama persis akan diminta lagi kalau isinya berubah nanti.
 function getContentTiles(t: (key: string) => string): ContentTile[] {
   return [
-    { key: "link", label: t("dashboard.components.produkPageEditor.contentTiles.link.label"), description: t("dashboard.components.produkPageEditor.contentTiles.link.desc"), Icon: IconLink },
-    { key: "video", label: t("dashboard.components.produkPageEditor.contentTiles.video.label"), description: t("dashboard.components.produkPageEditor.contentTiles.video.desc"), Icon: IconPlayCircle },
-    { key: "faq", label: t("dashboard.components.produkPageEditor.contentTiles.faq.label"), description: t("dashboard.components.produkPageEditor.contentTiles.faq.desc"), Icon: IconFaqBubble },
+    { key: "link", label: t("dashboard.components.produkPageEditor.contentTiles.link.label"), description: t("dashboard.components.produkPageEditor.contentTiles.link.desc"), Icon: LucideLink },
+    { key: "video", label: t("dashboard.components.produkPageEditor.contentTiles.video.label"), description: t("dashboard.components.produkPageEditor.contentTiles.video.desc"), Icon: LucideVideo },
+    { key: "faq", label: t("dashboard.components.produkPageEditor.contentTiles.faq.label"), description: t("dashboard.components.produkPageEditor.contentTiles.faq.desc"), Icon: HelpCircle },
     // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
     // lalu keluar text, bukan hanya untuk faq saja" -- lihat catatan lengkap
     // di dashboard/links/page.tsx (pola sama persis, dipakai ulang di sini
     // untuk paritas halaman utama/Toko).
-    { key: "accordion", label: t("dashboard.components.produkPageEditor.contentTiles.accordion.label"), description: t("dashboard.components.produkPageEditor.contentTiles.accordion.desc"), Icon: IconChevronRight },
-    { key: "contact_form", label: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"), description: t("dashboard.components.produkPageEditor.contentTiles.contactForm.desc"), Icon: IconContactCard },
-    { key: "maps", label: t("dashboard.components.produkPageEditor.contentTiles.maps.label"), description: t("dashboard.components.produkPageEditor.contentTiles.maps.desc"), Icon: IconMapPin },
-    { key: "text", label: t("dashboard.components.produkPageEditor.contentTiles.text.label"), description: t("dashboard.components.produkPageEditor.contentTiles.text.desc"), Icon: IconTextLines },
+    { key: "accordion", label: t("dashboard.components.produkPageEditor.contentTiles.accordion.label"), description: t("dashboard.components.produkPageEditor.contentTiles.accordion.desc"), Icon: ChevronDown },
+    { key: "contact_form", label: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"), description: t("dashboard.components.produkPageEditor.contentTiles.contactForm.desc"), Icon: ClipboardList },
+    { key: "maps", label: t("dashboard.components.produkPageEditor.contentTiles.maps.label"), description: t("dashboard.components.produkPageEditor.contentTiles.maps.desc"), Icon: LucideMapPin },
+    { key: "text", label: t("dashboard.components.produkPageEditor.contentTiles.text.label"), description: t("dashboard.components.produkPageEditor.contentTiles.text.desc"), Icon: LucideType },
     // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
     // 2026, lihat catatan lengkap di dashboard/links/page.tsx (pola sama
     // persis, dipakai ulang di sini untuk paritas halaman utama/Toko).
-    { key: "gallery", label: t("dashboard.components.produkPageEditor.contentTiles.gallery.label"), description: t("dashboard.components.produkPageEditor.contentTiles.gallery.desc"), Icon: IconPhotoLibrary },
-    { key: "audio", label: t("dashboard.components.produkPageEditor.contentTiles.audio.label"), description: t("dashboard.components.produkPageEditor.contentTiles.audio.desc"), Icon: IconMusicNote },
+    { key: "gallery", label: t("dashboard.components.produkPageEditor.contentTiles.gallery.label"), description: t("dashboard.components.produkPageEditor.contentTiles.gallery.desc"), Icon: LucideImages },
+    { key: "audio", label: t("dashboard.components.produkPageEditor.contentTiles.audio.label"), description: t("dashboard.components.produkPageEditor.contentTiles.audio.desc"), Icon: LucideMusic },
     // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
     // file pdf download", lihat catatan lengkap di dashboard/links/page.tsx
     // (pola sama persis, dipakai ulang di sini untuk paritas halaman
     // utama/Toko).
-    { key: "file", label: t("dashboard.components.produkPageEditor.contentTiles.file.label"), description: t("dashboard.components.produkPageEditor.contentTiles.file.desc"), Icon: IconFileText },
+    { key: "file", label: t("dashboard.components.produkPageEditor.contentTiles.file.label"), description: t("dashboard.components.produkPageEditor.contentTiles.file.desc"), Icon: LucideFileText },
     // "produk" -- permintaan langsung pengguna, 13 September 2026 ("jangan
     // tampil langsung di link nya, tapi data produk itu akan bisa dipilih
     // ketika menggunakan blok produk"): grid otomatis Halaman Toko (SEMUA
@@ -183,19 +189,19 @@ function getContentTiles(t: (key: string) => string): ContentTile[] {
     // grid otomatis berhenti tampil & kreator kurasi sendiri produk mana
     // yang muncul, persis seperti blok "produk" di halaman Bio/Landing
     // (ProdukBlockEditor, dipakai ulang APA ADANYA di bawah).
-    { key: "produk", label: t("dashboard.components.produkPageEditor.contentTiles.produk.label"), description: t("dashboard.components.produkPageEditor.contentTiles.produk.desc"), Icon: IconShoppingBag },
+    { key: "produk", label: t("dashboard.components.produkPageEditor.contentTiles.produk.label"), description: t("dashboard.components.produkPageEditor.contentTiles.produk.desc"), Icon: LucideShoppingBag },
     // 10 tipe baru (susulan 15 September 2026) -- lihat catatan namespace
     // i18n di atas fungsi ini.
-    { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: IconCamera },
-    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconCatalogTiles },
-    { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: IconExternal },
-    { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: IconCamera },
-    { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: IconVideoImage },
-    { key: "image_slider", label: t("dashboard.pages.links.contentTiles.imageSlider.label"), description: t("dashboard.pages.links.contentTiles.imageSlider.description"), Icon: IconSlideshow },
-    { key: "list", label: t("dashboard.pages.links.contentTiles.list.label"), description: t("dashboard.pages.links.contentTiles.list.description"), Icon: IconListCard },
-    { key: "countdown", label: t("dashboard.pages.links.contentTiles.countdown.label"), description: t("dashboard.pages.links.contentTiles.countdown.description"), Icon: IconClock },
-    { key: "embed_link", label: t("dashboard.pages.links.contentTiles.embedLink.label"), description: t("dashboard.pages.links.contentTiles.embedLink.description"), Icon: IconLink },
-    { key: "embed", label: t("dashboard.pages.links.contentTiles.embed.label"), description: t("dashboard.pages.links.contentTiles.embed.description"), Icon: IconIframe },
+    { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: Presentation },
+    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: LayoutGrid },
+    { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: MousePointerClick },
+    { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: LucideImage },
+    { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: Clapperboard },
+    { key: "image_slider", label: t("dashboard.pages.links.contentTiles.imageSlider.label"), description: t("dashboard.pages.links.contentTiles.imageSlider.description"), Icon: GalleryHorizontal },
+    { key: "list", label: t("dashboard.pages.links.contentTiles.list.label"), description: t("dashboard.pages.links.contentTiles.list.description"), Icon: LucideList },
+    { key: "countdown", label: t("dashboard.pages.links.contentTiles.countdown.label"), description: t("dashboard.pages.links.contentTiles.countdown.description"), Icon: Timer },
+    { key: "embed_link", label: t("dashboard.pages.links.contentTiles.embedLink.label"), description: t("dashboard.pages.links.contentTiles.embedLink.description"), Icon: Link2 },
+    { key: "embed", label: t("dashboard.pages.links.contentTiles.embed.label"), description: t("dashboard.pages.links.contentTiles.embed.description"), Icon: Code2 },
   ];
 }
 
