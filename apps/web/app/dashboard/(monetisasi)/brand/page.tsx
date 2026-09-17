@@ -28,6 +28,9 @@ import {
   updateBrandCampaignStatus,
 } from "@/lib/api-client";
 import { useErrorToast } from "@/lib/use-error-toast";
+import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
+import { isRichTextEmpty } from "@/lib/catalog-blocks";
 
 // Marketplace Brand <-> Kreator (benchmark Linktree "Earn > Sponsored Links"
 // & "Brand Deals", 3 September 2026). Tiga tampilan lewat ?view= -- pola
@@ -157,7 +160,9 @@ function BrandPageInner() {
       await createBrandCampaign({
         kind: form.kind,
         title: form.title,
-        brief: form.brief,
+        // Editor kosong menghasilkan "<p></p>" (TipTap), bukan "" -- kirim
+        // "" supaya kartu/detail tidak merender blok brief kosong.
+        brief: isRichTextEmpty(form.brief) ? "" : form.brief,
         url: form.url,
         category: form.category,
         fee_idr: Number(form.fee_idr) || 0,
@@ -293,7 +298,12 @@ function BrandPageInner() {
                     <p className="mt-0.5 text-xs text-app-muted">
                       {t("dashboard.pages.brand.byBrand").replace("{username}", c.brand_username)} &middot; {feeLabel(c.fee_idr)} &middot; {slotsLabel(c)}
                     </p>
-                    {c.brief && <p className="mt-2 whitespace-pre-line text-xs text-app-ink">{c.brief}</p>}
+                    {c.brief && (
+                      <div
+                        className="jeon-rich-text-content mt-2 whitespace-pre-line text-xs text-app-ink"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(c.brief) }}
+                      />
+                    )}
                   </div>
                   {c.my_application_status ? (
                     <StatusBadge status={c.my_application_status} tone={STATUS_TONE[c.my_application_status]} label={statusLabel(c.my_application_status)} />
@@ -388,10 +398,22 @@ function BrandPageInner() {
                   <input required minLength={3} maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={INPUT} />
                 </label>
               </div>
-              <label className="text-xs font-semibold text-app-ink">
+              {/* Brief = rich text (permintaan langsung pengguna, 18
+                  September 2026: "di bagian field brief post a campaign
+                  buat jadi rich text dan lakukan formating yang rapih
+                  untuk hasil nya") -- RichTextEditor yang sama dengan blok
+                  "text"/FAQ; disimpan sebagai HTML, dirender lewat
+                  sanitizeRichTextHtml di tab Peluang, Jelajahi Campaign,
+                  & detail campaign. setForm memakai updater fungsional:
+                  onChange TipTap dipanggil dari closure saat editor
+                  dibuat, `form` di situ bisa basi. */}
+              <div className="text-xs font-semibold text-app-ink">
                 {t("dashboard.pages.brand.fieldBrief")}
-                <textarea rows={3} maxLength={3000} value={form.brief} onChange={(e) => setForm({ ...form, brief: e.target.value })} placeholder={t("dashboard.pages.brand.fieldBriefPlaceholder")} className={INPUT} />
-              </label>
+                <div className="mt-1 font-normal">
+                  <RichTextEditor html={form.brief} onChange={(html) => setForm((prev) => ({ ...prev, brief: html }))} />
+                </div>
+                <span className="mt-1 block text-[11px] font-normal text-app-muted">{t("dashboard.pages.brand.fieldBriefPlaceholder")}</span>
+              </div>
               <label className="text-xs font-semibold text-app-ink">
                 {t("dashboard.pages.brand.fieldUrl")}
                 <input type="url" required={form.kind === "sponsored_link"} value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://" className={INPUT} />

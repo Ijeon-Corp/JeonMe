@@ -60,8 +60,14 @@ func validateCampaignInput(in *brandCampaignInput) string {
 	if n := len([]rune(in.Title)); n < 3 || n > 120 {
 		return "judul 3-120 karakter"
 	}
-	if len([]rune(in.Brief)) > 3000 {
-		return "brief maksimal 3000 karakter"
+	// 10000 (bukan 3000 seperti semula): brief SEKARANG HTML rich text
+	// (RichTextEditor di dashboard/brand, 18 September 2026) -- tag
+	// <p>/<ul>/<li>/<strong> ikut terhitung, jadi batas lama akan menolak
+	// brief yang sebagai plain text dulunya masih muat. Disanitasi
+	// (DOMPurify whitelist sempit) di sisi klien saat dirender, pola sama
+	// seperti isi blok "text"/jawaban FAQ.
+	if len([]rune(in.Brief)) > 10000 {
+		return "brief maksimal 10000 karakter"
 	}
 	if len([]rune(in.Category)) > 60 {
 		return "kategori maksimal 60 karakter"

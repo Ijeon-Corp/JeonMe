@@ -9,6 +9,7 @@ import PageSkeleton from "@/components/Skeleton";
 import StatusBadge, { type StatusTone } from "@/components/dashboard/data/StatusBadge";
 import { IconBriefcase, IconChevronRight } from "@/components/icons";
 import { ApiError, BrandApplicationStatus, BrandCampaign, BrandCampaignKind, listBrandCampaigns } from "@/lib/api-client";
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useErrorToast } from "@/lib/use-error-toast";
 
 // Halaman "Jelajahi Campaign" -- permintaan langsung pengguna, 16 September
@@ -106,7 +107,16 @@ export default function DiscoverCampaignsPage() {
             <p className="text-xs text-app-muted">
               {t("dashboard.pages.brand.byBrand").replace("{username}", c.brand_username)} &middot; {feeLabel(c.fee_idr)} &middot; {slotsLabel(c)}
             </p>
-            {c.brief && <p className="line-clamp-3 whitespace-pre-line text-xs text-app-ink">{c.brief}</p>}
+            {/* brief = HTML rich text sejak 18 September 2026 (brief lama
+                plain text tetap benar lewat whitespace-pre-line) -- pola
+                sanitize + jeon-rich-text-content sama seperti blok "text"
+                di PagePreview.tsx. */}
+            {c.brief && (
+              <div
+                className="jeon-rich-text-content line-clamp-3 whitespace-pre-line text-xs text-app-ink"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(c.brief) }}
+              />
+            )}
             <span className="mt-auto flex items-center gap-0.5 pt-1 text-xs font-bold text-jeon-purple">
               {t("dashboard.pages.brand.discover.viewDetail")}
               <IconChevronRight className="h-3.5 w-3.5" />

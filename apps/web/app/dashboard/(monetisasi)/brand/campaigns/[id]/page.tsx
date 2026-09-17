@@ -9,6 +9,7 @@ import PageSkeleton from "@/components/Skeleton";
 import StatusBadge, { type StatusTone } from "@/components/dashboard/data/StatusBadge";
 import { IconBriefcase } from "@/components/icons";
 import { ApiError, BrandApplicationStatus, BrandCampaign, applyBrandCampaign, listBrandCampaigns } from "@/lib/api-client";
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useErrorToast } from "@/lib/use-error-toast";
 
 // Halaman detail satu campaign -- pasangan campaigns/page.tsx (lihat catatan
@@ -122,7 +123,14 @@ export default function CampaignDetailPage() {
         {campaign.brief && (
           <div className="mt-4 border-t border-app-border pt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.brand.discover.aboutTitle")}</p>
-            <p className="mt-1.5 whitespace-pre-line text-sm text-app-ink">{campaign.brief}</p>
+            {/* brief = HTML rich text sejak 18 September 2026 (brief lama
+                plain text tetap benar lewat whitespace-pre-line) -- pola
+                sanitize + jeon-rich-text-content sama seperti blok "text"
+                di PagePreview.tsx. */}
+            <div
+              className="jeon-rich-text-content mt-1.5 whitespace-pre-line text-sm leading-relaxed text-app-ink"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(campaign.brief) }}
+            />
           </div>
         )}
 
