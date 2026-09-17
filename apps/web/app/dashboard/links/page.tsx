@@ -58,16 +58,11 @@ import {
   IconChart,
   IconChevronRight,
   IconSettings,
-  IconClock,
-  IconClose,
   IconColumns,
-  IconCopy,
   IconFileText,
   IconGrid,
   IconGripVertical,
-  IconLock,
   IconMusicNote,
-  IconPaintbrush,
   IconPencil,
   IconPlus,
   IconStar,
@@ -78,6 +73,7 @@ import EmptyState from "@/components/EmptyState";
 import FormField from "@/components/FormField";
 import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
+import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -3146,211 +3142,30 @@ export default function DashboardLinksPage() {
                   di header (restrukturisasi UX 31 Agustus 2026, lihat
                   catatan toolsOpenId) -- markup & handler di dalamnya
                   TIDAK berubah, cuma dibungkus kondisional + kontainer. */}
+              {/* Strip alat kelola -- dipindah ke komponen bersama
+                  BlockToolsStrip.tsx (18 September 2026, redesain berlabel
+                  atas laporan pengguna "icon di settings blok secara ui/ux
+                  sangat tidak user friendly"); catatan alasan tiap gerbang
+                  (jadwal semua tipe, kunci penuh cuma link/button, sensitif
+                  utk tipe lain, featured cuma link, hapus lewat dialog
+                  konfirmasi) ikut pindah ke sana. */}
               {toolsOpenId === link.id && (
-              <div className="ml-11 flex flex-wrap items-center gap-1.5 rounded-jsm border-2 border-jeon-ink bg-app-surface-2 p-2">
-                {/* Jadwal tayang -- susulan 14 September 2026 (permintaan
-                    langsung pengguna: "buka jadwal tayang & kunci akses ke
-                    semua tipe blok, bukan cuma link"). starts_at/ends_at
-                    SUDAH generik per-row di backend (tidak ada gerbang
-                    block_type sama sekali, lihat UpdateLink) -- hanya
-                    mengontrol TAMPIL/TIDAK-nya seluruh blok, tidak
-                    menyembunyikan sebagian isi, jadi aman dibuka ke semua
-                    tipe. BEDA dari kunci age/code/subscribe di bawah. */}
-                <button
-                  type="button"
-                  onClick={() => openScheduleForm(link)}
-                  title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  <IconClock className="h-4 w-4" />
-                </button>
-                {/* Kunci akses PENUH (age/code/subscribe) -- SENGAJA TETAP
-                    dibatasi ke "link"/"button" (diperluas dari cuma "link"
-                    sebelumnya, backend UpdateLink SUDAH lama mengizinkan
-                    "button" juga, UI-nya saja belum pernah membuka). TIDAK
-                    diperluas ke block_type lain (video/text/dst) -- gerbang
-                    ini menyembunyikan `url` dari payload publik sampai
-                    terbuka, tapi block_type lain menaruh isinya di
-                    block_data yang SELALU terkirim penuh apa pun status
-                    kunci. Membuka menu ini ke tipe lain akan membuat UI
-                    mengklaim ada gerbang padahal isinya sudah bocor duluan
-                    -- persis alasan yang sama kenapa backend menolaknya
-                    (lihat komentar di UpdateLink, links.go). "sensitive"
-                    tetap satu-satunya opsi utk tipe lain, lewat toggle
-                    ringkas di bawah. */}
-                {(link.block_type === "link" || link.block_type === "button") && (
-                  <button
-                    type="button"
-                    onClick={() => openLockForm(link)}
-                    title={t("dashboard.pages.links.linkCard.lockTooltip")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.lock_type ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <IconLock className="h-4 w-4" />
-                  </button>
-                )}
-                {/* Tandai konten sensitif -- permintaan langsung pengguna, 20
-                    Agustus 2026: "tambahkan juga sensitive content supaya
-                    nanti tampil ke user ketika mau akses". Versi RINGKAS
-                    (satu klik toggle, bukan form kunci penuh) khusus block_type
-                    SELAIN "link"/"button" -- lihat catatan lengkap di
-                    handleToggleSensitive kenapa age/kode/subscribe tidak
-                    ditawarkan di sini. "button" dikeluarkan 14 September
-                    2026 bersamaan dgn menu kunci penuh dibuka utknya
-                    (redundan kalau dua-duanya tampil sekaligus). */}
-                {link.block_type !== "link" && link.block_type !== "button" && (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSensitive(link)}
-                    title={link.lock_type === "sensitive" ? t("dashboard.pages.links.linkCard.unmarkSensitive") : t("dashboard.pages.links.linkCard.markSensitive")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.lock_type === "sensitive" ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <span aria-hidden className="text-sm leading-none">⚠️</span>
-                  </button>
-                )}
-                {/* Kontrol ikon -- permintaan langsung pengguna, 14 Agustus 2026:
-                    "harusnya semua tipe ini... bisa ubah icon" -- sebelumnya
-                    unggah/galeri/hapus ikon cuma tersedia utk tautan biasa,
-                    sekarang berlaku utk SEMUA block_type (UploadIcon/DeleteIcon
-                    backend & updateLink icon_key sudah generik per-row, tidak
-                    peduli block_type). */}
-                <label
-                  title={link.custom_icon_url ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
-                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.custom_icon_url ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  {iconUploadingId === link.id ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                  ) : (
-                    <IconCamera className="h-4 w-4" />
-                  )}
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                    onChange={(e) => handleIconUpload(e, link)}
-                    disabled={iconUploadingId === link.id}
-                    className="hidden"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIconPickerLinkId(link.id)}
-                  title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.icon_key ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                {/* Warna ikon kustom -- permintaan langsung pengguna, 22
-                    Agustus 2026: "bisa mengubah warna yang kita inginkan
-                    untuk icon di blok daripada hanya warna hitam saja".
-                    Disembunyikan kalau pakai ikon kustom hasil unggah
-                    (custom_icon_url, gambar raster) -- warna cuma berlaku
-                    utk ikon SVG (galeri/deteksi otomatis), tidak masuk akal
-                    "mewarnai ulang" foto. <input type="color"> asli
-                    disembunyikan (opacity-0) menutupi swatch bulat supaya
-                    klik di mana pun pada tombol membuka color picker native
-                    browser -- pola sama seperti label unggah file di atas. */}
-                {!link.custom_icon_url && (
-                  <label
-                    title={link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
-                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10"
-                  >
-                    {link.icon_color ? (
-                      <span
-                        className="h-4 w-4 rounded-full ring-1 ring-border"
-                        style={{ backgroundColor: link.icon_color }}
-                        aria-hidden
-                      />
-                    ) : (
-                      <IconPaintbrush className="h-4 w-4 text-app-muted" />
-                    )}
-                    <input
-                      type="color"
-                      value={link.icon_color || "#000000"}
-                      onChange={(e) => handleIconColorChange(link, e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </label>
-                )}
-                {link.icon_color && (
-                  <button
-                    type="button"
-                    onClick={() => handleClearIconColor(link)}
-                    title={t("dashboard.pages.links.linkCard.clearIconColor")}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-                  >
-                    <IconClose className="h-4 w-4" />
-                  </button>
-                )}
-                {(link.custom_icon_url || link.icon_key) && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIcon(link)}
-                    title={t("dashboard.pages.links.linkCard.removeIcon")}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-                  >
-                    <IconClose className="h-4 w-4" />
-                  </button>
-                )}
-                {/* Modul "Featured Link" (permintaan langsung pengguna,
-                    referensi "Featured Layout" Linktree sungguhan): tampil
-                    sebagai kartu thumbnail 16:9, bukan baris klasik -- lihat
-                    panel unggah thumbnail di bawah yang muncul begitu status
-                    ini menyala. Khusus tautan biasa (thumbnail 16:9 tidak
-                    relevan utk blok video/faq/maps/text yang punya rendering
-                    sendiri). */}
-                {link.block_type === "link" && (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeatured(link)}
-                    title={link.is_featured ? t("dashboard.pages.links.linkCard.unfeature") : t("dashboard.pages.links.linkCard.makeFeatured")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.is_featured ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <IconStar className="h-4 w-4" />
-                  </button>
-                )}
-                {/* "Edit Konten" pindah ke baris header kartu (aksi utama
-                    blok harus selalu terlihat, bukan tersembunyi di strip). */}
-                <div className="flex-1" />
-                {/* Duplikat -- permintaan langsung pengguna, 20 Agustus 2026:
-                    "di bagian link bio di blok nya tambahkan fungsi duplicate".
-                    Berlaku utk SEMUA block_type, langsung tereksekusi tanpa
-                    dialog konfirmasi (beda dari Hapus di bawah) -- duplikat
-                    murni MENAMBAH baris baru, tidak menghapus/mengubah apa pun
-                    yang sudah ada, jadi tidak ada risiko kehilangan data yang
-                    perlu dikonfirmasi dulu. */}
-                <button
-                  type="button"
-                  onClick={() => handleDuplicate(link)}
-                  title={t("dashboard.pages.links.linkCard.duplicate")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
-                >
-                  <IconCopy className="h-4 w-4" />
-                </button>
-                {/* Permintaan langsung pengguna, 14 Agustus 2026: "kalau mau
-                    hapus tampilkan toast peringatan dulu" -- sebelumnya hapus
-                    langsung tanpa konfirmasi apa pun (link maupun blok
-                    lainnya), sekarang buka dialog peringatan dulu (lihat
-                    confirmDeleteId & modalnya di bawah <ul>). */}
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(link.id)}
-                  title={t("dashboard.pages.links.common.delete")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                >
-                  <IconTrash className="h-4 w-4" />
-                </button>
-              </div>
+                <BlockToolsStrip
+                  link={link}
+                  className="ml-11"
+                  iconUploading={iconUploadingId === link.id}
+                  onSchedule={() => openScheduleForm(link)}
+                  onLock={() => openLockForm(link)}
+                  onToggleSensitive={() => handleToggleSensitive(link)}
+                  onIconUpload={(e) => handleIconUpload(e, link)}
+                  onOpenIconGallery={() => setIconPickerLinkId(link.id)}
+                  onIconColorChange={(color) => handleIconColorChange(link, color)}
+                  onClearIconColor={() => handleClearIconColor(link)}
+                  onRemoveIcon={() => handleRemoveIcon(link)}
+                  onToggleFeatured={() => handleToggleFeatured(link)}
+                  onDuplicate={() => handleDuplicate(link)}
+                  onDelete={() => setConfirmDeleteId(link.id)}
+                />
               )}
 
               {link.block_type === "link" && link.is_featured && (

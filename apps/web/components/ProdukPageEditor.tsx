@@ -39,23 +39,16 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import {
-  IconCamera,
   IconChart,
   IconChevronRight,
-  IconClock,
-  IconClose,
   IconColumns,
-  IconCopy,
   IconExternal,
   IconGripVertical,
   IconLock,
-  IconPaintbrush,
   IconPencil,
   IconPlus,
   IconSettings,
   IconSparkle,
-  IconStar,
-  IconTrash,
   IconX,
 } from "@/components/icons";
 import { blockPreviewFor, isBlockExpandable, maxGalleryImages } from "@/lib/block-preview";
@@ -92,6 +85,7 @@ import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/co
 import Toggle from "@/components/Toggle";
 import SectionCard from "@/components/dashboard/page/SectionCard";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
+import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import {
   DesignSectionPatch,
   FontSection,
@@ -2204,144 +2198,26 @@ function BlockSection({
               </div>
             )}
 
-            {/* Strip alat kelola -- jadwal/kunci/sensitif/kontrol ikon/
-                featured/duplikat/hapus, dilipat di balik tombol Kelola di
-                header. Gerbang per tombol (kunci penuh cuma link/button,
-                sensitif utk tipe lain, featured cuma link) SAMA PERSIS &
-                dengan alasan yang sama seperti dashboard/links/page.tsx. */}
+            {/* Strip alat kelola -- komponen bersama BlockToolsStrip.tsx
+                (berlabel, sama persis dgn Links); gerbang per tipe & alasannya
+                ada di komponen itu. */}
             {toolsOpenId === link.id && (
-              <div className="ml-6 flex flex-wrap items-center gap-1.5 rounded-jsm border-2 border-jeon-ink bg-app-surface-2 p-2">
-                <button
-                  type="button"
-                  onClick={() => openScheduleForm(link)}
-                  title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  <IconClock className="h-4 w-4" />
-                </button>
-                {(link.block_type === "link" || link.block_type === "button") && (
-                  <button
-                    type="button"
-                    onClick={() => openLockForm(link)}
-                    title={t("dashboard.pages.links.linkCard.lockTooltip")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.lock_type ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <IconLock className="h-4 w-4" />
-                  </button>
-                )}
-                {link.block_type !== "link" && link.block_type !== "button" && (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSensitive(link)}
-                    title={link.lock_type === "sensitive" ? t("dashboard.pages.links.linkCard.unmarkSensitive") : t("dashboard.pages.links.linkCard.markSensitive")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.lock_type === "sensitive" ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <span aria-hidden className="text-sm leading-none">⚠️</span>
-                  </button>
-                )}
-                <label
-                  title={link.custom_icon_url ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
-                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.custom_icon_url ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  {iconUploadingId === link.id ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                  ) : (
-                    <IconCamera className="h-4 w-4" />
-                  )}
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                    onChange={(e) => handleIconUpload(e, link)}
-                    disabled={iconUploadingId === link.id}
-                    className="hidden"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIconPickerLinkId(link.id)}
-                  title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                    link.icon_key ? "text-jeon-purple" : "text-app-muted"
-                  }`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                {!link.custom_icon_url && (
-                  <label
-                    title={link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
-                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10"
-                  >
-                    {link.icon_color ? (
-                      <span className="h-4 w-4 rounded-full ring-1 ring-border" style={{ backgroundColor: link.icon_color }} aria-hidden />
-                    ) : (
-                      <IconPaintbrush className="h-4 w-4 text-app-muted" />
-                    )}
-                    <input
-                      type="color"
-                      value={link.icon_color || "#000000"}
-                      onChange={(e) => handleIconColorChange(link, e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </label>
-                )}
-                {link.icon_color && (
-                  <button
-                    type="button"
-                    onClick={() => handleClearIconColor(link)}
-                    title={t("dashboard.pages.links.linkCard.clearIconColor")}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-                  >
-                    <IconClose className="h-4 w-4" />
-                  </button>
-                )}
-                {(link.custom_icon_url || link.icon_key) && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIcon(link)}
-                    title={t("dashboard.pages.links.linkCard.removeIcon")}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
-                  >
-                    <IconClose className="h-4 w-4" />
-                  </button>
-                )}
-                {link.block_type === "link" && (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeatured(link)}
-                    title={link.is_featured ? t("dashboard.pages.links.linkCard.unfeature") : t("dashboard.pages.links.linkCard.makeFeatured")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                      link.is_featured ? "text-jeon-purple" : "text-app-muted"
-                    }`}
-                  >
-                    <IconStar className="h-4 w-4" />
-                  </button>
-                )}
-                <div className="flex-1" />
-                <button
-                  type="button"
-                  onClick={() => handleDuplicate(link)}
-                  title={t("dashboard.pages.links.linkCard.duplicate")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
-                >
-                  <IconCopy className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(link.id)}
-                  title={t("dashboard.pages.links.common.delete")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                >
-                  <IconTrash className="h-4 w-4" />
-                </button>
-              </div>
+              <BlockToolsStrip
+                link={link}
+                className="ml-6"
+                iconUploading={iconUploadingId === link.id}
+                onSchedule={() => openScheduleForm(link)}
+                onLock={() => openLockForm(link)}
+                onToggleSensitive={() => handleToggleSensitive(link)}
+                onIconUpload={(e) => handleIconUpload(e, link)}
+                onOpenIconGallery={() => setIconPickerLinkId(link.id)}
+                onIconColorChange={(color) => handleIconColorChange(link, color)}
+                onClearIconColor={() => handleClearIconColor(link)}
+                onRemoveIcon={() => handleRemoveIcon(link)}
+                onToggleFeatured={() => handleToggleFeatured(link)}
+                onDuplicate={() => handleDuplicate(link)}
+                onDelete={() => setConfirmDeleteId(link.id)}
+              />
             )}
 
             {link.block_type === "link" && link.is_featured && (

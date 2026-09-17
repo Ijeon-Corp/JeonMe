@@ -891,6 +891,23 @@ export const dictionaries = {
             removeIcon: "Hapus ikon (kembali ke deteksi/ikon default)",
             unfeature: "Matikan Featured (kembali ke baris klasik)",
             makeFeatured: "Jadikan Featured (kartu thumbnail besar)",
+            // toolLabels -- label teks di samping ikon strip alat kelola blok
+            // (BlockToolsStrip.tsx, 18 September 2026); tooltip panjang di
+            // atas tetap dipakai sebagai `title`.
+            toolLabels: {
+              schedule: "Jadwal",
+              lock: "Kunci",
+              sensitive: "Sensitif",
+              featured: "Featured",
+              duplicate: "Duplikat",
+              delete: "Hapus",
+              iconGroup: "Ikon",
+              uploadIcon: "Unggah",
+              iconGallery: "Galeri",
+              iconColor: "Warna",
+              clearIconColor: "Reset warna",
+              removeIcon: "Hapus ikon",
+            },
             // editContent -- redesain "Konsisten & Ringkas" (14 September
             // 2026, permintaan langsung pengguna: "saya masih kurang suka ui
             // dan ux dari mode simple ini di tiap blok nya", Opsi A dari 3
@@ -4110,6 +4127,20 @@ export const dictionaries = {
             removeIcon: "Remove icon (revert to auto-detected/default icon)",
             unfeature: "Turn off Featured (revert to classic row)",
             makeFeatured: "Make Featured (large thumbnail card)",
+            toolLabels: {
+              schedule: "Schedule",
+              lock: "Lock",
+              sensitive: "Sensitive",
+              featured: "Featured",
+              duplicate: "Duplicate",
+              delete: "Delete",
+              iconGroup: "Icon",
+              uploadIcon: "Upload",
+              iconGallery: "Gallery",
+              iconColor: "Color",
+              clearIconColor: "Reset color",
+              removeIcon: "Remove icon",
+            },
             editContent: "Edit Content",
             contentPreviewEmpty: "No content yet",
             duplicate: "Duplicate",
