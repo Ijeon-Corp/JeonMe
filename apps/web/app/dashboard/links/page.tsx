@@ -3102,11 +3102,6 @@ export default function DashboardLinksPage() {
                       </button>
                     </div>
                   )}
-                  {link.block_type !== "link" && (
-                    <span className="mt-1 inline-block rounded-full bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
-                      {blockTypeLabel[link.block_type] ?? link.block_type}
-                    </span>
-                  )}
                   {/* Baris ringkasan -- redesain "Konsisten & Ringkas" (14
                       September 2026, lihat catatan lengkap di
                       blockPreviewFor): info penting blok (jumlah produk/
