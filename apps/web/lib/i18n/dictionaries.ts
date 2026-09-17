@@ -1365,6 +1365,11 @@ export const dictionaries = {
             flashSale: "Flash Sale",
             pwyw: "Bayar Seikhlasnya",
             collaboratorsCount: "{count} kolaborator",
+            // inactive/uploadFileInline/uploadCoverInline -- status & unggah
+            // langsung di baris tabel Produk (18 September 2026).
+            inactive: "Nonaktif",
+            uploadFileInline: "Unggah file",
+            uploadCoverInline: "Unggah sampul",
           },
           minPriceLabel: "Min",
           notShown: "Tidak ditampilkan",
@@ -1449,6 +1454,12 @@ export const dictionaries = {
           coverPicker: {
             placeholder: "Pilih gambar sampul (wajib)",
           },
+          // filePicker -- File Produk langsung di form buat produk digital
+          // (18 September 2026), lihat renderFilePicker di CreateProductForm.
+          filePicker: {
+            placeholder: "Pilih file produk (wajib) -- pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB",
+            hint: "Produk langsung aktif begitu file & sampul terunggah -- tidak perlu buka Kelola lagi.",
+          },
           errors: {
             loadProducts: "Gagal memuat produk.",
             loadTokoPage: "Gagal memuat Halaman Toko.",
@@ -1460,6 +1471,7 @@ export const dictionaries = {
             loadOverview: "Gagal memuat ringkasan toko.",
             nameAndPriceRequired: "Nama produk wajib diisi dan harga minimal Rp1.000.",
             coverRequired: "Gambar sampul wajib diunggah.",
+            productFileRequired: "File produk wajib diunggah untuk produk digital.",
             categoryRequired: "Kategori wajib dipilih atau diisi.",
             createProduct: "Gagal membuat produk.",
             nameAndPriceRequiredShort: "Nama wajib diisi dan harga minimal Rp1.000.",
@@ -4521,6 +4533,9 @@ export const dictionaries = {
             flashSale: "Flash Sale",
             pwyw: "Pay What You Want",
             collaboratorsCount: "{count} collaborators",
+            inactive: "Inactive",
+            uploadFileInline: "Upload file",
+            uploadCoverInline: "Upload cover",
           },
           minPriceLabel: "Min",
           notShown: "Not shown",
@@ -4605,6 +4620,10 @@ export const dictionaries = {
           coverPicker: {
             placeholder: "Choose a cover image (required)",
           },
+          filePicker: {
+            placeholder: "Choose the product file (required) -- pdf/zip/epub/mp4/mp3/mov/image, max 100MB",
+            hint: "The product goes live as soon as the file & cover are uploaded -- no need to open Manage afterwards.",
+          },
           errors: {
             loadProducts: "Failed to load products.",
             loadTokoPage: "Failed to load the Store Page.",
@@ -4616,6 +4635,7 @@ export const dictionaries = {
             loadOverview: "Failed to load the store summary.",
             nameAndPriceRequired: "Product name is required and the price must be at least Rp1,000.",
             coverRequired: "A cover image must be uploaded.",
+            productFileRequired: "A product file must be uploaded for digital products.",
             categoryRequired: "A category must be chosen or entered.",
             createProduct: "Failed to create the product.",
             nameAndPriceRequiredShort: "Name is required and the price must be at least Rp1,000.",

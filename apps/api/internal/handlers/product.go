@@ -1337,8 +1337,11 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
+	// moderation_locked_at IS NULL: produk yang di-takedown admin tidak
+	// boleh aktif lagi cuma karena kreator mengunggah ulang filenya --
+	// gerbang yang sama dengan Update (lihat cek moderationLocked di sana).
 	if _, err := h.DB.Exec(ctx, `
-		UPDATE products SET file_key = $1, file_size_bytes = $2, is_active = (is_active OR $3 != '') WHERE id = $4
+		UPDATE products SET file_key = $1, file_size_bytes = $2, is_active = (is_active OR ($3 != '' AND moderation_locked_at IS NULL)) WHERE id = $4
 	`, key, fileHeader.Size, coverImageURL, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "file terunggah tapi gagal menyimpan referensinya"})
 		return
@@ -1414,7 +1417,23 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 	// tanpa ini URL sampul byte-identik antar-unggahan & browser/CDN akan
 	// terus menampilkan sampul lama walau unggahan baru sudah sukses.
 	coverURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
-	if _, err := h.DB.Exec(ctx, `UPDATE products SET cover_image_url = $1 WHERE id = $2`, coverURL, productID); err != nil {
+	// Auto-aktif begitu file DAN sampul lengkap, apa pun URUTAN unggahnya
+	// -- cermin gerbang di UploadFile (aktif kalau sampul sudah ada).
+	// Sebelum 18 September 2026 sampul selalu terunggah lebih dulu (wajib
+	// sejak create, file baru menyusul lewat modal Kelola), jadi cukup
+	// UploadFile yang mengaktifkan. Sekarang form buat produk digital
+	// meminta file DAN sampul sekaligus (permintaan langsung pengguna:
+	// "product file tampilkan langsung saja ... supaya user tidak lupa"),
+	// dan file diunggah DULUAN (lebih besar) -- tanpa ini, produk digital
+	// yang dibuat lewat form baru tidak pernah aktif. Berlaku juga utk
+	// tombol "Unggah file"/"Unggah sampul" inline di tabel produk yang
+	// bisa diklik dalam urutan apa pun. payment_link/external_link tidak
+	// terpengaruh (file_key selalu kosong, aktivasinya tetap lewat Update
+	// eksplisit dari CreateProductForm.tsx). Guard moderation_locked_at
+	// sama dengan Update & UploadFile.
+	if _, err := h.DB.Exec(ctx, `
+		UPDATE products SET cover_image_url = $1, is_active = (is_active OR (file_key != '' AND moderation_locked_at IS NULL)) WHERE id = $2
+	`, coverURL, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "sampul terunggah tapi gagal menyimpan referensinya"})
 		return
 	}

@@ -39,12 +39,14 @@ import {
 } from "@/lib/api-client";
 import {
   IconBox,
+  IconCamera,
   IconChevronRight,
   IconExternal,
   IconPlus,
   IconSearch,
   IconSparkle,
   IconTrash,
+  IconUpload,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
@@ -569,7 +571,10 @@ function DashboardProductsPageInner() {
     try {
       await uploadProductFile(product.id, file);
       const isPdf = file.name.toLowerCase().endsWith(".pdf");
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, has_file: true, is_pdf: isPdf } : p)));
+      // is_active ikut dinaikkan optimis mengikuti gerbang backend
+      // (product.go: digital aktif begitu file DAN sampul ada) -- badge
+      // "Nonaktif" di baris tabel langsung hilang tanpa reload.
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, has_file: true, is_pdf: isPdf, is_active: p.is_active || Boolean(p.cover_image_url) } : p)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.uploadFile"));
     } finally {
@@ -582,7 +587,15 @@ function DashboardProductsPageInner() {
     setCoverBusyId(product.id);
     try {
       const { cover_image_url } = await uploadProductCover(product.id, file);
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, cover_image_url } : p)));
+      // is_active optimis mengikuti gerbang backend: payment_link/
+      // external_link aktif begitu sampul ada, digital butuh file juga.
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id
+            ? { ...p, cover_image_url, is_active: p.is_active || p.product_kind === "payment_link" || p.product_kind === "external_link" || p.has_file }
+            : p
+        )
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.uploadCover"));
     } finally {
@@ -1335,6 +1348,64 @@ function DashboardProductsPageInner() {
                                   <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold text-[#111111]">
                                     {t("dashboard.pages.products.badges.collaboratorsCount").replace("{count}", String(p.collaborator_splits.length))}
                                   </span>
+                                )}
+                                {/* Status nonaktif + unggah INLINE -- permintaan
+                                    langsung pengguna, 18 September 2026: "product
+                                    file tampilkan langsung saja untuk diisi
+                                    daripada harus klik manage dulu supaya user
+                                    tidak lupa". Sebelumnya tabel ini tidak
+                                    menampilkan status aktif/nonaktif sama sekali,
+                                    dan satu-satunya jalan unggah file/sampul ada di
+                                    modal Kelola -- produk digital yang filenya belum
+                                    diunggah diam-diam nonaktif & tidak tampil di
+                                    blok Produk. Sekarang tiap baris nonaktif
+                                    langsung menampilkan tombol unggah yang kurang
+                                    (handler SAMA dgn modal Kelola). */}
+                                {!p.is_active && (
+                                  <span className="rounded-full border-2 border-[#111111] bg-jeon-coral px-1.5 py-0.5 text-[9px] font-bold text-[#111111]">
+                                    {t("dashboard.pages.products.badges.inactive")}
+                                  </span>
+                                )}
+                                {p.product_kind !== "payment_link" && p.product_kind !== "external_link" && !p.has_file && (
+                                  <label
+                                    className={`flex cursor-pointer items-center gap-1 rounded-full border-2 border-jeon-purple bg-jeon-lavender/40 px-2 py-0.5 text-[9px] font-bold text-jeon-purple hover:bg-jeon-lavender ${
+                                      busyId === p.id ? "opacity-60" : ""
+                                    }`}
+                                  >
+                                    <IconUpload className="h-2.5 w-2.5" />
+                                    {busyId === p.id ? t("dashboard.pages.products.manageModal.uploading") : t("dashboard.pages.products.badges.uploadFileInline")}
+                                    <input
+                                      type="file"
+                                      className="hidden"
+                                      disabled={busyId === p.id}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleUpload(p, file);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                                {!p.cover_image_url && (
+                                  <label
+                                    className={`flex cursor-pointer items-center gap-1 rounded-full border-2 border-jeon-purple bg-jeon-lavender/40 px-2 py-0.5 text-[9px] font-bold text-jeon-purple hover:bg-jeon-lavender ${
+                                      coverBusyId === p.id ? "opacity-60" : ""
+                                    }`}
+                                  >
+                                    <IconCamera className="h-2.5 w-2.5" />
+                                    {coverBusyId === p.id ? t("dashboard.pages.products.manageModal.uploading") : t("dashboard.pages.products.badges.uploadCoverInline")}
+                                    <input
+                                      type="file"
+                                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                      className="hidden"
+                                      disabled={coverBusyId === p.id}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleUploadCover(p, file);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                  </label>
                                 )}
                               </div>
                             </div>

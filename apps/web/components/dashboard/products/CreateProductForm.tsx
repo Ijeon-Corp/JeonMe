@@ -8,6 +8,7 @@ import {
   listProducts,
   updateProduct,
   uploadProductCover,
+  uploadProductFile,
 } from "@/lib/api-client";
 import { IconCamera, IconExternal, IconUpload, IconWallet } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
@@ -54,6 +55,31 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
+}
+
+// renderFilePicker -- File Produk LANGSUNG di form buat produk digital
+// (permintaan langsung pengguna, 18 September 2026: "product file
+// tampilkan langsung saja untuk diisi daripada harus klik manage dulu
+// supaya user tidak lupa"). SEBELUMNYA file cuma bisa diunggah belakangan
+// lewat modal Kelola -- produk digital yang dibuat tanpa file diam-diam
+// nonaktif & tidak tampil di blok Produk (laporan "4 produk muncul 3").
+// Wajib, pola sama renderCoverPicker (sampul wajib sejak 19 Agustus 2026).
+// accept mengikuti daftar yang ditampilkan di atas tabel Produk (pdf/zip/
+// epub/mp4/mp3/mov/gambar, maks 100MB -- batas ukuran divalidasi backend).
+function renderFilePicker(productFile: File | null, setProductFile: (f: File | null) => void, t: (key: string) => string) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-jeon-purple/60 bg-jeon-lavender/20 px-3.5 py-2.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+      <IconUpload className="h-4 w-4 flex-shrink-0 text-jeon-purple" />
+      <span className="min-w-0 truncate">{productFile ? productFile.name : t("dashboard.pages.products.filePicker.placeholder")}</span>
+      <input
+        type="file"
+        required
+        accept=".pdf,.zip,.epub,.mp4,.mp3,.mov,.jpg,.jpeg,.png,.webp"
+        className="hidden"
+        onChange={(e) => setProductFile(e.target.files?.[0] ?? null)}
       />
     </label>
   );
@@ -176,6 +202,7 @@ export default function CreateProductForm({
   const [priceIDR, setPriceIDR] = useState("");
   const [category, setCategory] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [productFile, setProductFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [paymentLimitCount, setPaymentLimitCount] = useState("");
@@ -200,6 +227,10 @@ export default function CreateProductForm({
       onError(t("dashboard.pages.products.errors.nameAndPriceRequired"));
       return;
     }
+    if (!productFile) {
+      onError(t("dashboard.pages.products.errors.productFileRequired"));
+      return;
+    }
     if (!coverFile) {
       onError(t("dashboard.pages.products.errors.coverRequired"));
       return;
@@ -211,10 +242,14 @@ export default function CreateProductForm({
     setCreating(true);
     try {
       const { id } = await createProduct({ name, price_idr: price, category: category.trim() });
-      // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
-      // diunggah LANGSUNG setelah produk dibuat. Produk digital MASIH
-      // perlu unggah File Produk & aktivasi manual terpisah seperti
-      // sebelumnya (tidak berubah) -- sampul cuma satu syarat TAMBAHAN.
+      // Sampul WAJIB (19 Agustus 2026) & File Produk WAJIB (18 September
+      // 2026, lihat renderFilePicker) -- keduanya diunggah LANGSUNG setelah
+      // produk dibuat, sehingga produk digital langsung AKTIF (gerbang
+      // aktivasi backend: file + sampul) tanpa perlu buka modal Kelola.
+      // File dulu (biasanya jauh lebih besar): kalau gagal di tengah,
+      // produk tetap ada tapi nonaktif & barisnya menampilkan tombol
+      // "Unggah file" inline utk mengulang.
+      await uploadProductFile(id, productFile);
       await uploadProductCover(id, coverFile);
       onCreated(await findCreated(id));
     } catch (err) {
@@ -403,6 +438,8 @@ export default function CreateProductForm({
             t={t}
           />
         </div>
+        {renderFilePicker(productFile, setProductFile, t)}
+        <p className="-mt-1 text-[11px] text-app-muted">{t("dashboard.pages.products.filePicker.hint")}</p>
         {renderCoverPicker(coverFile, setCoverFile, t)}
         <div className="flex gap-2">
           <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
