@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { IconChevronRight, IconClose } from "@/components/icons";
-import { Share2 } from "lucide-react";
+import { Images, Share2 } from "lucide-react";
 import type { GalleryDisplay } from "@/lib/gallery-display";
 
 // Blok "gallery" (hasil analisa galeri tema kompetitor, 17 Agustus 2026 --
@@ -134,11 +134,23 @@ export default function GalleryBlock({
 
   const captionFor = (src: string): GalleryCaption => captions[src] ?? {};
 
-  if (display === "stack" && images.length > 0) {
+  if ((display === "stack" || display === "fan") && images.length > 0) {
     // Tiga foto teratas dikipas: yang paling atas (index 0) tegak & penuh,
     // dua di belakangnya miring kiri/kanan sedikit -- meniru referensi.
+    // "fan" (19 September 2026, screenshot referensi kedua dari pengguna):
+    // foto LANSKAP; dua foto belakang mengintip di tepi kiri & kanan
+    // (bukan bertumpuk rapat di belakang foto depan), sedikit lebih tinggi
+    // dari foto depan; judul besar + subjudul berikon di bawah. Popup
+    // (lembar) yang dibuka SAMA dengan "stack".
+    const isFan = display === "fan";
     const fan = images.slice(0, 3);
-    const tilt = ["rotate-0 z-30", "-rotate-6 z-20 scale-95", "rotate-6 z-10 scale-95"];
+    const tilt = isFan
+      ? [
+          "left-[15%] right-[15%] top-[10%] bottom-[10%] rotate-0 z-30",
+          "left-[1%] right-[31%] top-[3%] bottom-[7%] -rotate-6 z-20",
+          "left-[31%] right-[1%] top-[3%] bottom-[7%] rotate-6 z-10",
+        ]
+      : ["inset-x-[6%] inset-y-[8%] rotate-0 z-30", "inset-x-[6%] inset-y-[8%] -rotate-6 z-20 scale-95", "inset-x-[6%] inset-y-[8%] rotate-6 z-10 scale-95"];
     return (
       <div className={cardClassName}>
         <button
@@ -147,22 +159,25 @@ export default function GalleryBlock({
           aria-label={`Buka galeri ${title || ""}`.trim()}
           className="group flex w-full flex-col items-center gap-3 text-left"
         >
-          <div className="relative aspect-[4/3] w-full max-w-[420px]">
+          <div className={isFan ? "relative aspect-[16/11] w-full" : "relative aspect-[4/3] w-full max-w-[420px]"}>
             {fan.map((src, i) => (
               <div
                 key={src}
-                className={`absolute inset-x-[6%] inset-y-[8%] overflow-hidden rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.25)] ring-1 ring-black/10 transition-transform duration-300 group-hover:scale-[1.02] ${tilt[i]}`}
+                className={`absolute overflow-hidden ${isFan ? "rounded-xl" : "rounded-2xl"} shadow-[0_10px_30px_rgba(0,0,0,0.25)] ring-1 ring-black/10 transition-transform duration-300 group-hover:scale-[1.02] ${tilt[i]}`}
               >
-                <Image src={src} alt={captionFor(src).title || (title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`)} fill sizes="420px" className="object-cover" />
+                <Image src={src} alt={captionFor(src).title || (title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`)} fill sizes={isFan ? "(max-width: 640px) 90vw, 448px" : "420px"} className="object-cover" />
               </div>
             ))}
           </div>
           <div className="flex w-full flex-col items-center">
-            <p className={`flex items-center gap-1.5 text-lg font-bold leading-tight ${titleClassName}`}>
+            <p className={`flex items-center gap-1.5 ${isFan ? "text-2xl" : "text-lg"} font-bold leading-tight ${titleClassName}`}>
               {icon}
               <span>{title}</span>
             </p>
-            <p className="mt-1 text-sm opacity-70">Galeri · {images.length} foto</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm opacity-70">
+              {isFan && <Images className="h-4 w-4" aria-hidden />}
+              Galeri · {images.length} foto
+            </p>
           </div>
         </button>
 

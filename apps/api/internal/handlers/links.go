@@ -764,7 +764,7 @@ func checkBuilderProductOwnership(ctx context.Context, db *pgxpool.Pool, userID,
 // carousel/collage/masonry/circles ditambah 18 September 2026 (permintaan
 // langsung pengguna: "tambahkan beberapa bentuk display lagi untuk image
 // grid").
-var validGalleryDisplays = map[string]bool{"grid": true, "stack": true, "carousel": true, "collage": true, "masonry": true, "circles": true}
+var validGalleryDisplays = map[string]bool{"grid": true, "stack": true, "fan": true, "carousel": true, "collage": true, "masonry": true, "circles": true}
 
 func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) (string, bool) {
 	switch blockType {
@@ -958,7 +958,7 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		if raw, ok := data["display"]; ok {
 			display, isStr := raw.(string)
 			if !isStr || !validGalleryDisplays[display] {
-				return "display galeri harus grid, stack, carousel, collage, masonry, atau circles", false
+				return "display galeri harus grid, stack, fan, carousel, collage, masonry, atau circles", false
 			}
 		}
 		if raw, ok := data["captions"]; ok {
