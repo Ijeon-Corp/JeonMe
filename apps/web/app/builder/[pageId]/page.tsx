@@ -521,7 +521,10 @@ export default function BuilderPage() {
       });
       return;
     }
-    if (type === "maps" || type === "catalog" || type === "contact_form") return; // modal sudah menyaring ini, jaga-jaga saja.
+    // "catalog" satu-satunya yang masih root-only (modal sudah menyaring,
+    // jaga-jaga saja). "maps"/"contact_form" boleh bersarang sejak 18
+    // September 2026 (lihat ROOT_ONLY_TYPES, BuilderAddComponentModal.tsx).
+    if (type === "catalog") return;
     const root = links.find((l) => l.id === target.rootId);
     if (!root) return;
     const builderRoot = rootToBuilderRoot(root);

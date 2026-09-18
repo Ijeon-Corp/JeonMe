@@ -66,7 +66,13 @@ export type AddableBlockType = EmbeddedBuilderBlock["block_type"] | "maps" | "ca
 // ROOT_ONLY_TYPES -- disaring dari daftar tile begitu `nested` true (target
 // tambah di dalam Section/Column, bukan root) supaya kreator tidak sempat
 // memilih tipe yang backend pasti tolak.
-const ROOT_ONLY_TYPES: ReadonlySet<AddableBlockType> = new Set(["maps", "catalog", "contact_form"]);
+// "maps" & "contact_form" DILEPAS dari daftar ini (perbaikan Builder 18
+// September 2026): backend kini path-aware -- SubmitContactForm mencari
+// blok tertanam lewat root_link_id dan koordinat Maps bersarang ikut
+// di-resolve (links.go, allowedBuilderEmbeddedBlockTypes). Tinggal
+// "catalog" yang tetap root-only (keputusan v1, mekanisme items[]/blocks[]
+// terpisah).
+const ROOT_ONLY_TYPES: ReadonlySet<AddableBlockType> = new Set(["catalog"]);
 
 export interface BuilderComponentTile {
   type: AddableBlockType;

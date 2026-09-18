@@ -1295,12 +1295,13 @@ function NodeFieldEditor({
     );
   }
 
-  // "contact_form" -- Fase 4 (13 September 2026), ROOT-ONLY (lihat
-  // allowedBuilderEmbeddedBlockTypes, links.go, utk alasan teknis --
-  // SubmitContactForm resolve linkID langsung ke baris `links`, belum
-  // path-walk ke block_data bersarang). Title saja, sama seperti "button"
-  // tanpa url -- isi form sendiri (nama/email/pesan) di-render langsung
-  // oleh ContactFormBlock, tidak ada field lain utk diedit di sini.
+  // "contact_form" -- Fase 4 (13 September 2026). Dulu ROOT-ONLY karena
+  // SubmitContactForm resolve linkID langsung ke baris `links`; sejak 18
+  // September 2026 backend mencari blok tertanam lewat root_link_id
+  // (links.go), jadi editor ini dipakai utk root MAUPUN bersarang -- tidak
+  // ada asumsi root di sini. Title saja, sama seperti "button" tanpa url
+  // -- isi form sendiri (nama/email/pesan) di-render langsung oleh
+  // ContactFormBlock, tidak ada field lain utk diedit di sini.
   if (node.blockType === "contact_form") {
     return (
       <div className="flex flex-col gap-3">
