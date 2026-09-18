@@ -97,6 +97,8 @@ import {
   type DesignSectionPage,
   type DesignSectionPatch,
 } from "@/components/dashboard/page/design-sections";
+import { normalizeGalleryDisplay, type GalleryDisplay } from "@/lib/gallery-display";
+import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 
 // BuilderDesignSection -- 5 sub-tab Design di dalam builder (permintaan
 // langsung pengguna 9 September 2026, "design langsung di builder juga")
@@ -509,7 +511,7 @@ function GalleryGridEditor({
   // display/captions/onPatchBlockData -- tampilan Tumpukan + keterangan per
   // foto (18 September 2026), paritas dgn panel galeri Links/Toko; patch
   // ditulis ke draft lokal lewat onUpdateNode (pemanggil), pola field lain.
-  display: "grid" | "stack";
+  display: GalleryDisplay;
   captions: Record<string, { title?: string; description?: string }>;
   onPatchBlockData: (patch: Record<string, unknown>) => void;
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
@@ -566,25 +568,8 @@ function GalleryGridEditor({
         <p className="text-[11px] font-semibold text-app-muted">
           {images.length}/{maxGalleryImages}
         </p>
-        {blockType === "gallery" && (
-          <div className="flex items-center gap-1" title={t("dashboard.pages.links.galleryPanel.displayStackHint")}>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.galleryPanel.displayLabel")}</span>
-            {(["grid", "stack"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => onPatchBlockData({ display: mode })}
-                aria-pressed={display === mode}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
-                  display === mode ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:text-app-ink"
-                }`}
-              >
-                {mode === "grid" ? t("dashboard.pages.links.galleryPanel.displayGrid") : t("dashboard.pages.links.galleryPanel.displayStack")}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
+      {blockType === "gallery" && <GalleryDisplayPicker value={display} onChange={(next) => onPatchBlockData({ display: next })} />}
       {images.length > 0 && (
         <div className="flex flex-col gap-1.5">
           {images.map((src, i) => {
@@ -1073,7 +1058,7 @@ function NodeFieldEditor({
           path={node.path}
           images={(node.blockData?.images as string[] | undefined) ?? []}
           blockType={node.blockType ?? "gallery"}
-          display={node.blockData?.display === "stack" ? "stack" : "grid"}
+          display={normalizeGalleryDisplay(node.blockData?.display)}
           captions={(node.blockData?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
           onPatchBlockData={(patch) => onUpdateNode(sel, { blockData: patch })}
           onEnsureRootPersisted={onEnsureRootPersisted}

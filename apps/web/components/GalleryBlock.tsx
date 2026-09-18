@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createPortal } from "react-dom";
 import { IconChevronRight, IconClose } from "@/components/icons";
 import { Share2 } from "lucide-react";
+import type { GalleryDisplay } from "@/lib/gallery-display";
 
 // Blok "gallery" (hasil analisa galeri tema kompetitor, 17 Agustus 2026 --
 // template portofolio/wisata s.id memakai grid multi-foto yang belum ada
@@ -51,7 +52,14 @@ export default function GalleryBlock({
   // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
   // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
   icon?: React.ReactNode;
-  display?: "grid" | "stack";
+  // display -- "grid"/"stack" (lihat catatan di atas) + 4 tampilan baru 18
+  // September 2026 ("tambahkan beberapa bentuk display lagi untuk image
+  // grid"): "carousel" (geser horizontal, satu foto besar per slide),
+  // "collage" (kelompok 3 foto: 1 besar + 2 kecil, sisi besar berselang-
+  // seling), "masonry" (2 kolom mengikuti rasio asli tiap foto), "circles"
+  // (deretan foto bundar ala sorotan Instagram + judul foto di bawahnya).
+  // Semua selain "stack" berbagi lightbox yang sama (openIndex).
+  display?: GalleryDisplay;
   captions?: Record<string, GalleryCaption>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -229,6 +237,130 @@ export default function GalleryBlock({
     );
   }
 
+  const altFor = (src: string, i: number) => captionFor(src).title || (title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`);
+  // Kelas scroll-strip tanpa scrollbar (carousel & circles): scrollbar
+  // horizontal di dalam kartu blok cuma jadi noise, geser jari/trackpad
+  // tetap jalan. Arbitrary variant Tailwind, bukan plugin baru.
+  const hideScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
+  function renderTiles() {
+    if (display === "carousel") {
+      return (
+        <div className={`-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 ${hideScrollbar}`}>
+          {images.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setOpenIndex(i)}
+              aria-label={`Perbesar foto ${i + 1}`}
+              className="relative aspect-[4/3] w-[82%] flex-shrink-0 snap-center cursor-zoom-in overflow-hidden rounded-2xl"
+            >
+              <Image src={src} alt={altFor(src, i)} fill sizes="(max-width: 640px) 82vw, 380px" className="object-cover" />
+              <span className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">
+                {i + 1}/{images.length}
+              </span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (display === "collage") {
+      // Kelompok 3 foto: 1 besar (2x2 sel) + 2 kecil bertumpuk di sisinya;
+      // sisi foto besar berselang-seling per kelompok (kiri, kanan, kiri...)
+      // supaya 9 foto tidak terasa seperti tiga baris yang sama. Sisa 1-2
+      // foto di kelompok terakhir dirender penuh/berdua.
+      const groups: string[][] = [];
+      for (let i = 0; i < images.length; i += 3) groups.push(images.slice(i, i + 3));
+      const tile = (src: string, i: number, className: string, sizes: string) => (
+        <button key={src} type="button" onClick={() => setOpenIndex(i)} aria-label={`Perbesar foto ${i + 1}`} className={`relative cursor-zoom-in overflow-hidden rounded-lg ${className}`}>
+          <Image src={src} alt={altFor(src, i)} fill sizes={sizes} className="object-cover transition-transform duration-200 hover:scale-105" />
+        </button>
+      );
+      return (
+        <div className="flex flex-col gap-1.5">
+          {groups.map((group, g) => {
+            const offset = g * 3;
+            if (group.length === 1) return <div key={g}>{tile(group[0], offset, "aspect-video w-full", "(max-width: 640px) 100vw, 448px")}</div>;
+            if (group.length === 2) {
+              return (
+                <div key={g} className="grid grid-cols-2 gap-1.5">
+                  {group.map((src, j) => tile(src, offset + j, "aspect-square w-full", "(max-width: 640px) 50vw, 220px"))}
+                </div>
+              );
+            }
+            const bigLeft = g % 2 === 0;
+            return (
+              <div key={g} className="grid grid-cols-3 grid-rows-2 gap-1.5">
+                {tile(group[0], offset, bigLeft ? "col-start-1 col-span-2 row-start-1 row-span-2" : "col-start-2 col-span-2 row-start-1 row-span-2", "(max-width: 640px) 66vw, 300px")}
+                {tile(group[1], offset + 1, `aspect-square ${bigLeft ? "col-start-3" : "col-start-1"} row-start-1`, "150px")}
+                {tile(group[2], offset + 2, `aspect-square ${bigLeft ? "col-start-3" : "col-start-1"} row-start-2`, "150px")}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    if (display === "masonry") {
+      // columns-2 + break-inside-avoid: tinggi tiap foto mengikuti rasio
+      // aslinya (width/height di next/image cuma tebakan awal, `h-auto`
+      // yang menentukan) -- foto potret & lanskap bercampur rapi tanpa
+      // perlu tahu dimensinya lebih dulu.
+      return (
+        <div className="columns-2 gap-1.5">
+          {images.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setOpenIndex(i)}
+              aria-label={`Perbesar foto ${i + 1}`}
+              className="mb-1.5 block w-full cursor-zoom-in overflow-hidden rounded-lg break-inside-avoid"
+            >
+              <Image src={src} alt={altFor(src, i)} width={600} height={800} sizes="(max-width: 640px) 50vw, 220px" className="h-auto w-full object-cover transition-transform duration-200 hover:scale-105" />
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (display === "circles") {
+      return (
+        <div className={`flex gap-3 overflow-x-auto pb-1 ${hideScrollbar}`}>
+          {images.map((src, i) => {
+            const cap = captionFor(src);
+            return (
+              <button key={src} type="button" onClick={() => setOpenIndex(i)} aria-label={`Perbesar foto ${i + 1}`} className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5">
+                <span className="relative block h-16 w-16 overflow-hidden rounded-full ring-2 ring-black/10">
+                  <Image src={src} alt={altFor(src, i)} fill sizes="64px" className="object-cover" />
+                </span>
+                {cap.title && <span className="w-full truncate text-center text-[10px] font-semibold opacity-80">{cap.title}</span>}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-3 gap-1.5">
+        {images.map((src, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setOpenIndex(i)}
+            className="relative aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
+            aria-label={`Perbesar foto ${i + 1}`}
+          >
+            {/* `fill` -- tombol pembungkusnya `aspect-square w-full`, jadi
+                tingginya turun dari rasio & lebarnya dari kolom grid (tidak
+                ada angka lebar literal). Butuh `relative` di tombol itu,
+                ditambahkan di baris class-nya. Sel grid 3 kolom di dalam
+                kolom publik max-w-md -> ~130px, dibulatkan ke atas ke 150px
+                untuk layar retina. */}
+            <Image src={src} alt={altFor(src, i)} fill sizes="150px" className="object-cover transition-transform duration-200 hover:scale-105" />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={cardClassName}>
       {title && (
@@ -237,35 +369,7 @@ export default function GalleryBlock({
           <span className="truncate">{title}</span>
         </p>
       )}
-      {images.length > 0 ? (
-        <div className="grid grid-cols-3 gap-1.5">
-          {images.map((src, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setOpenIndex(i)}
-              className="relative aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
-              aria-label={`Perbesar foto ${i + 1}`}
-            >
-              {/* `fill` -- tombol pembungkusnya `aspect-square w-full`, jadi
-                  tingginya turun dari rasio & lebarnya dari kolom grid (tidak
-                  ada angka lebar literal). Butuh `relative` di tombol itu,
-                  ditambahkan di baris class-nya. Sel grid 3 kolom di dalam
-                  kolom publik max-w-md -> ~130px, dibulatkan ke atas ke 150px
-                  untuk layar retina. */}
-              <Image
-                src={src}
-                alt={captionFor(src).title || (title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`)}
-                fill
-                sizes="150px"
-                className="object-cover transition-transform duration-200 hover:scale-105"
-              />
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-red-500">Galeri belum berisi foto.</p>
-      )}
+      {images.length > 0 ? renderTiles() : <p className="text-xs text-red-500">Galeri belum berisi foto.</p>}
 
       {/* createPortal ke document.body -- ditemukan lewat verifikasi live
           (bukan cuma baca kode): kartu blok di tema APAPUN yang pakai efek

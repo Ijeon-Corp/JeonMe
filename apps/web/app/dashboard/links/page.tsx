@@ -81,6 +81,8 @@ import { getLibraryIcon } from "@/lib/icon-library";
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { normalizeGalleryDisplay } from "@/lib/gallery-display";
+import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import {
   ChevronDown,
   Clapperboard,
@@ -3269,28 +3271,14 @@ export default function DashboardLinksPage() {
                         18 September 2026 (blok kartu tumpukan foto -> popup
                         foto + keterangan), lihat GalleryBlock.tsx. Khusus
                         "gallery" -- image_slider punya render sendiri. */}
-                    {link.block_type === "gallery" && (
-                      <div className="flex items-center gap-1" title={t("dashboard.pages.links.galleryPanel.displayStackHint")}>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.galleryPanel.displayLabel")}</span>
-                        {(["grid", "stack"] as const).map((mode) => {
-                          const active = ((link.block_data?.display as string | undefined) ?? "grid") === mode;
-                          return (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => handleBlockDataPatch(link, { display: mode })}
-                              aria-pressed={active}
-                              className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
-                                active ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:text-app-ink"
-                              }`}
-                            >
-                              {mode === "grid" ? t("dashboard.pages.links.galleryPanel.displayGrid") : t("dashboard.pages.links.galleryPanel.displayStack")}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
+                  {/* Pemilih tampilan -- komponen bersama GalleryDisplayPicker
+                      (6 tampilan sejak 18 September 2026, lihat
+                      lib/gallery-display.ts). Khusus "gallery" -- image_slider
+                      punya render sendiri. */}
+                  {link.block_type === "gallery" && (
+                    <GalleryDisplayPicker value={normalizeGalleryDisplay(link.block_data?.display)} onChange={(display) => handleBlockDataPatch(link, { display })} />
+                  )}
                   {/* Daftar foto + judul/keterangan per foto (captions dikunci
                       per URL, lihat validateBlockDataAtDepth links.go) --
                       disimpan onBlur lewat handleBlockDataPatch. */}

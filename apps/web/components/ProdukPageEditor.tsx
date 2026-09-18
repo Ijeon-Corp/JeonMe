@@ -51,6 +51,8 @@ import {
   IconX,
 } from "@/components/icons";
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { normalizeGalleryDisplay } from "@/lib/gallery-display";
+import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { detectLinkIcon } from "@/lib/link-icons";
 import {
@@ -2621,28 +2623,10 @@ function BlockSection({
                   {/* Tampilan Grid/Tumpukan + caption per foto -- pola SAMA
                       PERSIS dashboard/links/page.tsx (18 September 2026),
                       lihat catatan di sana & GalleryBlock.tsx. */}
-                  {link.block_type === "gallery" && (
-                    <div className="flex items-center gap-1" title={t("dashboard.pages.links.galleryPanel.displayStackHint")}>
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.galleryPanel.displayLabel")}</span>
-                      {(["grid", "stack"] as const).map((mode) => {
-                        const active = ((link.block_data?.display as string | undefined) ?? "grid") === mode;
-                        return (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => handleBlockDataPatch(link, { display: mode })}
-                            aria-pressed={active}
-                            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
-                              active ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:text-app-ink"
-                            }`}
-                          >
-                            {mode === "grid" ? t("dashboard.pages.links.galleryPanel.displayGrid") : t("dashboard.pages.links.galleryPanel.displayStack")}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
+                {link.block_type === "gallery" && (
+                  <GalleryDisplayPicker value={normalizeGalleryDisplay(link.block_data?.display)} onChange={(display) => handleBlockDataPatch(link, { display })} />
+                )}
                 {((link.block_data?.images as string[]) ?? []).length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     {((link.block_data?.images as string[]) ?? []).map((src, i) => {

@@ -1,5 +1,6 @@
 import type { LinkItem } from "@/lib/api-client";
 import { PRODUK_LAYOUT_OPTIONS, type ProdukBlockLayout } from "@/components/dashboard/page/ProdukBlockEditor";
+import { GALLERY_DISPLAY_OPTIONS, normalizeGalleryDisplay } from "@/lib/gallery-display";
 
 // Diekstrak APA ADANYA dari app/dashboard/links/page.tsx (18 September
 // 2026) supaya dipakai bersama ProdukPageEditor.tsx (Toko) -- permintaan
@@ -55,7 +56,13 @@ export function blockPreviewFor(link: LinkItem, t: (key: string) => string): str
     case "gallery":
     case "image_slider": {
       const count = ((bd?.images as string[] | undefined) ?? []).length;
-      return `${count}/${maxGalleryImages} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`;
+      const base = `${count}/${maxGalleryImages} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`;
+      // Nama tampilan ikut ditampilkan kalau bukan bawaan ("3/9 foto ·
+      // Kolase") -- 6 tampilan sejak 18 September 2026, lihat
+      // lib/gallery-display.ts; blok lama/grid tampil persis seperti dulu.
+      const display = normalizeGalleryDisplay(bd?.display);
+      const option = link.block_type === "gallery" && display !== "grid" ? GALLERY_DISPLAY_OPTIONS.find((o) => o.value === display) : undefined;
+      return option ? `${base} · ${t(`dashboard.pages.links.galleryPanel.${option.labelKey}`)}` : base;
     }
     case "faq": {
       const count = ((bd?.items as unknown[] | undefined) ?? []).length;

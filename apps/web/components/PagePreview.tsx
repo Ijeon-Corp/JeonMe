@@ -35,6 +35,7 @@ import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 import { ChevronLeft, HelpCircle, Images as GalleryIcon, LayoutGrid, Video as VideoIcon } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
+import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 
 // Blok konten "langka" -- audit performa 4 September 2026 (laporan
 // pengguna: "audit semua kode dari security performance ui ux dll"):
@@ -2010,7 +2011,7 @@ export function renderLinkOrBlock(
         key={link.id}
         title={link.title}
         images={(link.blockData?.images as string[]) ?? []}
-        display={link.blockData?.display === "stack" ? "stack" : "grid"}
+        display={normalizeGalleryDisplay(link.blockData?.display)}
         captions={(link.blockData?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}

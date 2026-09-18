@@ -739,6 +739,15 @@ func checkBuilderProductOwnership(ctx context.Context, db *pgxpool.Pool, userID,
 // (maxCatalogDepth dkk). `depth` HANYA relevan untuk block_type "catalog"
 // (dimulai dari 1 di validateBlockData) -- tipe lain mengabaikannya
 // sepenuhnya, tetap identik dengan validateBlockData yang lama.
+
+// validGalleryDisplays -- himpunan block_data.display blok galeri yang
+// dikenali frontend (lib/gallery-display.ts, SATU sumber kebenaran di sana;
+// tambah di kedua tempat kalau ada tampilan baru). grid/stack sejak awal,
+// carousel/collage/masonry/circles ditambah 18 September 2026 (permintaan
+// langsung pengguna: "tambahkan beberapa bentuk display lagi untuk image
+// grid").
+var validGalleryDisplays = map[string]bool{"grid": true, "stack": true, "carousel": true, "collage": true, "masonry": true, "circles": true}
+
 func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) (string, bool) {
 	switch blockType {
 	case "video":
@@ -930,8 +939,8 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// field ini tetap valid & tampil persis seperti sebelumnya.
 		if raw, ok := data["display"]; ok {
 			display, isStr := raw.(string)
-			if !isStr || (display != "grid" && display != "stack") {
-				return "display galeri harus grid atau stack", false
+			if !isStr || !validGalleryDisplays[display] {
+				return "display galeri harus grid, stack, carousel, collage, masonry, atau circles", false
 			}
 		}
 		if raw, ok := data["captions"]; ok {

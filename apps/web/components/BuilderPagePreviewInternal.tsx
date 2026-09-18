@@ -52,6 +52,7 @@ import {
   renderVideoBackground,
 } from "@/components/PagePreview";
 import type { PagePreviewData, PagePreviewLink, PagePreviewProduct } from "@/components/PagePreview";
+import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 
 // Blok konten "langka" -- SALINAN pola next/dynamic yang sama persis dari
 // PagePreview.tsx (lihat catatan lengkapnya di sana): tiap tipe blok tetap
@@ -329,7 +330,7 @@ function renderBuilderNode(
           <GalleryBlock
             title={node.title}
             images={(node.blockData.images as string[]) ?? []}
-            display={node.blockData.display === "stack" ? "stack" : "grid"}
+            display={normalizeGalleryDisplay(node.blockData.display)}
             captions={(node.blockData.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
