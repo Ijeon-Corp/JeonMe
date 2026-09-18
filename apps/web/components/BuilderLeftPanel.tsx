@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -17,14 +18,19 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconBox,
+  IconCamera,
   IconChevronRight,
+  IconClock,
   IconCopy,
   IconDotsVertical,
   IconExternal,
   IconFileText,
   IconGripVertical,
+  IconLock,
+  IconPaintbrush,
   IconPlus,
   IconSettings,
+  IconStar,
   IconTrash,
   IconX,
 } from "@/components/icons";
@@ -46,6 +52,7 @@ import {
   Image as LucideImage,
   Images as LucideImages,
   LayoutGrid,
+  TriangleAlert,
   Link as LucideLink,
   Link2,
   List as LucideList,
@@ -68,16 +75,21 @@ import {
   deleteBuilderMediaImage,
   deleteFileBlock,
   deleteGalleryImage,
+  deleteLinkIcon,
+  deleteLinkThumbnail,
   uploadAudioBlock,
   uploadBuilderMediaImage,
   uploadFileBlock,
   uploadGalleryImage,
+  uploadLinkIcon,
+  uploadLinkThumbnail,
   type CatalogItem,
   type DashboardProduct,
   type EmbeddedBuilderBlock,
   type LinkItem,
   type PageStickerData,
 } from "@/lib/api-client";
+import { getLibraryIcon } from "@/lib/icon-library";
 import {
   buildTree,
   findNodeByPath,
@@ -136,6 +148,11 @@ function containerKeyOf(node: BuilderTreeNode): string {
   if (node.path.length === 0) return "root";
   return `${node.rootId}:${JSON.stringify(node.path.slice(0, -1))}`;
 }
+
+// IconPickerModal -- dynamic() spt Links (app/dashboard/links/page.tsx):
+// galeri ikon siap-pakai (lib/icon-library.ts) yang cukup besar, tidak
+// perlu ikut bundle awal Builder.
+const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 
 function siblingsOf(tree: BuilderTreeNode[], node: BuilderTreeNode): BuilderTreeNode[] {
   if (node.path.length === 0) return tree;
@@ -969,12 +986,14 @@ function NodeFieldEditor({
   // MUNCUL di sini juga. Bug ditemukan lewat laporan langsung pengguna (10
   // September 2026, screenshot "Follow di Instagram" menampilkan pesan
   // "blok ini murni wadah" yang SALAH -- fallback lama tidak mengenali tipe
-  // ini sama sekali) -- field MINIMAL (judul+url) yang sama seperti "button",
-  // fitur lanjutan (ikon/kunci/jadwal) tetap lewat halaman Tautan klasik.
+  // ini sama sekali) -- field MINIMAL (judul+url) yang sama seperti "button".
+  // Subjudul "ikon/kunci/jadwal masih di halaman Tautan" DIHAPUS 19
+  // September 2026 -- sudah TIDAK BENAR sejak RootToolsPanel (lihat di
+  // atas TreeNodeView) menaruh kontrol itu LANGSUNG di sini juga.
   if (node.blockType === "link") {
     return (
       <div className="flex flex-col gap-3">
-        <BlockPanelHeader node={node} t={t} subtitle={t("dashboard.pages.linksBuilder.legacyLinkHint")} />
+        <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
           <FormField label={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}>
             <input
@@ -1598,6 +1617,356 @@ function collectAncestorIds(tree: BuilderTreeNode[], rootId: string, path: Build
   return ids;
 }
 
+// RootToolsPanel -- paritas BlockToolsStrip (19 September 2026, audit
+// Builder: "menu ⋮ hanya Duplikat+Hapus, tidak ada jadwal/kunci/ikon/
+// unggulan seperti Mode Simple"). HANYA dipasang utk root (lihat
+// TreeNodeView), field-fieldnya murni `links` (BuilderTreeNode.isActive
+// dkk, lihat catatan lengkap di lib/builder-blocks.ts) -- tidak ada
+// padanan blok bersarang.
+//
+// Jadwal/kunci/unggulan/warna+galeri ikon SEMUA draft (onUpdateNode,
+// BuilderNodePatch) -- baru terkirim ke server saat Simpan, KONSISTEN
+// dgn arsitektur draft Builder (beda dari Mode Simple yang langsung PATCH
+// per field, lihat openScheduleForm/openLockForm dashboard/links/
+// page.tsx). Upload/hapus ikon kustom & thumbnail TETAP immediate-write
+// (ensureRootPersisted + endpoint upload, pola sama MediaImageEditor) --
+// backend menolak custom_icon_url lewat PATCH generik (upload-only).
+function RootToolsPanel({
+  node,
+  onUpdateNode,
+  onEnsureRootPersisted,
+  onIconChanged,
+  onThumbnailChanged,
+  onThumbnailRemoved,
+}: {
+  node: BuilderTreeNode;
+  onUpdateNode: (target: BuilderSelection, patch: BuilderNodePatch) => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
+  onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
+  onThumbnailRemoved: (rootId: string) => void;
+}) {
+  const { t } = useLocale();
+  const sel = selectionOf(node);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleEnd, setScheduleEnd] = useState("");
+  const [lockOpen, setLockOpen] = useState(false);
+  const [lockType, setLockType] = useState<"age" | "code" | "subscribe" | "sensitive">("code");
+  const [lockCode, setLockCode] = useState("");
+  const [lockMinAge, setLockMinAge] = useState("18");
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconUploading, setIconUploading] = useState(false);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // fullLock/scheduled -- SAMA PERSIS gerbang BlockToolsStrip.tsx (Links/
+  // Toko): kunci lengkap (4 pilihan) cuma utk link/button, tipe lain
+  // cukup toggle sensitif; ditemukan sudah ada `sel`/`node.blockType` di
+  // sini jadi tidak perlu re-derive.
+  const fullLock = node.blockType === "link" || node.blockType === "button";
+  const scheduled = Boolean(node.startsAt && node.endsAt);
+
+  function openSchedule() {
+    setScheduleStart(node.startsAt ? node.startsAt.slice(0, 16) : "");
+    setScheduleEnd(node.endsAt ? node.endsAt.slice(0, 16) : "");
+    setScheduleOpen(true);
+  }
+  function saveSchedule() {
+    if (!scheduleStart || !scheduleEnd) {
+      setError(t("dashboard.pages.links.errors.scheduleRequired"));
+      return;
+    }
+    const startsAt = new Date(scheduleStart).toISOString();
+    const endsAt = new Date(scheduleEnd).toISOString();
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setError(t("dashboard.pages.links.errors.scheduleEndAfterStart"));
+      return;
+    }
+    setError(null);
+    onUpdateNode(sel, { startsAt, endsAt });
+    setScheduleOpen(false);
+  }
+
+  function openLock() {
+    setLockType((node.lockType as typeof lockType) || "code");
+    setLockCode(node.lockCode || "");
+    setLockMinAge(node.lockMinAge ? String(node.lockMinAge) : "18");
+    setLockOpen(true);
+  }
+  function saveLock() {
+    if (lockType === "code" && !lockCode.trim()) {
+      setError(t("dashboard.pages.links.errors.lockCodeRequired"));
+      return;
+    }
+    if (lockType === "age" && (!lockMinAge || Number(lockMinAge) < 13)) {
+      setError(t("dashboard.pages.links.errors.lockMinAge"));
+      return;
+    }
+    setError(null);
+    onUpdateNode(sel, {
+      lockType,
+      lockCode: lockType === "code" ? lockCode.trim() : undefined,
+      lockMinAge: lockType === "age" ? Number(lockMinAge) : undefined,
+    });
+    setLockOpen(false);
+  }
+  function toggleSensitive() {
+    onUpdateNode(sel, node.lockType === "sensitive" ? { clearLock: true } : { lockType: "sensitive" });
+  }
+
+  async function handleIconUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setIconUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(node.rootId);
+      const { custom_icon_url } = await uploadLinkIcon(realRootId, file);
+      onIconChanged(realRootId, { customIconUrl: custom_icon_url });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadIconFailed"));
+    } finally {
+      setIconUploading(false);
+    }
+  }
+  async function handleRemoveIcon() {
+    setIconUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(node.rootId);
+      await deleteLinkIcon(realRootId);
+      onUpdateNode(sel, { iconKey: "" });
+      onIconChanged(realRootId, { customIconUrl: "", iconKey: "" });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteIconFailed"));
+    } finally {
+      setIconUploading(false);
+    }
+  }
+  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setThumbnailUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(node.rootId);
+      const { thumbnail_url } = await uploadLinkThumbnail(realRootId, file);
+      onThumbnailChanged(realRootId, thumbnail_url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadThumbnailFailed"));
+    } finally {
+      setThumbnailUploading(false);
+    }
+  }
+  async function handleRemoveThumbnail() {
+    setThumbnailUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(node.rootId);
+      await deleteLinkThumbnail(realRootId);
+      onThumbnailRemoved(realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteThumbnailFailed"));
+    } finally {
+      setThumbnailUploading(false);
+    }
+  }
+
+  const libraryIcon = getLibraryIcon(node.iconKey);
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-app-border bg-app-surface-2 p-2.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <RootToolButton icon={IconClock} label={t("dashboard.pages.links.linkCard.toolLabels.schedule")} active={scheduled} onClick={openSchedule} />
+        {fullLock ? (
+          <RootToolButton icon={IconLock} label={t("dashboard.pages.links.linkCard.toolLabels.lock")} active={Boolean(node.lockType)} onClick={openLock} />
+        ) : (
+          <RootToolButton icon={TriangleAlert} label={t("dashboard.pages.links.linkCard.toolLabels.sensitive")} active={node.lockType === "sensitive"} onClick={toggleSensitive} />
+        )}
+        {node.blockType === "link" && (
+          <RootToolButton
+            icon={IconStar}
+            label={t("dashboard.pages.links.linkCard.toolLabels.featured")}
+            active={Boolean(node.isFeatured)}
+            onClick={() => onUpdateNode(sel, { isFeatured: !node.isFeatured })}
+          />
+        )}
+      </div>
+
+      {scheduleOpen && (
+        <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
+          <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
+            <input type="datetime-local" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none" />
+          </FormField>
+          <FormField label={t("dashboard.pages.links.schedulePanel.endLabel")}>
+            <input type="datetime-local" value={scheduleEnd} onChange={(e) => setScheduleEnd(e.target.value)} className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none" />
+          </FormField>
+          <div className="flex gap-1.5">
+            <button type="button" onClick={() => setScheduleOpen(false)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+              {t("dashboard.pages.links.common.cancel")}
+            </button>
+            <button type="button" onClick={saveSchedule} className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white">
+              {t("dashboard.pages.links.common.save")}
+            </button>
+          </div>
+        </div>
+      )}
+      {!scheduleOpen && scheduled && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
+          <span className="min-w-0 truncate text-[11px] font-semibold text-jeon-warning">
+            {t("dashboard.pages.links.schedulePanel.scheduledLabel")} {new Date(node.startsAt!).toLocaleString("id-ID")} {t("dashboard.pages.links.schedulePanel.until")} {new Date(node.endsAt!).toLocaleString("id-ID")}
+          </span>
+          <button type="button" onClick={() => onUpdateNode(sel, { clearSchedule: true })} className="flex-shrink-0 text-[11px] font-bold text-red-600 hover:underline">
+            {t("dashboard.pages.links.schedulePanel.cancelSchedule")}
+          </button>
+        </div>
+      )}
+
+      {fullLock && lockOpen && (
+        <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
+          <select value={lockType} onChange={(e) => setLockType(e.target.value as typeof lockType)} className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none">
+            <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
+            <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
+            <option value="subscribe">{t("dashboard.pages.links.lockPanel.types.subscribe")}</option>
+            <option value="sensitive">{t("dashboard.pages.links.lockPanel.types.sensitive")}</option>
+          </select>
+          {lockType === "code" && (
+            <input type="text" placeholder={t("dashboard.pages.links.lockPanel.codePlaceholder")} value={lockCode} onChange={(e) => setLockCode(e.target.value)} className="w-full rounded-md border border-app-border bg-app-surface px-2.5 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none" />
+          )}
+          {lockType === "age" && (
+            <input type="number" min={13} max={99} placeholder={t("dashboard.pages.links.lockPanel.minAgePlaceholder")} value={lockMinAge} onChange={(e) => setLockMinAge(e.target.value)} className="w-full rounded-md border border-app-border bg-app-surface px-2.5 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none" />
+          )}
+          <div className="flex gap-1.5">
+            <button type="button" onClick={() => setLockOpen(false)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+              {t("dashboard.pages.links.common.cancel")}
+            </button>
+            <button type="button" onClick={saveLock} className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white">
+              {t("dashboard.pages.links.common.save")}
+            </button>
+          </div>
+        </div>
+      )}
+      {fullLock && !lockOpen && node.lockType && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+          <span className="min-w-0 truncate text-[11px] font-semibold text-jeon-purple">
+            {t("dashboard.pages.links.lockPanel.lockedLabel")}{" "}
+            {node.lockType === "code"
+              ? t("dashboard.pages.links.lockPanel.statusTypes.code")
+              : node.lockType === "age"
+                ? t("dashboard.pages.links.lockPanel.statusTypes.age").replace("{age}", String(node.lockMinAge ?? 18))
+                : node.lockType === "sensitive"
+                  ? t("dashboard.pages.links.lockPanel.statusTypes.sensitive")
+                  : t("dashboard.pages.links.lockPanel.statusTypes.subscribe")}
+          </span>
+          <button type="button" onClick={() => onUpdateNode(sel, { clearLock: true })} className="flex-shrink-0 text-[11px] font-bold text-red-600 hover:underline">
+            {t("dashboard.pages.links.lockPanel.unlock")}
+          </button>
+        </div>
+      )}
+
+      {node.blockType === "link" && node.isFeatured && (
+        <div className="flex items-center gap-3 rounded-lg border border-app-border bg-app-surface p-2.5">
+          {node.thumbnailUrl ? (
+            <Image src={node.thumbnailUrl} alt="" width={96} height={56} className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+          ) : (
+            <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">{t("dashboard.pages.links.common.noneYet")}</div>
+          )}
+          <div className="flex flex-1 flex-col gap-1">
+            <label className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-app-border py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple ${thumbnailUploading ? "opacity-60" : ""}`}>
+              {thumbnailUploading ? t("dashboard.pages.linksBuilder.uploading") : t("dashboard.pages.linksBuilder.uploadPhoto")}
+              <input type="file" accept="image/*" onChange={handleThumbnailUpload} disabled={thumbnailUploading} className="hidden" />
+            </label>
+            {node.thumbnailUrl && (
+              <button type="button" onClick={handleRemoveThumbnail} disabled={thumbnailUploading} className="text-[11px] font-bold text-red-600 hover:underline disabled:opacity-60">
+                {t("dashboard.pages.linksBuilder.removePhoto")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-0.5 text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.linkCard.toolLabels.iconGroup")}</span>
+        {node.customIconUrl ? (
+          <Image src={node.customIconUrl} alt="" width={24} height={24} className="h-6 w-6 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+        ) : libraryIcon ? (
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender text-[#111111]">
+            <libraryIcon.Icon className="h-3.5 w-3.5" />
+          </span>
+        ) : null}
+        <label
+          title={node.customIconUrl ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
+          className={`inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold ${
+            node.customIconUrl ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+          } ${iconUploading ? "opacity-60" : ""}`}
+        >
+          {iconUploading ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden /> : <IconCamera className="h-3.5 w-3.5 flex-shrink-0" />}
+          {t("dashboard.pages.links.linkCard.toolLabels.uploadIcon")}
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleIconUpload} disabled={iconUploading} className="hidden" />
+        </label>
+        <RootToolButton icon={LayoutGrid} label={t("dashboard.pages.links.linkCard.toolLabels.iconGallery")} active={Boolean(node.iconKey)} onClick={() => setIconPickerOpen(true)} />
+        {!node.customIconUrl && (
+          <label
+            title={node.iconColor ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
+            className={`relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold ${
+              node.iconColor ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+            }`}
+          >
+            {node.iconColor ? <span className="h-3.5 w-3.5 flex-shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: node.iconColor }} aria-hidden /> : <IconPaintbrush className="h-3.5 w-3.5 flex-shrink-0" />}
+            {t("dashboard.pages.links.linkCard.toolLabels.iconColor")}
+            <input type="color" value={node.iconColor || "#000000"} onChange={(e) => onUpdateNode(sel, { iconColor: e.target.value })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+          </label>
+        )}
+        {node.iconColor && <RootToolButton icon={IconX} label={t("dashboard.pages.links.linkCard.toolLabels.clearIconColor")} onClick={() => onUpdateNode(sel, { iconColor: "" })} />}
+        {(node.customIconUrl || node.iconKey) && <RootToolButton icon={IconX} label={t("dashboard.pages.links.linkCard.toolLabels.removeIcon")} onClick={handleRemoveIcon} />}
+      </div>
+
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+
+      {iconPickerOpen && (
+        <IconPickerModal
+          currentKey={node.iconKey}
+          onSelect={(icon) => {
+            onUpdateNode(sel, { iconKey: icon.key });
+            setIconPickerOpen(false);
+          }}
+          onClose={() => setIconPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RootToolButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon | ((p: { className?: string }) => React.ReactElement);
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-pressed={active}
+      className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${
+        active ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      {label}
+    </button>
+  );
+}
+
 function TreeNodeView({
   node,
   depth,
@@ -1614,6 +1983,9 @@ function TreeNodeView({
   onGalleryImagesChanged,
   onAudioChanged,
   onFileChanged,
+  onIconChanged,
+  onThumbnailChanged,
+  onThumbnailRemoved,
   products,
   onProductCreated,
   siblingIds,
@@ -1637,6 +2009,14 @@ function TreeNodeView({
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
+  // onIconChanged/onThumbnailChanged/onThumbnailRemoved -- paritas
+  // BlockToolsStrip (19 September 2026), dipakai HANYA oleh RootToolsPanel
+  // (isRoot, lihat di bawah) -- tetap dithread lewat rekursi TreeNodeView
+  // spt prop upload lain di atas, sama sekali tidak dipanggil utk blok
+  // bersarang (custom_icon_url/thumbnail_url bukan bagian block_data).
+  onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
+  onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
+  onThumbnailRemoved: (rootId: string) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
   // siblingIds/onReorderRoot/onReorderChildren -- item "Pindah ke atas/
@@ -1922,7 +2302,7 @@ function TreeNodeView({
       </div>
 
       {isThisSelected && (
-        <div style={{ paddingLeft: `${(depth + 1) * 16}px` }} className="pb-2.5 pr-1.5 pt-1">
+        <div style={{ paddingLeft: `${(depth + 1) * 16}px` }} className="flex flex-col gap-2.5 pb-2.5 pr-1.5 pt-1">
           <NodeFieldEditor
             node={node}
             onUpdateNode={onUpdateNode}
@@ -1934,6 +2314,27 @@ function TreeNodeView({
             products={products}
             onProductCreated={onProductCreated}
           />
+          {/* RootToolsPanel -- paritas BlockToolsStrip (19 September 2026),
+              HANYA utk root (jadwal/kunci/unggulan/ikon adalah field
+              `links`, tidak ada padanannya di blok bersarang). Taruh
+              SESUDAH NodeFieldEditor (bukan di dalamnya, bukan SEBELUM
+              -- bug ditemukan lewat regresi builder-mode.spec.ts:
+              input file ikon RootToolsPanel yang lebih dulu di DOM
+              membuat selector "input file pertama" milik editor gambar/
+              galeri salah sasaran) supaya berlaku utk SEMUA tipe blok
+              tanpa menyentuh 20-an cabang switch NodeFieldEditor, & urutan
+              vertikal ini SEKALIGUS meniru Mode Simple: field isi dulu,
+              strip alat (jadwal/kunci/ikon) di bawahnya. */}
+          {isRoot && (
+            <RootToolsPanel
+              node={node}
+              onUpdateNode={onUpdateNode}
+              onEnsureRootPersisted={onEnsureRootPersisted}
+              onIconChanged={onIconChanged}
+              onThumbnailChanged={onThumbnailChanged}
+              onThumbnailRemoved={onThumbnailRemoved}
+            />
+          )}
         </div>
       )}
 
@@ -1963,6 +2364,9 @@ function TreeNodeView({
                   onGalleryImagesChanged={onGalleryImagesChanged}
                   onAudioChanged={onAudioChanged}
                   onFileChanged={onFileChanged}
+                  onIconChanged={onIconChanged}
+                  onThumbnailChanged={onThumbnailChanged}
+                  onThumbnailRemoved={onThumbnailRemoved}
                   products={products}
                   onProductCreated={onProductCreated}
                   siblingIds={childIds}
@@ -1993,6 +2397,9 @@ export default function BuilderLeftPanel({
   onGalleryImagesChanged,
   onAudioChanged,
   onFileChanged,
+  onIconChanged,
+  onThumbnailChanged,
+  onThumbnailRemoved,
   settingsHref,
   page,
   isPremium,
@@ -2051,6 +2458,9 @@ export default function BuilderLeftPanel({
   // file_size_bytes).
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
+  onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
+  onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
+  onThumbnailRemoved: (rootId: string) => void;
   settingsHref: string;
   // page/isPremium/onPatch/onLocalChange/onStyleOverride/onUploadAvatar/
   // onUploadBackground/onError/stickers/onStickersChange/designSection/
@@ -2314,6 +2724,9 @@ export default function BuilderLeftPanel({
                       onGalleryImagesChanged={onGalleryImagesChanged}
                       onAudioChanged={onAudioChanged}
                       onFileChanged={onFileChanged}
+                      onIconChanged={onIconChanged}
+                      onThumbnailChanged={onThumbnailChanged}
+                      onThumbnailRemoved={onThumbnailRemoved}
                       products={products}
                       onProductCreated={onProductCreated}
                       siblingIds={rootIds}

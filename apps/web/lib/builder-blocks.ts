@@ -225,6 +225,20 @@ export interface BuilderTreeNode {
   // September 2026: sebelumnya TIDAK ADA cara menonaktifkan blok di
   // Builder selain menghapusnya -- sekarang ada di menu ⋮ baris root.
   isActive?: boolean;
+  // Field root-only lain (19 September 2026, paritas BlockToolsStrip):
+  // jadwal tayang, kunci/sensitif, unggulan+thumbnail, ikon kustom. SEMUA
+  // field `links` sungguhan, TIDAK ADA padanannya di blok bersarang
+  // (EmbeddedBuilderBlock) -- persis pola isActive di atas.
+  startsAt?: string | null;
+  endsAt?: string | null;
+  lockType?: string;
+  lockCode?: string;
+  lockMinAge?: number | null;
+  isFeatured?: boolean;
+  thumbnailUrl?: string;
+  customIconUrl?: string;
+  iconKey?: string;
+  iconColor?: string;
   children: BuilderTreeNode[];
 }
 
@@ -233,12 +247,32 @@ export interface BuilderTreeNode {
 // tipe bersama (18 September 2026) karena sebelumnya bentuk objek ini
 // disalin literal di 4 tanda tangan berbeda; `isActive` hanya berlaku utk
 // root (diabaikan utk node bersarang, lihat catatan BuilderTreeNode.isActive).
+//
+// startsAt/endsAt/clearSchedule, lockType/lockCode/lockMinAge/clearLock,
+// isFeatured, iconKey/iconColor -- perbaikan Builder 19 September 2026
+// (paritas BlockToolsStrip Mode Simple, root-only sama seperti isActive).
+// SEMUA field ini pure-JSON (tanpa upload file) jadi tetap lewat model
+// draft biasa -- HANYA customIconUrl (unggah) & thumbnailUrl (unggah)
+// yang TIDAK di sini, keduanya ditulis langsung ke server via
+// onIconChanged/onThumbnailChanged (immediate-write, pola sama
+// onMediaImageChanged) karena backend menolak customIconUrl lewat PATCH
+// generik (upload-only, lihat updateLinkRequest links.go).
 export interface BuilderNodePatch {
   title?: string;
   url?: string;
   description?: string;
   blockData?: Record<string, unknown>;
   isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  clearSchedule?: boolean;
+  lockType?: string;
+  lockCode?: string;
+  lockMinAge?: number | null;
+  clearLock?: boolean;
+  isFeatured?: boolean;
+  iconKey?: string;
+  iconColor?: string;
 }
 
 function buildChildNodes(rootId: string, parentPath: BuilderSeg[], children: EmbeddedBuilderBlock[]): BuilderTreeNode[] {
@@ -282,6 +316,16 @@ export function buildTree(links: LinkItem[]): BuilderTreeNode[] {
   return links.map((link) => ({
     ...buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data),
     isActive: link.is_active,
+    startsAt: link.starts_at,
+    endsAt: link.ends_at,
+    lockType: link.lock_type,
+    lockCode: link.lock_code,
+    lockMinAge: link.lock_min_age,
+    isFeatured: link.is_featured,
+    thumbnailUrl: link.thumbnail_url,
+    customIconUrl: link.custom_icon_url,
+    iconKey: link.icon_key,
+    iconColor: link.icon_color,
   }));
 }
 

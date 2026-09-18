@@ -151,6 +151,68 @@ function extractPageDesignPatch(p: MyPage): Partial<MyPage> {
 // TestUpdateMyPage_RejectsCustomBackgroundValueForFreeUser di backend,
 // TIDAK diubah) jadi perbaikannya di SINI: kirim HANYA field yang
 // NILAINYA benar-benar berbeda dari snapshot server, bukan seluruh objek.
+// LinkRestFields/NEW_ROOT_REST_DEFAULTS/diffLinkRestFields -- paritas
+// BlockToolsStrip di Builder (19 September 2026): jadwal/kunci/unggulan/
+// ikon-galeri/warna-ikon SEMUANYA field root-only (`links`) di luar title/
+// url/description/block_data/is_active yang sudah ditangani commitSave
+// sebelum ini. Diekstrak jadi SATU fungsi dipakai DUA tempat (langkah 2 --
+// root baru yang sudah diubah field ini sebelum Save pertama, & langkah 3
+// -- root lama yang berubah) supaya logikanya tidak dua kali ditulis beda.
+// clear_schedule/clear_lock dipakai (bukan mengirim string/null kosong)
+// karena begitu backend menerimanya (updateLinkRequest, links.go).
+type LinkRestFields = Pick<LinkItem, "is_active" | "starts_at" | "ends_at" | "lock_type" | "lock_code" | "lock_min_age" | "is_featured" | "icon_key" | "icon_color">;
+const NEW_ROOT_REST_DEFAULTS: LinkRestFields = {
+  is_active: true,
+  starts_at: null,
+  ends_at: null,
+  lock_type: "",
+  lock_code: "",
+  lock_min_age: null,
+  is_featured: false,
+  icon_key: "",
+  icon_color: "",
+};
+function diffLinkRestFields(root: LinkItem, before: LinkRestFields): Parameters<typeof updateLink>[1] | null {
+  const patch: Parameters<typeof updateLink>[1] = {};
+  let changed = false;
+  if (root.is_active !== before.is_active) {
+    patch.is_active = root.is_active;
+    changed = true;
+  }
+  if (root.starts_at !== before.starts_at || root.ends_at !== before.ends_at) {
+    changed = true;
+    if (root.starts_at && root.ends_at) {
+      patch.starts_at = root.starts_at;
+      patch.ends_at = root.ends_at;
+    } else {
+      patch.clear_schedule = true;
+    }
+  }
+  if (root.lock_type !== before.lock_type || root.lock_code !== before.lock_code || root.lock_min_age !== before.lock_min_age) {
+    changed = true;
+    if (root.lock_type) {
+      patch.lock_type = root.lock_type as "age" | "code" | "subscribe" | "sensitive";
+      if (root.lock_code) patch.lock_code = root.lock_code;
+      if (root.lock_min_age != null) patch.lock_min_age = root.lock_min_age;
+    } else {
+      patch.clear_lock = true;
+    }
+  }
+  if (root.is_featured !== before.is_featured) {
+    patch.is_featured = root.is_featured;
+    changed = true;
+  }
+  if (root.icon_key !== before.icon_key) {
+    patch.icon_key = root.icon_key;
+    changed = true;
+  }
+  if (root.icon_color !== before.icon_color) {
+    patch.icon_color = root.icon_color;
+    changed = true;
+  }
+  return changed ? patch : null;
+}
+
 function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> {
   const draft = extractPageDesignPatch(page);
   const server = extractPageDesignPatch(serverPage);
@@ -772,9 +834,20 @@ export default function BuilderPage() {
                 ...(patch.url !== undefined ? { url: patch.url } : {}),
                 ...(patch.description !== undefined ? { description: patch.description } : {}),
                 ...(patch.blockData !== undefined ? { block_data: { ...l.block_data, ...patch.blockData } } : {}),
-                // isActive -- hanya root (kolom `links.is_active`), lihat
+                // isActive & field root-only lain (19 September 2026,
+                // paritas BlockToolsStrip) -- lihat catatan lengkap di
                 // BuilderNodePatch; ikut draft & terkirim di commitSave.
                 ...(patch.isActive !== undefined ? { is_active: patch.isActive } : {}),
+                ...(patch.startsAt !== undefined ? { starts_at: patch.startsAt } : {}),
+                ...(patch.endsAt !== undefined ? { ends_at: patch.endsAt } : {}),
+                ...(patch.clearSchedule ? { starts_at: null, ends_at: null } : {}),
+                ...(patch.lockType !== undefined ? { lock_type: patch.lockType as LinkItem["lock_type"] } : {}),
+                ...(patch.lockCode !== undefined ? { lock_code: patch.lockCode } : {}),
+                ...(patch.lockMinAge !== undefined ? { lock_min_age: patch.lockMinAge } : {}),
+                ...(patch.clearLock ? { lock_type: "" as const, lock_code: "", lock_min_age: null } : {}),
+                ...(patch.isFeatured !== undefined ? { is_featured: patch.isFeatured } : {}),
+                ...(patch.iconKey !== undefined ? { icon_key: patch.iconKey } : {}),
+                ...(patch.iconColor !== undefined ? { icon_color: patch.iconColor } : {}),
               }
             : l
         );
@@ -951,6 +1024,31 @@ export default function BuilderPage() {
     applyFieldToPath(rootId, path, (bd) => ({ ...bd, file_url: patch.file_url, file_name: patch.file_name, file_size_bytes: patch.file_size_bytes }));
   }
 
+  // handleIconChanged/handleIconRemoved/handleThumbnailChanged/
+  // handleThumbnailRemoved -- paritas BlockToolsStrip (19 September 2026),
+  // ROOT-only (custom_icon_url/thumbnail_url bukan bagian block_data,
+  // beda dari handleMediaImageChanged dkk di atas) & IMMEDIATE-write
+  // (bukan draft) karena keduanya upload file -- backend menolak
+  // custom_icon_url lewat PATCH generik (upload-only, updateLinkRequest
+  // links.go), pola sama persis handleMediaImageChanged: tulis LANGSUNG
+  // ke `links`+`serverLinks` (BUKAN applyFieldToPath yang menyasar
+  // block_data), supaya draft blok LAIN yang belum Disimpan tidak ikut
+  // tertimpa. Pemanggil (RootToolsPanel, BuilderLeftPanel.tsx) sendiri
+  // yang memanggil onEnsureRootPersisted + endpoint upload/hapus, di sini
+  // cukup menerima HASILNYA & menambal state.
+  function handleIconChanged(rootId: string, patch: { customIconUrl?: string; iconKey?: string }) {
+    setLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, ...(patch.customIconUrl !== undefined ? { custom_icon_url: patch.customIconUrl } : {}), ...(patch.iconKey !== undefined ? { icon_key: patch.iconKey } : {}) } : l)));
+    setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, ...(patch.customIconUrl !== undefined ? { custom_icon_url: patch.customIconUrl } : {}), ...(patch.iconKey !== undefined ? { icon_key: patch.iconKey } : {}) } : l)));
+  }
+  function handleThumbnailChanged(rootId: string, thumbnailUrl: string) {
+    setLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, thumbnail_url: thumbnailUrl, is_featured: true } : l)));
+    setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, thumbnail_url: thumbnailUrl, is_featured: true } : l)));
+  }
+  function handleThumbnailRemoved(rootId: string) {
+    setLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, thumbnail_url: "", is_featured: false } : l)));
+    setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, thumbnail_url: "", is_featured: false } : l)));
+  }
+
   // handlePatch/handleStyleOverride/handleDesignLocalChange -- redesain
   // arsitektur draft: SEKARANG murni `setPage` (draft lokal), TIDAK ADA
   // panggilan API lagi (dulu handlePatch langsung PATCH ke backend dengan
@@ -1071,14 +1169,28 @@ export default function BuilderPage() {
           continue;
         }
         let created = await createRootOnServer(root);
-        // Root baru yang SUDAH dinonaktifkan di draft sebelum pernah
-        // disimpan (menu ⋮ > Nonaktifkan, 18 September 2026): createBlock
-        // selalu membuat baris aktif, jadi status nonaktif menyusul lewat
-        // PATCH terpisah -- kalau PATCH ini gagal, blok tetap ada (aktif)
-        // & retry Save berikutnya mengirimnya lagi lewat langkah 3.
-        if (root.is_active === false) {
-          await updateLink(created.id, { is_active: false });
-          created = { ...created, is_active: false };
+        // Root baru yang SUDAH diubah field root-only (Nonaktifkan/jadwal/
+        // kunci/unggulan/ikon galeri/warna) di draft sebelum pernah
+        // disimpan: createBlock selalu membuat baris dgn nilai bawaan,
+        // jadi apa pun yang berbeda menyusul lewat PATCH terpisah -- kalau
+        // PATCH ini gagal, blok tetap ada (nilai bawaan) & retry Save
+        // berikutnya mengirimnya lagi lewat langkah 3 (diffLinkRestFields
+        // membandingkan thd server, bukan draft).
+        const restPatch = diffLinkRestFields(root, NEW_ROOT_REST_DEFAULTS);
+        if (restPatch) {
+          await updateLink(created.id, restPatch);
+          created = {
+            ...created,
+            is_active: root.is_active,
+            starts_at: root.starts_at,
+            ends_at: root.ends_at,
+            lock_type: root.lock_type,
+            lock_code: root.lock_code,
+            lock_min_age: root.lock_min_age,
+            is_featured: root.is_featured,
+            icon_key: root.icon_key,
+            icon_color: root.icon_color,
+          };
         }
         setSelection((prev) => (prev && prev.rootId === root.id ? { ...prev, rootId: created.id } : prev));
         // setLinks per-iterasi (BUKAN sekali di luar loop) -- bug ditemukan
@@ -1106,13 +1218,13 @@ export default function BuilderPage() {
       for (const root of nextDraftLinks) {
         const before = originalById.get(root.id);
         if (!before) continue; // baru dibuat di langkah 2, sudah pasti sinkron dgn server.
-        const changed =
+        const contentChanged =
           before.title !== root.title ||
           before.url !== root.url ||
           before.description !== root.description ||
-          before.is_active !== root.is_active ||
           JSON.stringify(before.block_data) !== JSON.stringify(root.block_data);
-        if (!changed) continue;
+        const restPatch = diffLinkRestFields(root, before);
+        if (!contentChanged && !restPatch) continue;
         // url: root.url || undefined -- BUKAN root.url mentah (bug ditemukan
         // lewat verifikasi e2e live, 10 September 2026): blok kontainer
         // (section/column/divider/dst) TIDAK PERNAH punya URL sungguhan
@@ -1122,7 +1234,7 @@ export default function BuilderPage() {
         // links.go tidak merelaksasi field ini seperti CreateBlock).
         // createRootOnServer (langkah 2 di atas) sudah benar sejak awal,
         // cabang UPDATE ini yang sebelumnya lupa filter yang sama.
-        await updateLink(root.id, { title: root.title, url: root.url || undefined, description: root.description, block_data: root.block_data, is_active: root.is_active });
+        await updateLink(root.id, { title: root.title, url: root.url || undefined, description: root.description, block_data: root.block_data, ...(restPatch ?? {}) });
         nextServerLinks = nextServerLinks.map((l) => (l.id === root.id ? root : l));
         setServerLinks(nextServerLinks);
       }
@@ -1542,6 +1654,9 @@ export default function BuilderPage() {
           onGalleryImagesChanged={handleGalleryImagesChanged}
           onAudioChanged={handleAudioChanged}
           onFileChanged={handleFileChanged}
+          onIconChanged={handleIconChanged}
+          onThumbnailChanged={handleThumbnailChanged}
+          onThumbnailRemoved={handleThumbnailRemoved}
           onEnsureRootPersisted={ensureRootPersisted}
           settingsHref="/dashboard/settings"
           page={designPage}
