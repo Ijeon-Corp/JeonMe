@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -971,7 +972,7 @@ func TestValidateBlockData_BuilderFase3Types(t *testing.T) {
 		}
 	})
 
-	t.Run("countdown/list/image_slider/embed boleh ditanam di dalam Section, maps TIDAK (root-only)", func(t *testing.T) {
+	t.Run("countdown/list/image_slider/embed boleh ditanam di dalam Section", func(t *testing.T) {
 		child := func(id, blockType string) map[string]any {
 			return map[string]any{"id": id, "block_type": blockType, "title": "", "block_data": map[string]any{}}
 		}
@@ -981,9 +982,308 @@ func TestValidateBlockData_BuilderFase3Types(t *testing.T) {
 				t.Fatalf("block_type %q seharusnya boleh ditanam di Section sejak Fase 3, dapat: %s", bt, msg)
 			}
 		}
-		data := map[string]any{"children": []any{child("c1", "maps")}}
+		// "maps" dulu diuji di sini sbg contoh tipe ROOT-ONLY Fase 3 -- sejak
+		// Builder improvements 18 September 2026 SUDAH boleh ditanam, lihat
+		// TestValidateBlockData_BuilderNestedContactFormMaps di bawah.
+	})
+}
+
+// TestValidateBlockData_BuilderNestedContactFormMaps -- Builder improvements
+// 18 September 2026: "contact_form" & "maps" dicabut dari status root-only
+// (lihat catatan lengkap di allowedBuilderEmbeddedBlockTypes, links.go).
+// Validator struktur murni, diuji langsung seperti test Fase 1-3 di atas.
+func TestValidateBlockData_BuilderNestedContactFormMaps(t *testing.T) {
+	child := func(id, blockType string, data map[string]any) map[string]any {
+		return map[string]any{"id": id, "block_type": blockType, "title": "", "url": "https://maps.app.goo.gl/abc", "block_data": data}
+	}
+
+	t.Run("contact_form & maps boleh ditanam langsung di Section", func(t *testing.T) {
+		data := map[string]any{"children": []any{
+			child("c1", "contact_form", map[string]any{}),
+			child("c2", "maps", map[string]any{"embed": true}),
+		}}
+		if msg, ok := validateBlockData("section", data); !ok {
+			t.Fatalf("contact_form/maps seharusnya boleh ditanam di Section sejak 18 September 2026, dapat: %s", msg)
+		}
+	})
+
+	t.Run("contact_form & maps boleh ditanam di dalam kolom Column", func(t *testing.T) {
+		data := map[string]any{"columns": []any{
+			map[string]any{"children": []any{child("c1", "contact_form", map[string]any{})}},
+			map[string]any{"children": []any{child("c2", "maps", map[string]any{"embed": false})}},
+		}}
+		if msg, ok := validateBlockData("column", data); !ok {
+			t.Fatalf("contact_form/maps seharusnya boleh ditanam di Column, dapat: %s", msg)
+		}
+	})
+
+	t.Run("aturan block_data maps TETAP berlaku saat tertanam (embed wajib bool)", func(t *testing.T) {
+		data := map[string]any{"children": []any{child("c1", "maps", map[string]any{"embed": "ya"})}}
 		if _, ok := validateBlockData("section", data); ok {
-			t.Fatal(`"maps" ROOT-ONLY di Fase 3 -- seharusnya TETAP ditolak sbg anak Section`)
+			t.Fatal("embed bukan bool seharusnya tetap ditolak walau blok maps-nya tertanam")
+		}
+	})
+
+	t.Run("catalog TETAP tidak boleh ditanam (root-only)", func(t *testing.T) {
+		data := map[string]any{"children": []any{child("c1", "catalog", map[string]any{})}}
+		if _, ok := validateBlockData("section", data); ok {
+			t.Fatal("catalog seharusnya TETAP ditolak sbg anak Section")
+		}
+	})
+}
+
+// TestFindEmbeddedBuilderBlock -- pencarian id blok tertanam yang dipakai
+// SubmitContactForm utk Formulir Kontak di dalam Section/Column (Builder
+// improvements 18 September 2026). Fungsi murni, tanpa DB.
+func TestFindEmbeddedBuilderBlock(t *testing.T) {
+	node := func(id, blockType string, data map[string]any) map[string]any {
+		return map[string]any{"id": id, "block_type": blockType, "title": "", "block_data": data}
+	}
+	// section(root) -> [text, column -> [ [text], [section -> [contact_form]] ]]
+	deepSection := node("s2", "section", map[string]any{"children": []any{node("cf1", "contact_form", map[string]any{})}})
+	column := node("col1", "column", map[string]any{"columns": []any{
+		map[string]any{"children": []any{node("t2", "text", map[string]any{})}},
+		map[string]any{"children": []any{deepSection}},
+	}})
+	root := map[string]any{"children": []any{node("t1", "text", map[string]any{}), column}}
+
+	t.Run("menemukan blok di kedalaman 3 lewat column", func(t *testing.T) {
+		found := findEmbeddedBuilderBlock(root, "cf1")
+		if found == nil {
+			t.Fatal("contact_form yang tertanam di section->column->section seharusnya ditemukan")
+		}
+		if bt, _ := found["block_type"].(string); bt != "contact_form" {
+			t.Fatalf("block_type = %q, ekspektasi contact_form", bt)
+		}
+	})
+
+	t.Run("menemukan anak langsung & node kontainer itu sendiri", func(t *testing.T) {
+		if findEmbeddedBuilderBlock(root, "t1") == nil {
+			t.Fatal("anak langsung root seharusnya ditemukan")
+		}
+		if found := findEmbeddedBuilderBlock(root, "col1"); found == nil || found["block_type"] != "column" {
+			t.Fatal("node column tertanam seharusnya ditemukan sbg node ber-block_type column")
+		}
+	})
+
+	t.Run("id yang tidak ada / rootData nil mengembalikan nil", func(t *testing.T) {
+		if findEmbeddedBuilderBlock(root, "tidak-ada") != nil {
+			t.Fatal("id yang tidak ada seharusnya nil")
+		}
+		if findEmbeddedBuilderBlock(nil, "cf1") != nil {
+			t.Fatal("rootData nil seharusnya nil, bukan panic")
+		}
+		// block_data root yang BUKAN kontainer (mis. baris root bertipe text)
+		// tidak punya children/columns -- harus nil, bukan panic.
+		if findEmbeddedBuilderBlock(map[string]any{"text": "halo"}, "cf1") != nil {
+			t.Fatal("block_data tanpa children/columns seharusnya nil")
+		}
+	})
+}
+
+// TestResolveNestedMapsEmbedCoords -- resolusi koordinat maps TERTANAM
+// (Builder improvements 18 September 2026), cermin path-aware dari blok
+// resolveMapsEmbedCoords utk root. Resolver disuntik palsu supaya test
+// TIDAK melakukan HTTP keluar ke Google Maps.
+func TestResolveNestedMapsEmbedCoords(t *testing.T) {
+	maps := func(id, url string, data map[string]any) map[string]any {
+		return map[string]any{"id": id, "block_type": "maps", "title": "Kantor", "url": url, "block_data": data}
+	}
+	fakeResolver := func(calls *[]string) mapsCoordResolver {
+		return func(_ context.Context, rawURL string) (float64, float64, error) {
+			*calls = append(*calls, rawURL)
+			if strings.Contains(rawURL, "rusak") {
+				return 0, 0, errors.New("tautan harus berupa tautan berbagi Google Maps yang valid")
+			}
+			return -6.2, 106.8, nil
+		}
+	}
+
+	t.Run("maps embed=true di dalam column diresolusi & koordinat ditulis di tempat", func(t *testing.T) {
+		target := maps("m1", "https://maps.app.goo.gl/abc", map[string]any{"embed": true})
+		data := map[string]any{"columns": []any{
+			map[string]any{"children": []any{map[string]any{"id": "t1", "block_type": "text", "block_data": map[string]any{}}}},
+			map[string]any{"children": []any{target}},
+		}}
+		var calls []string
+		if err := resolveNestedMapsEmbedCoords(context.Background(), data, nil, fakeResolver(&calls)); err != nil {
+			t.Fatalf("resolusi seharusnya sukses, dapat: %v", err)
+		}
+		bd := target["block_data"].(map[string]any)
+		if bd["embed_lat"] != -6.2 || bd["embed_lng"] != 106.8 {
+			t.Fatalf("embed_lat/embed_lng = %v/%v, ekspektasi -6.2/106.8 (mutasi di tempat)", bd["embed_lat"], bd["embed_lng"])
+		}
+		if len(calls) != 1 {
+			t.Fatalf("resolver dipanggil %d kali, ekspektasi tepat 1", len(calls))
+		}
+	})
+
+	t.Run("embed=false atau url kosong dilewati tanpa HTTP & tanpa error", func(t *testing.T) {
+		direct := maps("m1", "https://maps.app.goo.gl/abc", map[string]any{"embed": false})
+		shell := maps("m2", "", map[string]any{"embed": true})
+		data := map[string]any{"children": []any{direct, shell}}
+		var calls []string
+		if err := resolveNestedMapsEmbedCoords(context.Background(), data, nil, fakeResolver(&calls)); err != nil {
+			t.Fatalf("seharusnya tidak error, dapat: %v", err)
+		}
+		if len(calls) != 0 {
+			t.Fatalf("resolver seharusnya TIDAK dipanggil, dipanggil utk: %v", calls)
+		}
+		if _, ok := shell["block_data"].(map[string]any)["embed_lat"]; ok {
+			t.Fatal("maps tanpa url seharusnya dibiarkan tanpa koordinat (shell-first)")
+		}
+	})
+
+	t.Run("koordinat dari prev dipakai ulang kalau url sama, diresolusi ulang kalau url berubah", func(t *testing.T) {
+		prev := map[string]any{"children": []any{
+			maps("sama", "https://maps.app.goo.gl/lama", map[string]any{"embed": true, "embed_lat": -7.0, "embed_lng": 110.0}),
+			maps("ubah", "https://maps.app.goo.gl/lama", map[string]any{"embed": true, "embed_lat": -7.0, "embed_lng": 110.0}),
+		}}
+		// Klien mengirim balik koordinat "sama" dgn nilai yang DIUBAH -- yang
+		// dipercaya harus nilai dari prev (DB), bukan kiriman klien.
+		same := maps("sama", "https://maps.app.goo.gl/lama", map[string]any{"embed": true, "embed_lat": 99.0, "embed_lng": 99.0})
+		changed := maps("ubah", "https://maps.app.goo.gl/baru", map[string]any{"embed": true, "embed_lat": -7.0, "embed_lng": 110.0})
+		data := map[string]any{"children": []any{same, changed}}
+		var calls []string
+		if err := resolveNestedMapsEmbedCoords(context.Background(), data, prev, fakeResolver(&calls)); err != nil {
+			t.Fatalf("seharusnya sukses, dapat: %v", err)
+		}
+		sameBD := same["block_data"].(map[string]any)
+		if sameBD["embed_lat"] != -7.0 || sameBD["embed_lng"] != 110.0 {
+			t.Fatalf("node url-sama seharusnya memakai koordinat prev (-7/110), dapat %v/%v", sameBD["embed_lat"], sameBD["embed_lng"])
+		}
+		changedBD := changed["block_data"].(map[string]any)
+		if changedBD["embed_lat"] != -6.2 || changedBD["embed_lng"] != 106.8 {
+			t.Fatalf("node url-berubah seharusnya diresolusi ulang (-6.2/106.8), dapat %v/%v", changedBD["embed_lat"], changedBD["embed_lng"])
+		}
+		if len(calls) != 1 || calls[0] != "https://maps.app.goo.gl/baru" {
+			t.Fatalf("resolver seharusnya dipanggil tepat sekali utk url baru, dapat: %v", calls)
+		}
+	})
+
+	t.Run("resolver gagal -> error menyebut blok, mutasi berhenti", func(t *testing.T) {
+		broken := maps("m1", "https://example.com/rusak", map[string]any{"embed": true})
+		data := map[string]any{"children": []any{broken}}
+		var calls []string
+		err := resolveNestedMapsEmbedCoords(context.Background(), data, nil, fakeResolver(&calls))
+		if err == nil {
+			t.Fatal("resolver gagal seharusnya diteruskan sbg error")
+		}
+		if !strings.Contains(err.Error(), "blok Maps tertanam (Kantor)") || !strings.Contains(err.Error(), "Google Maps") {
+			t.Fatalf("pesan error seharusnya menyebut blok & alasan asli, dapat: %v", err)
+		}
+	})
+
+	t.Run("block_data non-kontainer (root text) no-op", func(t *testing.T) {
+		var calls []string
+		if err := resolveNestedMapsEmbedCoords(context.Background(), map[string]any{"text": "halo"}, nil, fakeResolver(&calls)); err != nil || len(calls) != 0 {
+			t.Fatalf("root tanpa children/columns seharusnya no-op, err=%v calls=%v", err, calls)
+		}
+	})
+}
+
+// TestLinksSubmitContactForm_NestedInSection -- alur nyata end-to-end di
+// atas DB (Builder improvements 18 September 2026): Formulir Kontak yang
+// ditanam di Section bisa di-submit pengunjung lewat id blok tertanam +
+// root_link_id, sementara id tertanam TANPA root_link_id (perilaku lama)
+// tetap 404, root milik kreator LAIN tidak bisa dipakai utk "meminjam" id,
+// & anak tertanam bertipe bukan contact_form ditolak 400. Queue nil ->
+// handler membalas 200 tanpa enqueue (pola yang sudah ada), cukup utk
+// membuktikan pencarian id-nya.
+func TestLinksSubmitContactForm_NestedInSection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/blocks", links.CreateBlock)
+	router.POST("/links/:id/contact", links.SubmitContactForm)
+
+	embeddedContactID := uuid.NewString()
+	embeddedTextID := uuid.NewString()
+	createSection := func(ownerID string) string {
+		rec := doJSON(t, router, http.MethodPost, "/blocks", map[string]any{
+			"block_type": "section", "title": "Hubungi Kami",
+			"block_data": map[string]any{"children": []any{
+				map[string]any{"id": embeddedContactID, "block_type": "contact_form", "title": "Kontak", "block_data": map[string]any{}},
+				map[string]any{"id": embeddedTextID, "block_type": "text", "title": "", "block_data": map[string]any{"text": "halo"}},
+			}},
+		}, map[string]string{"X-Test-UserID": ownerID})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("buat section dgn contact_form tertanam gagal: status %d, body %s", rec.Code, rec.Body.String())
+		}
+		var created linkItem
+		if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+			t.Fatalf("gagal decode section: %v", err)
+		}
+		return created.ID
+	}
+	rootID := createSection(userID)
+	otherRootID := createSection(otherUserID)
+
+	body := func(rootLinkID string) map[string]any {
+		payload := map[string]any{"name": "Budi", "email": "budi@example.com", "message": "Halo, mau tanya."}
+		if rootLinkID != "" {
+			payload["root_link_id"] = rootLinkID
+		}
+		return payload
+	}
+
+	t.Run("id tertanam + root_link_id yang benar -> 200", func(t *testing.T) {
+		rec := doJSON(t, router, http.MethodPost, "/links/"+embeddedContactID+"/contact", body(rootID), nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("submit ke contact_form tertanam seharusnya 200, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("id tertanam TANPA root_link_id -> 404 (perilaku lama tidak berubah)", func(t *testing.T) {
+		rec := doJSON(t, router, http.MethodPost, "/links/"+embeddedContactID+"/contact", body(""), nil)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("tanpa root_link_id seharusnya 404, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("root_link_id menunjuk root yang tidak memuat id itu -> 404", func(t *testing.T) {
+		// otherRootID memuat id tertanam yang SAMA (uuid dibagi di test ini)
+		// tapi milik kreator lain -- pencarian dibatasi ke root yang disebut,
+		// jadi id acak yang TIDAK ada di root mana pun harus 404.
+		rec := doJSON(t, router, http.MethodPost, "/links/"+uuid.NewString()+"/contact", body(rootID), nil)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("id yang tidak ada di root seharusnya 404, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+		rec = doJSON(t, router, http.MethodPost, "/links/"+embeddedContactID+"/contact", body(uuid.NewString()), nil)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("root_link_id yang tidak ada seharusnya 404, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+		rec = doJSON(t, router, http.MethodPost, "/links/"+embeddedContactID+"/contact", body("bukan-uuid"), nil)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("root_link_id non-uuid seharusnya 404 (bukan 500), dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("id tertanam bertipe text -> 400 bukan formulir kontak", func(t *testing.T) {
+		rec := doJSON(t, router, http.MethodPost, "/links/"+embeddedTextID+"/contact", body(rootID), nil)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("anak bertipe text seharusnya 400, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("id non-uuid tanpa root_link_id -> 404, bukan 500", func(t *testing.T) {
+		rec := doJSON(t, router, http.MethodPost, "/links/bukan-uuid/contact", body(""), nil)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("id non-uuid seharusnya 404, dapat %d, body %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("root milik kreator lain tetap resolve ke root itu (penerima = pemilik root)", func(t *testing.T) {
+		// Bukan celah: pengunjung memang bebas mengirim ke formulir siapa pun
+		// yang benar-benar ada di halaman publik -- yang dijamin adalah
+		// penerima SELALU pemilik root yang disebut, tidak pernah kreator lain.
+		rec := doJSON(t, router, http.MethodPost, "/links/"+embeddedContactID+"/contact", body(otherRootID), nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("root milik kreator lain yang memang memuat id itu seharusnya 200, dapat %d, body %s", rec.Code, rec.Body.String())
 		}
 	})
 }

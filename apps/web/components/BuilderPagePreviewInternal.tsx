@@ -61,6 +61,7 @@ import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 // PagePreview.tsx) supaya file ini berdiri sendiri -- modul tujuannya SAMA,
 // jadi bundler tetap memakai satu chunk yang sama untuk masing-masing.
 const AudioPlayerBlock = dynamic(() => import("@/components/AudioPlayerBlock"));
+const ContactFormBlock = dynamic(() => import("@/components/ContactFormBlock"));
 const CountdownBlock = dynamic(() => import("@/components/CountdownBlock"));
 const EmbedBlock = dynamic(() => import("@/components/EmbedBlock"));
 const FaqBlock = dynamic(() => import("@/components/FaqBlock"));
@@ -148,11 +149,18 @@ const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "produk",
   // Fase 4 (13 September 2026): 5 tipe klasik lama, boleh root MAUPUN
   // bersarang (lihat allowedBuilderEmbeddedBlockTypes, links.go).
-  // "contact_form"/"catalog" SENGAJA TIDAK di sini (root-only) -- baris
-  // ROOT tipe itu tetap jatuh ke renderLinkOrBlock yang SUDAH bekerja
-  // penuh (termasuk submit form sungguhan & drill-down katalog), menulis
-  // ulang logic itu di renderBuilderNode cuma menambah duplikasi tanpa
-  // manfaat karena keduanya TIDAK PERNAH muncul bersarang.
+  // "catalog" SENGAJA TIDAK di sini (root-only) -- baris ROOT tipe itu
+  // tetap jatuh ke renderLinkOrBlock yang SUDAH bekerja penuh (drill-down
+  // katalog), menulis ulang logic itu di renderBuilderNode cuma menambah
+  // duplikasi tanpa manfaat karena tidak pernah muncul bersarang.
+  // "contact_form" JUGA SENGAJA TIDAK di sini walau sejak Builder
+  // improvements 18 September 2026 sudah boleh BERSARANG (ada case-nya di
+  // renderBuilderNode, dipakai anak Section/Column): baris ROOT-nya tetap
+  // lewat renderLinkOrBlock supaya ikon kustom (resolveBlockIcon) & gerbang
+  // konten sensitif yang cuma ada di PagePreviewLink tetap berfungsi --
+  // BuilderRenderNode lossy soal field root-only itu (lihat catatan Fase 4
+  // di renderBuilderNode). Anak tertanam tidak pernah lewat set ini (masuk
+  // switch langsung dari kontainernya), jadi tidak butuh entry.
   "heading",
   "accordion",
   "audio",
@@ -176,12 +184,22 @@ function renderBuilderNode(
   data: PagePreviewData,
   interactive: boolean,
   canBuy: boolean,
-  selectedNodeId?: string
+  selectedNodeId?: string,
+  // rootLinkId -- Builder improvements 18 September 2026: id baris `links`
+  // ROOT yang memuat node ini, diturunkan lewat rekursi Section/Column
+  // (undefined = node ini SENDIRI root). Dibutuhkan blok "contact_form"
+  // tertanam: submit-nya harus membawa id root supaya backend
+  // (SubmitContactForm + root_link_id) bisa menemukan id blok tertanam di
+  // dalam block_data root itu -- id anak Section/Column bukan baris `links`.
+  rootLinkId?: string
 ): React.ReactNode {
   // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
   // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
   // (assert isi Section/Column tertanam tampil benar di halaman publik).
   const ring = builderSelectionRing(node.id, selectedNodeId);
+  // Root id utk anak-anak node ini: kalau node ini sendiri root (rootLinkId
+  // belum ada), id-nya sendirilah root bagi semua keturunannya.
+  const childRootLinkId = rootLinkId ?? node.id;
   switch (node.blockType) {
     case "divider":
       // Target klik diperlebar (py-2.5 di kanvas KREATOR SAJA, `!interactive`)
@@ -270,7 +288,7 @@ function renderBuilderNode(
           data-builder-block-type="section"
           className={`flex w-full flex-col items-center gap-4 rounded-xl${ring}`}
         >
-          {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
+          {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId, childRootLinkId))}
         </section>
       );
     }
@@ -287,7 +305,7 @@ function renderBuilderNode(
                 className="flex min-w-0 flex-1 flex-col items-center gap-4"
                 style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
               >
-                {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
+                {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId, childRootLinkId))}
               </div>
             );
           })}
@@ -456,8 +474,11 @@ function renderBuilderNode(
       );
     }
     // Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru
-    // + promosi "maps" (block_type lama, ROOT-ONLY -- lihat catatan
-    // lengkap di allowedBuilderEmbeddedBlockTypes, links.go).
+    // + promosi "maps" (block_type lama; dulu ROOT-ONLY, sejak Builder
+    // improvements 18 September 2026 boleh bersarang juga -- koordinat
+    // embed_lat/embed_lng anak tertanam kini diresolusi backend persis
+    // seperti root, lihat resolveNestedMapsEmbedCoords di links.go; case
+    // ini SUDAH generik root/tertanam sejak awal, tidak perlu diubah).
     case "maps":
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="maps" className={`w-full rounded-xl${ring}`}>
@@ -656,6 +677,48 @@ function renderBuilderNode(
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
           />
+        </div>
+      );
+    case "contact_form":
+      // "contact_form" TERTANAM -- Builder improvements 18 September 2026
+      // (dulu root-only, lihat allowedBuilderEmbeddedBlockTypes links.go).
+      // Cermin PERSIS cabang contact_form di renderLinkOrBlock (PagePreview.
+      // tsx): interaktif = ContactFormBlock sungguhan, pratinjau/kanvas =
+      // kartu judul + tombol mati. Bedanya cuma `rootLinkId` (id root
+      // pemuat, diturunkan lewat rekursi) supaya submit dari blok tertanam
+      // sampai ke backend, & tanpa ikon kustom (field root-only, trade-off
+      // yang sama dgn blok Fase 4 di bawah). Baris ROOT tipe ini TIDAK lewat
+      // sini (lihat catatan BUILDER_NODE_BLOCK_TYPES), jadi rootLinkId di
+      // sini praktis selalu terisi -- fallback ke node.id sendiri cuma
+      // jaga-jaga (backend mengabaikan root_link_id kalau id-nya root asli).
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="contact_form" className={`w-full rounded-xl${ring}`}>
+          {interactive ? (
+            <ContactFormBlock
+              linkId={node.id}
+              rootLinkId={rootLinkId ?? node.id}
+              title={node.title}
+              cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+              titleClassName={theme.cardTitle}
+              inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+              buttonClassName={theme.buyButton}
+            />
+          ) : (
+            <div className={`w-full rounded-xl p-2.5 text-center ${theme.card}`}>
+              {node.title && <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>}
+              {/* div ber-role button, BUKAN <button disabled> -- alasan sama
+                  persis blok "button" di atas (form control disabled tidak
+                  mem-bubble-kan klik, blok jadi tidak bisa dipilih di kanvas). */}
+              <div
+                role="button"
+                aria-disabled="true"
+                title="Pratinjau -- tombol ini tidak aktif"
+                className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+              >
+                Kirim Pesan
+              </div>
+            </div>
+          )}
         </div>
       );
     case "project_showcase": {

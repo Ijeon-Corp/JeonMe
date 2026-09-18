@@ -524,19 +524,18 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	"embed_link":  true,
 	// Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru,
 	// SEMUA boleh root maupun bersarang -- TIDAK ada requirement upload/
-	// fetch server-side per-node spt Maps (lihat CATATAN "maps" TIDAK ada
-	// di sini: block_type itu ROOT-ONLY di Fase 3 karena
-	// resolveMapsEmbedCoords cuma dipanggil utk request block ROOT,
-	// SENGAJA belum ikut di-path-walk ke block_data bersarang -- lihat
-	// plan Fase 3 utk detail lengkap. Root tidak butuh entry di allowlist
-	// ini sama sekali, allowlist ini KHUSUS anak tertanam Section/Column).
+	// fetch server-side per-node spt Maps ("maps" dulu ROOT-ONLY di Fase 3
+	// karena resolveMapsEmbedCoords cuma dipanggil utk request block ROOT;
+	// SUDAH dicabut 18 September 2026, lihat entry "maps" di bawah. Root
+	// tidak butuh entry di allowlist ini sama sekali, allowlist ini KHUSUS
+	// anak tertanam Section/Column).
 	"countdown":    true,
 	"list":         true,
 	"image_slider": true,
 	"embed":        true,
 	// "produk" -- permintaan langsung pengguna 10 September 2026, boleh
-	// ditanam di Section/Column (TIDAK root-only spt "maps" -- tidak ada
-	// keterbatasan resolusi server-side serupa utk tipe ini).
+	// ditanam di Section/Column (tidak ada keterbatasan resolusi
+	// server-side serupa "maps" lama utk tipe ini).
 	"produk": true,
 	// Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"):
 	// 5 tipe klasik lama (SEBELUMNYA cuma ada di Simple Mode/dashboard/
@@ -546,16 +545,35 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	// SEKARANG path-aware (lihat UploadAudio/UploadFile, mirror
 	// UploadMediaImage) jadi aman ditanam berapa pun dalam. "project_showcase"
 	// gambarnya lewat mediaImageBlockTypes (SUDAH path-aware sejak lama).
-	// "contact_form" &amp; "catalog" SENGAJA TIDAK masuk sini (tetap root-only):
-	// SubmitContactForm (baris ~3126) resolve linkID langsung ke baris
-	// `links`, tidak path-walk ke block_data bersarang -- anak Section/
-	// Column bukan baris `links` sungguhan, submit akan 404. "catalog"
-	// tetap ikut alasan v1 yang sudah ada di atas.
+	// "catalog" SENGAJA TIDAK masuk sini (tetap root-only), ikut alasan v1
+	// yang sudah ada di atas (tidak cross-nest dgn Section/Column).
 	"heading":          true,
 	"accordion":        true,
 	"audio":            true,
 	"file":             true,
 	"project_showcase": true,
+	// "contact_form" & "maps" -- Builder improvements 18 September 2026:
+	// keduanya SEBELUMNYA root-only, BUKAN karena keputusan produk, melainkan
+	// dua keterbatasan teknis yang sekarang sudah ditutup:
+	//   - "contact_form": SubmitContactForm dulu resolve `:id` LANGSUNG ke
+	//     baris `links` -- anak Section/Column bukan baris `links` sungguhan,
+	//     jadi submit dari blok tertanam pasti 404. Sekarang endpoint itu
+	//     menerima `root_link_id` opsional & mencari id blok tertanam secara
+	//     rekursif di block_data root itu SAJA (findEmbeddedBuilderBlock) --
+	//     lingkupnya sengaja sempit ke satu baris root, bukan pencarian
+	//     seluruh tabel.
+	//   - "maps": resolveMapsEmbedCoords dulu cuma dipanggil utk block ROOT
+	//     (CreateBlock/Update/CreateBlockForPage), blok maps tertanam
+	//     dgn embed=true tidak pernah punya embed_lat/embed_lng, popup peta
+	//     tidak pernah bisa tampil. Sekarang ketiga handler itu juga
+	//     menyusuri children[]/columns[] (resolveNestedMapsEmbedCoords) &
+	//     meresolusi koordinat tiap maps tertanam persis seperti root.
+	// Frontend: renderBuilderNode (BuilderPagePreviewInternal.tsx) sudah py
+	// case "maps" sejak Fase 3 & case "contact_form" ditambah bersamaan
+	// perubahan ini; ROOT_ONLY_TYPES di BuilderAddComponentModal.tsx dicabut
+	// terpisah setelah backend ini terpasang.
+	"contact_form": true,
+	"maps":         true,
 }
 
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
@@ -1518,6 +1536,157 @@ func parseBuilderPath(c *gin.Context) ([]builderPathSeg, error) {
 	return path, nil
 }
 
+// walkEmbeddedBuilderBlocks -- PURE, kunjungi SETIAP blok tertanam di dalam
+// pohon Section/Column (children[] langsung MAUPUN children[] tiap entri
+// columns[], rekursif ke block_data tiap anak, kedalaman berapa pun) urut
+// depth-first. `data` adalah block_data satu node (root ATAU tertanam) --
+// tipe apa pun boleh dilempar ke sini, node tanpa children/columns cuma
+// jadi no-op. visit mengembalikan false utk berhenti lebih awal (dipakai
+// findEmbeddedBuilderBlock begitu id ketemu). Pola penyusuran SAMA dgn
+// collectBuilderProductIDs di atas, dipusatkan di sini supaya dua pemakai
+// baru (Builder improvements 18 September 2026: pencarian id formulir
+// kontak tertanam + resolusi koordinat maps tertanam) tidak menyalin loop
+// children/columns yang sama untuk ketiga kalinya.
+func walkEmbeddedBuilderBlocks(data map[string]any, visit func(node map[string]any) bool) bool {
+	if data == nil {
+		return true
+	}
+	if children, ok := data["children"].([]any); ok {
+		for _, raw := range children {
+			node, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			if !visit(node) {
+				return false
+			}
+			nested, _ := node["block_data"].(map[string]any)
+			if !walkEmbeddedBuilderBlocks(nested, visit) {
+				return false
+			}
+		}
+	}
+	if columns, ok := data["columns"].([]any); ok {
+		for _, raw := range columns {
+			// Kolom sendiri bukan node ber-block_type (cuma widthPercent+
+			// children), jadi TIDAK di-visit -- langsung turun ke children-nya.
+			col, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			if !walkEmbeddedBuilderBlocks(col, visit) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// findEmbeddedBuilderBlock -- PURE: cari SATU blok tertanam ber-id
+// `targetID` di mana pun di dalam block_data `rootData` (Section/Column
+// root, kedalaman berapa pun). nil kalau tidak ada. Dipakai
+// SubmitContactForm (Builder improvements 18 September 2026) supaya blok
+// Formulir Kontak yang ditanam di Section/Column bisa di-submit pengunjung
+// -- id anak tertanam BUKAN baris `links`, jadi lookup langsung ke tabel
+// pasti gagal; pencarian dibatasi ke SATU baris root yang disebut klien
+// (root_link_id), bukan pencarian seluruh tabel.
+func findEmbeddedBuilderBlock(rootData map[string]any, targetID string) map[string]any {
+	var found map[string]any
+	walkEmbeddedBuilderBlocks(rootData, func(node map[string]any) bool {
+		if id, _ := node["id"].(string); id == targetID {
+			found = node
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+// mapsCoordResolver -- tanda tangan resolveMapsEmbedCoords, dilewatkan
+// sebagai parameter ke resolveNestedMapsEmbedCoords supaya unit test bisa
+// menyuntikkan resolver palsu (tanpa HTTP keluar sungguhan ke Google Maps).
+type mapsCoordResolver func(ctx context.Context, rawURL string) (lat, lng float64, err error)
+
+// resolveNestedMapsEmbedCoords -- Builder improvements 18 September 2026:
+// versi path-aware dari blok resolusi koordinat "maps" yang ada di
+// CreateBlock/Update/CreateBlockForPage (yang cuma menangani baris ROOT
+// bertipe maps). Menyusuri SEMUA blok tertanam di dalam `data` (block_data
+// root Section/Column yang sedang disimpan) & utk tiap node block_type
+// "maps" dgn embed=true, mengisi embed_lat/embed_lng PERSIS seperti root --
+// map dimutasi di tempat (Go map = reference type, pola sama
+// resolveBuilderBlockData), pemanggil cukup marshal ulang `data` setelahnya.
+//
+// `prev` (opsional, block_data root yang SUDAH tersimpan di DB, dipakai
+// Update) menghindari permintaan HTTP keluar berulang: satu Section bisa
+// memuat beberapa maps sekaligus & SETIAP Simpan dari Builder mengirim
+// ulang seluruh pohon -- kalau node dgn id yang sama sudah punya koordinat
+// hasil resolusi server utk url yang SAMA PERSIS, koordinat itu dipakai
+// ulang (nilai yang dipercaya adalah yang dari DB, BUKAN embed_lat/embed_lng
+// kiriman klien -- klien selalu mengirim balik apa yang diterimanya, tapi
+// tidak ada alasan mempercayainya begitu saja). Url berubah / node baru ->
+// resolusi ulang lewat `resolve`.
+//
+// url KOSONG dgn embed=true SENGAJA dilewati tanpa error (bukan 400 spt
+// root): anak Section/Column dibuat shell-first (tautan diisi belakangan
+// lewat panel), toggle embed yang keburu dinyalakan sebelum url diisi
+// tidak boleh menggagalkan Simpan seluruh Section. Tanpa koordinat,
+// MapsEmbedBlock (frontend) otomatis jatuh ke mode tautan langsung.
+func resolveNestedMapsEmbedCoords(ctx context.Context, data, prev map[string]any, resolve mapsCoordResolver) error {
+	prevCoords := map[string][3]any{}
+	walkEmbeddedBuilderBlocks(prev, func(node map[string]any) bool {
+		if bt, _ := node["block_type"].(string); bt != "maps" {
+			return true
+		}
+		id, _ := node["id"].(string)
+		url, _ := node["url"].(string)
+		bd, _ := node["block_data"].(map[string]any)
+		lat, okLat := bd["embed_lat"].(float64)
+		lng, okLng := bd["embed_lng"].(float64)
+		if id != "" && okLat && okLng {
+			prevCoords[id] = [3]any{url, lat, lng}
+		}
+		return true
+	})
+
+	var walkErr error
+	walkEmbeddedBuilderBlocks(data, func(node map[string]any) bool {
+		if bt, _ := node["block_type"].(string); bt != "maps" {
+			return true
+		}
+		bd, _ := node["block_data"].(map[string]any)
+		if bd == nil {
+			return true
+		}
+		if embed, _ := bd["embed"].(bool); !embed {
+			return true
+		}
+		url, _ := node["url"].(string)
+		url = strings.TrimSpace(url)
+		if url == "" {
+			return true
+		}
+		id, _ := node["id"].(string)
+		if cached, ok := prevCoords[id]; ok && cached[0] == url {
+			bd["embed_lat"] = cached[1]
+			bd["embed_lng"] = cached[2]
+			return true
+		}
+		lat, lng, err := resolve(ctx, url)
+		if err != nil {
+			label, _ := node["title"].(string)
+			if strings.TrimSpace(label) == "" {
+				label = "tanpa judul"
+			}
+			walkErr = fmt.Errorf("blok Maps tertanam (%s): %w", label, err)
+			return false
+		}
+		bd["embed_lat"] = lat
+		bd["embed_lng"] = lng
+		return true
+	})
+	return walkErr
+}
+
 type createBlockRequest struct {
 	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed produk"`
 	Title     string         `json:"title" binding:"required,max=100"`
@@ -1593,6 +1762,13 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 			req.BlockData["embed_lat"] = lat
 			req.BlockData["embed_lng"] = lng
 		}
+	}
+	// Maps TERTANAM di Section/Column (Builder improvements 18 September
+	// 2026) -- root baru belum punya versi tersimpan, jadi prev=nil (semua
+	// maps embed=true diresolusi). Lihat resolveNestedMapsEmbedCoords.
+	if rerr := resolveNestedMapsEmbedCoords(ctx, req.BlockData, nil, resolveMapsEmbedCoords); rerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+		return
 	}
 
 	var pageID string
@@ -1845,7 +2021,8 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	var blockDataJSON []byte
 	if req.BlockData != nil {
 		var currentBlockType, currentURL string
-		if err := h.DB.QueryRow(ctx, `SELECT block_type, url FROM links WHERE id = $1`, linkID).Scan(&currentBlockType, &currentURL); err != nil {
+		var currentBlockDataRaw []byte
+		if err := h.DB.QueryRow(ctx, `SELECT block_type, url, block_data FROM links WHERE id = $1`, linkID).Scan(&currentBlockType, &currentURL, &currentBlockDataRaw); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
 			return
 		}
@@ -1879,6 +2056,20 @@ func (h *LinksHandler) Update(c *gin.Context) {
 				req.BlockData["embed_lat"] = lat
 				req.BlockData["embed_lng"] = lng
 			}
+		}
+		// Maps TERTANAM di Section/Column (Builder improvements 18 September
+		// 2026): block_data yang SUDAH tersimpan dilewatkan sbg `prev` supaya
+		// maps tertanam yang url-nya tidak berubah memakai ulang koordinat
+		// hasil resolusi sebelumnya (tanpa HTTP keluar lagi tiap Simpan) --
+		// lihat resolveNestedMapsEmbedCoords. Gagal decode prev cuma berarti
+		// tidak ada yang bisa dipakai ulang (prev=nil), bukan error.
+		var prevBlockData map[string]any
+		if len(currentBlockDataRaw) > 0 {
+			_ = json.Unmarshal(currentBlockDataRaw, &prevBlockData)
+		}
+		if rerr := resolveNestedMapsEmbedCoords(ctx, req.BlockData, prevBlockData, resolveMapsEmbedCoords); rerr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+			return
 		}
 		encoded, err := json.Marshal(req.BlockData)
 		if err != nil {
@@ -3472,6 +3663,15 @@ type contactFormRequest struct {
 	Name    string `json:"name" binding:"required,max=100"`
 	Email   string `json:"email" binding:"required,email"`
 	Message string `json:"message" binding:"required,max=2000"`
+	// RootLinkID -- Builder improvements 18 September 2026: blok Formulir
+	// Kontak yang DITANAM di Section/Column (Canvas Builder) bukan baris
+	// `links` sungguhan -- `:id` di rute adalah id blok tertanam (uuid yang
+	// dibuat klien, lihat newBuilderBlock di builder-blocks.ts), dan field
+	// ini adalah id baris `links` ROOT yang memuatnya. Opsional: blok root
+	// (perilaku lama) tetap cukup `:id` saja. Divalidasi manual (uuid.Parse)
+	// di handler supaya pesan errornya konsisten "tautan tidak ditemukan",
+	// bukan pesan validator generik.
+	RootLinkID string `json:"root_link_id" binding:"omitempty,max=64"`
 }
 
 // SubmitContactForm — No.77 (Sprint 9): endpoint PUBLIK untuk blok Formulir
@@ -3479,6 +3679,16 @@ type contactFormRequest struct {
 // queue.TypeContactFormNotification) -- pengunjung tidak pernah menunggu
 // SMTP selesai, dan lambat/gagalnya SMTP tidak pernah membuat submit ini
 // gagal di sisi pengunjung.
+//
+// Blok TERTANAM (Builder improvements 18 September 2026): kalau `:id` bukan
+// baris `links` DAN body menyertakan `root_link_id`, blok dicari secara
+// rekursif HANYA di dalam block_data baris root itu (findEmbeddedBuilderBlock)
+// -- kreator penerima email adalah pemilik halaman root tersebut, sama
+// persis dgn alur root. Lingkup sengaja sempit ke SATU baris (bukan
+// pencarian JSONB seluruh tabel): tidak ada full scan yang bisa dipicu
+// pengunjung anonim, & id tertanam tidak bisa "dipinjam" utk mengirim ke
+// kreator lain karena root yang disebut klienlah yang menentukan penerima.
+// Perilaku utk id ROOT (lookup langsung, tanpa root_link_id) TIDAK berubah.
 func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
 	linkID := c.Param("id")
 
@@ -3492,11 +3702,40 @@ func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
 	defer cancel()
 
 	var blockType, creatorEmail, pageUsername string
-	err := h.DB.QueryRow(ctx, `
-		SELECT l.block_type, u.email, u.username
-		FROM links l JOIN pages p ON p.id = l.page_id JOIN users u ON u.id = p.user_id
-		WHERE l.id = $1
-	`, linkID).Scan(&blockType, &creatorEmail, &pageUsername)
+	// links.id bertipe UUID -- string non-uuid di query langsung akan
+	// menghasilkan error Postgres 22P02 (dulu jadi 500 "gagal memuat
+	// tautan"), padahal artinya sama dgn "tidak ada baris": diperlakukan
+	// sbg ErrNoRows supaya jatuh ke jalur blok tertanam / 404 yang benar.
+	err := pgx.ErrNoRows
+	if _, perr := uuid.Parse(linkID); perr == nil {
+		err = h.DB.QueryRow(ctx, `
+			SELECT l.block_type, u.email, u.username
+			FROM links l JOIN pages p ON p.id = l.page_id JOIN users u ON u.id = p.user_id
+			WHERE l.id = $1
+		`, linkID).Scan(&blockType, &creatorEmail, &pageUsername)
+	}
+	if err == pgx.ErrNoRows && req.RootLinkID != "" {
+		if _, perr := uuid.Parse(req.RootLinkID); perr != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+			return
+		}
+		var rootBlockDataRaw []byte
+		err = h.DB.QueryRow(ctx, `
+			SELECT l.block_data, u.email, u.username
+			FROM links l JOIN pages p ON p.id = l.page_id JOIN users u ON u.id = p.user_id
+			WHERE l.id = $1
+		`, req.RootLinkID).Scan(&rootBlockDataRaw, &creatorEmail, &pageUsername)
+		if err == nil {
+			var rootData map[string]any
+			_ = json.Unmarshal(rootBlockDataRaw, &rootData)
+			embedded := findEmbeddedBuilderBlock(rootData, linkID)
+			if embedded == nil {
+				err = pgx.ErrNoRows
+			} else {
+				blockType, _ = embedded["block_type"].(string)
+			}
+		}
+	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
@@ -3956,6 +4195,12 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 			req.BlockData["embed_lat"] = lat
 			req.BlockData["embed_lng"] = lng
 		}
+	}
+	// Maps TERTANAM di Section/Column -- cermin PERSIS CreateBlock (Builder
+	// improvements 18 September 2026), lihat resolveNestedMapsEmbedCoords.
+	if rerr := resolveNestedMapsEmbedCoords(ctx, req.BlockData, nil, resolveMapsEmbedCoords); rerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+		return
 	}
 
 	id, position, blockDataJSON, err := h.insertBlock(ctx, pageID, req)

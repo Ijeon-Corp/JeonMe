@@ -8,6 +8,7 @@ import { ApiError, submitContactForm } from "@/lib/api-client";
 // dikirim asinkron di backend (lihat queue.TypeContactFormNotification).
 export default function ContactFormBlock({
   linkId,
+  rootLinkId,
   title,
   cardClassName,
   titleClassName,
@@ -16,6 +17,11 @@ export default function ContactFormBlock({
   icon,
 }: {
   linkId: string;
+  // rootLinkId -- Builder improvements 18 September 2026: diisi HANYA saat
+  // blok ini TERTANAM di Section/Column (Canvas Builder) -- `linkId` lalu
+  // berarti id blok tertanam & ini id baris `links` root pemuatnya, lihat
+  // submitContactForm (api-client.ts). Blok root membiarkannya kosong.
+  rootLinkId?: string;
   title: string;
   cardClassName: string;
   titleClassName: string;
@@ -37,7 +43,7 @@ export default function ContactFormBlock({
     setError(null);
     setLoading(true);
     try {
-      await submitContactForm(linkId, { name, email, message });
+      await submitContactForm(linkId, { name, email, message }, rootLinkId);
       setSent(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengirim pesan, coba lagi.");

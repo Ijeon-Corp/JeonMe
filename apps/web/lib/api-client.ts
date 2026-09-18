@@ -335,8 +335,17 @@ export function unlockLink(linkId: string, input: { code?: string; email?: strin
 
 // No.77 (Sprint 9): kirim pesan lewat blok Formulir Kontak -- endpoint
 // publik, tanpa akun.
-export function submitContactForm(linkId: string, input: { name: string; email: string; message: string }) {
-  return apiFetch<{ message: string }>(`/links/${linkId}/contact`, { method: "POST", body: JSON.stringify(input) });
+//
+// rootLinkId -- Builder improvements 18 September 2026: blok Formulir
+// Kontak yang DITANAM di Section/Column (Canvas Builder) bukan baris
+// `links` sungguhan -- `linkId` di sini adalah id blok tertanam (uuid
+// buatan klien, newBuilderBlock) & `rootLinkId` id baris `links` root yang
+// memuatnya; backend (SubmitContactForm, links.go) mencari id tertanam itu
+// HANYA di dalam block_data root tersebut. Blok root (perilaku lama) cukup
+// `linkId` saja, field ini tidak dikirim.
+export function submitContactForm(linkId: string, input: { name: string; email: string; message: string }, rootLinkId?: string) {
+  const body = rootLinkId ? { ...input, root_link_id: rootLinkId } : input;
+  return apiFetch<{ message: string }>(`/links/${linkId}/contact`, { method: "POST", body: JSON.stringify(body) });
 }
 
 // submitPageFeedback -- popup "Kritik dan Saran" di footer halaman publik
@@ -1489,29 +1498,38 @@ export interface EmbeddedBuilderBlock {
     | "image"
     | "video_image"
     | "embed_link"
-    // Fase 3 (permintaan langsung pengguna 8 September 2026): "maps"
-    // SENGAJA TIDAK di sini -- block_type itu ROOT-ONLY di Fase 3
-    // (resolveMapsEmbedCoords, backend, belum path-walk ke block_data
-    // bersarang), jadi tidak valid sbg anak Section/Column tertanam.
+    // Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru.
+    // "maps" dulu SENGAJA tidak di sini (ROOT-ONLY -- resolveMapsEmbedCoords
+    // backend belum path-walk ke block_data bersarang); dicabut 18
+    // September 2026, lihat entry "maps" di bawah.
     | "countdown"
     | "list"
     | "image_slider"
     | "embed"
     // "produk" -- permintaan langsung pengguna 10 September 2026: BOLEH
-    // ditanam di Section/Column (TIDAK root-only spt "maps" -- tidak ada
-    // keterbatasan resolusi server-side serupa utk tipe ini).
+    // ditanam di Section/Column (tidak ada keterbatasan resolusi
+    // server-side serupa "maps" lama utk tipe ini).
     | "produk"
     // Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"):
     // 5 tipe klasik lama, boleh ditanam Section/Column (upload audio/file
     // SEKARANG path-aware, gambar project_showcase lewat mediaImageBlockTypes
-    // yang sudah path-aware). "contact_form"/"catalog" SENGAJA TIDAK di
-    // sini -- lihat allowedBuilderEmbeddedBlockTypes (links.go) utk alasan
-    // lengkap keduanya tetap root-only spt "maps".
+    // yang sudah path-aware). "catalog" SENGAJA TIDAK di sini -- lihat
+    // allowedBuilderEmbeddedBlockTypes (links.go), tetap root-only.
     | "heading"
     | "accordion"
     | "audio"
     | "file"
-    | "project_showcase";
+    | "project_showcase"
+    // "contact_form" & "maps" -- Builder improvements 18 September 2026:
+    // keduanya dulu root-only murni karena keterbatasan backend (submit
+    // formulir kontak resolve id langsung ke baris `links`; koordinat maps
+    // cuma diresolusi utk root). Backend sekarang path-aware utk keduanya
+    // (SubmitContactForm + root_link_id, resolveNestedMapsEmbedCoords --
+    // lihat catatan lengkap di allowedBuilderEmbeddedBlockTypes, links.go),
+    // jadi valid sbg anak Section/Column tertanam. Render tertanam: case
+    // "maps"/"contact_form" di renderBuilderNode (BuilderPagePreviewInternal).
+    | "contact_form"
+    | "maps";
   title: string;
   url?: string;
   description?: string;
