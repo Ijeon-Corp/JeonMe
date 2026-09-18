@@ -927,6 +927,24 @@ export default function BuilderPagePreview({
           // BuilderRenderNode yang lossy: iconKey/customIconUrl/lockType/
           // thumbnailUrl ikut terbawa), persis seperti mode "simple".
           const blockType = link.blockType ?? "link";
+          // Blok root nonaktif (18 September 2026, menu ⋮ > Nonaktifkan):
+          // di kanvas Builder tetap dirender REDUP + label supaya kreator
+          // tahu blok itu masih ada & bisa diaktifkan lagi -- sebelumnya
+          // lenyap total dari kanvas (cuma menyisakan ring seleksi tipis).
+          // Hanya mungkin true di kanvas (includeInactiveLinks), pratinjau
+          // lain tidak pernah menerima blok nonaktif.
+          const inactive = isBuilderCanvas && link.isActive === false;
+          const inactiveWrap = (el: React.ReactNode) =>
+            inactive ? (
+              <div key={`inactive-${link.id}`} className="relative opacity-40">
+                {el}
+                <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-[#111111] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Nonaktif
+                </span>
+              </div>
+            ) : (
+              el
+            );
           if (!BUILDER_NODE_BLOCK_TYPES.has(blockType)) {
             // data-builder-node-id di sini (BUKAN di dalam renderLinkOrBlock
             // sendiri, yang dibagi dengan mode "simple" & tidak tahu apa-apa
@@ -934,7 +952,7 @@ export default function BuilderPagePreview({
             // 2026 "klik blok di kanvas juga": tanpa ini blok tipe klasik
             // tidak bisa diklik-pilih di kanvas sama sekali, cuma lewat tree
             // kiri.
-            return (
+            return inactiveWrap(
               <div
                 key={link.id}
                 data-builder-node-id={link.id}
@@ -970,7 +988,7 @@ export default function BuilderPagePreview({
             blockType,
             blockData: link.blockData ?? {},
           };
-          return renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId);
+          return inactiveWrap(renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId));
         })}
 
         {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15

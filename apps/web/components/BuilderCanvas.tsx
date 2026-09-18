@@ -182,7 +182,7 @@ export default function BuilderCanvas({
                   // pernah dilihat pengunjung sungguhan), jadi blok "produk"
                   // yang baru memilih produk digital yang belum diaktifkan
                   // tetap harus terlihat, bukan jatuh ke placeholder kosong.
-                  ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products, true),
+                  ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products, true, true),
                   pageType,
                   pageSlug,
                   builderMode: "builder",

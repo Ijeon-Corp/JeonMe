@@ -53,7 +53,7 @@ import {
 import { useLocale } from "@/lib/locale-context";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconClose, IconPencil } from "@/components/icons";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Redo2, Undo2 } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
 import BuilderLeftPanel, { type BuilderDesignSection, type BuilderPageSettings } from "@/components/BuilderLeftPanel";
 import BuilderCanvas, { BUILDER_DEVICE_WIDTHS, type BuilderDeviceWidth } from "@/components/BuilderCanvas";
@@ -197,6 +197,10 @@ function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> 
 // unggah ulang sendiri kalau perlu, sama seperti blok baru yang belum
 // pernah diisi.
 const STORAGE_KEYED_BLOCK_DATA_FIELDS = ["image_url", "images", "audio_url", "file_url", "file_name", "file_size_bytes"];
+
+// HISTORY_LIMIT -- jumlah langkah undo/redo yang disimpan (snapshot draft
+// blok utuh, lihat `history` di komponen).
+const HISTORY_LIMIT = 50;
 
 // cloneCatalogItems -- bug ditemukan lewat audit ROUND 2 (13 September
 // 2026): cloneBlockDataWithNewIds di bawah cuma rekursi ke `children`/
@@ -352,6 +356,21 @@ export default function BuilderPage() {
   // Simple sudah lama memakai dialog. Satu state di rute ini supaya jalur
   // menu ⋮ maupun tombol Delete keyboard memakai dialog yang sama.
   const [confirmDelete, setConfirmDelete] = useState<BuilderSelection | null>(null);
+  // history -- undo/redo draft BLOK (18 September 2026, audit Builder:
+  // "tidak ada undo/redo & nol keyboard shortcut; kombinasi berbahaya dgn
+  // hapus tanpa konfirmasi"). Snapshot `links` utuh (draft kecil, pola
+  // JSON.stringify yang sama dipakai isDirty) dicatat di TIAP handler
+  // mutasi draft (recordHistory) -- BUKAN lewat useEffect pada `links`
+  // (react-hooks/set-state-in-effect, lihat CLAUDE.md). Lingkup SENGAJA
+  // blok saja: field desain/pengaturan halaman & unggahan media tidak
+  // masuk history (unggahan sudah persisten di server, "undo"-nya
+  // menyesatkan). History dikosongkan saat Simpan sukses (snapshot lama
+  // memegang id "temp-..." yang sudah diganti id server) & saat muat ulang.
+  const [history, setHistory] = useState<{ past: LinkItem[][]; future: LinkItem[][] }>({ past: [], future: [] });
+  // historyCoalesceRef -- ketikan berturut-turut pada field yang SAMA
+  // (rich text/judul) digabung jadi satu langkah undo (jendela 1.2 dtk),
+  // kalau tidak Ctrl+Z mundur per huruf. Ref dimutasi HANYA di handler.
+  const historyCoalesceRef = useRef<{ key: string; at: number } | null>(null);
 
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const tree = useMemo(() => buildTree(links), [links]);
@@ -427,6 +446,7 @@ export default function BuilderPage() {
   }, [isMain, pageId]);
 
   const applyPageData = useCallback((result: Awaited<ReturnType<typeof fetchPageData>>) => {
+    setHistory({ past: [], future: [] });
     setOwnerUsername(result.ownerUsername);
     setPage(result.page);
     setServerPage(result.page);
@@ -475,6 +495,40 @@ export default function BuilderPage() {
       });
   }, [page, isMain, pageId]);
 
+  // recordHistory -- dipanggil SEBELUM setLinks di tiap handler mutasi
+  // draft; `links` dari closure render terakhir = snapshot yang benar utk
+  // di-undo. coalesceKey (handleUpdateNode) menggabungkan ketikan
+  // berturut-turut pada field yang sama, lihat historyCoalesceRef.
+  function recordHistory(coalesceKey?: string) {
+    if (coalesceKey) {
+      const last = historyCoalesceRef.current;
+      const now = Date.now();
+      historyCoalesceRef.current = { key: coalesceKey, at: now };
+      if (last && last.key === coalesceKey && now - last.at < 1200) return;
+    } else {
+      historyCoalesceRef.current = null;
+    }
+    setHistory((h) => ({ past: [...h.past.slice(-(HISTORY_LIMIT - 1)), links], future: [] }));
+  }
+
+  function undo() {
+    if (history.past.length === 0) return;
+    const previous = history.past[history.past.length - 1];
+    setHistory({ past: history.past.slice(0, -1), future: [links, ...history.future].slice(0, HISTORY_LIMIT) });
+    historyCoalesceRef.current = null;
+    setError(null);
+    setLinks(previous);
+  }
+
+  function redo() {
+    if (history.future.length === 0) return;
+    const [next, ...rest] = history.future;
+    setHistory({ past: [...history.past.slice(-(HISTORY_LIMIT - 1)), links], future: rest });
+    historyCoalesceRef.current = null;
+    setError(null);
+    setLinks(next);
+  }
+
   function rootToBuilderRoot(root: LinkItem): BuilderRoot {
     return {
       children: root.block_data?.children as EmbeddedBuilderBlock[] | undefined,
@@ -490,6 +544,7 @@ export default function BuilderPage() {
   // (functional update) alih-alih await+refresh().
   function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps" | "catalog" | "contact_form") {
     setError(null);
+    recordHistory();
     if (!target) {
       const title = t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[type] ?? "typeText"}`);
       // "maps"/"catalog"/"contact_form" -- ketiganya ROOT-ONLY, BUKAN
@@ -576,6 +631,7 @@ export default function BuilderPage() {
 
   function handleDelete(target: BuilderSelection) {
     setError(null);
+    recordHistory();
     // Bug ditemukan lewat audit (13 September 2026): menu "..." (TreeNodeView,
     // BuilderLeftPanel.tsx) cuma memanggil onDeselect kalau blok yang
     // DIHAPUS itu SENDIRI yang sedang terpilih -- kalau yang terpilih
@@ -624,6 +680,7 @@ export default function BuilderPage() {
   // terpisah ke server).
   function handleClone(target: BuilderSelection) {
     setError(null);
+    recordHistory();
     if (target.path.length === 0) {
       setLinks((prev) => {
         const index = prev.findIndex((l) => l.id === target.rootId);
@@ -680,6 +737,7 @@ export default function BuilderPage() {
   }
 
   function handleReorderRoot(orderedIds: string[]) {
+    recordHistory();
     setLinks((prev) => {
       const byId = new Map(prev.map((l) => [l.id, l] as const));
       return orderedIds.map((id) => byId.get(id)).filter((l): l is LinkItem => !!l);
@@ -688,6 +746,7 @@ export default function BuilderPage() {
 
   function handleReorderChildren(rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) {
     setError(null);
+    recordHistory();
     setLinks((prev) => {
       const root = prev.find((l) => l.id === rootId);
       if (!root) return prev;
@@ -702,6 +761,7 @@ export default function BuilderPage() {
 
   function handleUpdateNode(target: BuilderSelection, patch: BuilderNodePatch) {
     setError(null);
+    recordHistory(`${target.rootId}:${JSON.stringify(target.path)}:${Object.keys(patch).join("|")}`);
     setLinks((prev) => {
       if (target.path.length === 0) {
         return prev.map((l) =>
@@ -1109,6 +1169,11 @@ export default function BuilderPage() {
       setPage(finalPage);
       setServerPage(finalPage);
       showToast(publish ? t("dashboard.pages.linksBuilder.publishSuccess") : t("dashboard.pages.linksBuilder.saveSuccess"));
+      // Snapshot history memegang id "temp-..." yang barusan diganti id
+      // server -- undo ke sana akan memicu churn hapus/buat-ulang saat
+      // Simpan berikutnya. Mulai bersih setelah Simpan sukses.
+      setHistory({ past: [], future: [] });
+      historyCoalesceRef.current = null;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
     } finally {
@@ -1127,6 +1192,58 @@ export default function BuilderPage() {
   function requestDelete(target: BuilderSelection) {
     setConfirmDelete(target);
   }
+
+  // Shortcut keyboard (18 September 2026): Ctrl/Cmd+Z undo, Shift+Ctrl/Cmd+Z
+  // atau Ctrl+Y redo, Delete/Backspace hapus blok terpilih (lewat dialog
+  // yang sama), Ctrl/Cmd+D duplikat, Ctrl/Cmd+S simpan. Listener dipasang
+  // SEKALI (deps []) & membaca handler TERBARU lewat ref yang disegarkan
+  // tiap render -- menghindari closure basi tanpa pasang-lepas listener
+  // tiap render. Di dalam input/textarea/contenteditable (TipTap) hanya
+  // Ctrl+S yang ditangkap; sisanya diserahkan ke perilaku native (TipTap
+  // punya undo sendiri, Backspace di input jelas bukan "hapus blok").
+  const shortcutRef = useRef({ undo, redo, requestDelete, handleClone, commitSave, selection, isDirty, saving, confirmDelete });
+  useEffect(() => {
+    shortcutRef.current = { undo, redo, requestDelete, handleClone, commitSave, selection, isDirty, saving, confirmDelete };
+  });
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const s = shortcutRef.current;
+      const meta = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      const target = e.target as HTMLElement | null;
+      const inField = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);
+      if (meta && key === "s") {
+        e.preventDefault();
+        if (s.isDirty && s.saving === "") void s.commitSave(false);
+        return;
+      }
+      if (inField) return;
+      if (meta && key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) s.redo();
+        else s.undo();
+        return;
+      }
+      if (meta && key === "y") {
+        e.preventDefault();
+        s.redo();
+        return;
+      }
+      if (meta && key === "d") {
+        if (s.selection && s.selection.kind === "block" && s.selection.blockType !== "link") {
+          e.preventDefault();
+          s.handleClone(s.selection);
+        }
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && s.selection && s.selection.kind === "block" && !s.confirmDelete) {
+        e.preventDefault();
+        s.requestDelete(s.selection);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   function handlePageSettingsChange(patch: Partial<BuilderPageSettings>) {
     setError(null);
@@ -1283,6 +1400,28 @@ export default function BuilderPage() {
           )}
         </div>
 
+        <div className="hidden items-center gap-0.5 sm:flex">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={history.past.length === 0}
+            title={`${t("dashboard.pages.linksBuilder.undo")} (Ctrl+Z)`}
+            aria-label={t("dashboard.pages.linksBuilder.undo")}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-app-muted hover:bg-app-surface-2 hover:text-app-ink disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={history.future.length === 0}
+            title={`${t("dashboard.pages.linksBuilder.redo")} (Ctrl+Shift+Z)`}
+            aria-label={t("dashboard.pages.linksBuilder.redo")}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-app-muted hover:bg-app-surface-2 hover:text-app-ink disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+        </div>
         <div className="hidden items-center gap-1.5 rounded-full bg-app-surface-2 p-1 sm:flex">
           {(Object.keys(BUILDER_DEVICE_WIDTHS) as BuilderDeviceWidth[]).map((key) => (
             <button

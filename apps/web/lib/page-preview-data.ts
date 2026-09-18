@@ -25,7 +25,12 @@ export function toPreviewData(
   // pengunjung sungguhan) -- SEHARUSNYA tetap terlihat apa pun status
   // aktifnya, sama seperti field draft lain di rute Builder. Default false
   // (perilaku lama, WAJIB untuk rute publik `[username]`/`[username]/[slug]`).
-  includeInactiveProducts = false
+  includeInactiveProducts = false,
+  // includeInactiveLinks -- kanvas Builder (18 September 2026): blok yang
+  // dinonaktifkan lewat menu ⋮ tetap dirender (redup + label "Nonaktif",
+  // lihat BuilderPagePreviewInternal) supaya kreator melihat & bisa
+  // memilihnya kembali -- di pratinjau lain/halaman publik tetap disaring.
+  includeInactiveLinks = false
 ): PagePreviewData {
   return {
     username: page.username,
@@ -71,9 +76,10 @@ export function toPreviewData(
           }
         : undefined,
     links: links
-      .filter((l) => l.is_active)
+      .filter((l) => l.is_active || includeInactiveLinks)
       .map((l) => ({
         id: l.id,
+        isActive: l.is_active,
         title: l.title,
         url: l.url,
         lockType: l.lock_type || undefined,

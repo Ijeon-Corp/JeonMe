@@ -1160,6 +1160,8 @@ export const dictionaries = {
           statusPublished: "Terbit",
           statusDraft: "Draft",
           viewPublic: "Lihat halaman",
+          undo: "Urungkan",
+          redo: "Ulangi",
           settings: {
             title: "Pengaturan halaman",
             publish: "Terbitkan halaman",
@@ -4430,6 +4432,8 @@ export const dictionaries = {
           statusPublished: "Live",
           statusDraft: "Draft",
           viewPublic: "View page",
+          undo: "Undo",
+          redo: "Redo",
           settings: {
             title: "Page settings",
             publish: "Publish page",

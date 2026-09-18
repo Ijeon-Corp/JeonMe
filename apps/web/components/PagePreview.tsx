@@ -126,6 +126,11 @@ export interface PagePreviewLink {
   // sebelumnya. Dipakai ulang blockType "project_showcase" sebagai
   // paragraf deskripsi -- lihat renderLinkOrBlock di bawah.
   description?: string;
+  // isActive -- hanya diisi toPreviewData utk kanvas Builder (18 September
+  // 2026, includeInactiveLinks): false = blok dinonaktifkan kreator, kanvas
+  // merendernya redup berlabel "Nonaktif". Halaman publik tidak pernah
+  // menerima blok nonaktif sama sekali (disaring server), jadi undefined.
+  isActive?: boolean;
 }
 
 export interface PagePreviewProduct {
