@@ -39,19 +39,18 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import {
-  IconChart,
   IconChevronRight,
+  IconDotsVertical,
   IconColumns,
   IconExternal,
   IconGripVertical,
   IconLock,
   IconPencil,
   IconPlus,
-  IconSettings,
   IconSparkle,
   IconX,
 } from "@/components/icons";
-import { blockPreviewFor, isBlockExpandable, maxGalleryImages } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { detectLinkIcon } from "@/lib/link-icons";
 import {
@@ -1972,7 +1971,10 @@ function BlockSection({
             onDragStart={() => setDragId(link.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(link.id)}
-            className={`flex flex-col gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-3 shadow-card ${link.is_active ? "" : "opacity-60"}`}
+            // Kulit kartu SAMA PERSIS dashboard/links/page.tsx (redesain baris
+            // blok 18 September 2026, referensi gambar pengguna) -- lihat
+            // catatan di sana.
+            className={`group flex flex-col gap-3 rounded-[22px] border border-app-border bg-app-surface p-3 transition-colors sm:p-4 ${link.is_active ? "" : "opacity-60"}`}
           >
             {/* Baris header blok -- paritas Toko <-> Links (permintaan
                 langsung pengguna, 18 September 2026: "buat tiap blok yang
@@ -1994,60 +1996,44 @@ function BlockSection({
                   toggleContentEdit(link);
                 }
               }}
-              className={`flex items-center gap-3 ${isBlockExpandable(link, t) ? "cursor-pointer" : ""}`}
+              className={`relative flex items-center gap-3 ${isBlockExpandable(link, t) ? "cursor-pointer" : ""}`}
             >
-              <div className="flex flex-shrink-0 flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => moveLinkByOffset(index, -1)}
-                  disabled={index === 0}
-                  aria-label={t("dashboard.pages.links.moveUp")}
-                  title={t("dashboard.pages.links.moveUp")}
-                  className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
-                >
-                  <IconChevronRight className="h-3.5 w-3.5 -rotate-90" />
-                </button>
-                <IconGripVertical className="h-3.5 w-3.5 cursor-grab text-app-muted/70" />
-                <button
-                  type="button"
-                  onClick={() => moveLinkByOffset(index, 1)}
-                  disabled={index === links.length - 1}
-                  aria-label={t("dashboard.pages.links.moveDown")}
-                  title={t("dashboard.pages.links.moveDown")}
-                  className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
-                >
-                  <IconChevronRight className="h-3.5 w-3.5 rotate-90" />
-                </button>
-              </div>
+              {/* Grip drag hover-only + tombol ▲/▼ pindah ke BlockToolsStrip
+                  (menu ⋮) -- redesain 18 September 2026, sama Links. */}
+              <IconGripVertical className="absolute -left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 cursor-grab text-app-muted opacity-0 transition-opacity group-hover:opacity-60" />
               {/* Badge ikon -- urutan resolusi sama Links: custom_icon_url >
                   icon_key galeri > deteksi platform dari URL (tautan biasa)
                   > ikon tipe blok (dari CONTENT_TILES, peta ikon yang sama
-                  dipakai modal Tambah di sini). */}
+                  dipakai modal Tambah di sini). Tile 48px (redesain 18
+                  September 2026): platform terdeteksi = warna mereknya,
+                  selain itu tile putih bergaris (BLOCK_TILE_CLASS). */}
               {link.custom_icon_url ? (
-                // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
                 <Image
                   src={link.custom_icon_url}
                   alt=""
                   title={t("dashboard.pages.links.linkCard.customIcon")}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 flex-shrink-0 rounded-2xl object-cover ring-1 ring-black/5"
                 />
               ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
                 (() => {
                   const libraryIcon = getLibraryIcon(link.icon_key)!;
                   return (
-                    <span title={libraryIcon.label} className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]">
-                      <libraryIcon.Icon className="h-4 w-4" />
+                    <span title={libraryIcon.label} className={BLOCK_TILE_CLASS}>
+                      <libraryIcon.Icon className="h-5 w-5" />
                     </span>
                   );
                 })()
               ) : link.block_type === "link" ? (
                 (() => {
-                  const { Icon, label, badgeClass } = detectLinkIcon(link.url);
+                  const { Icon, label, badgeClass, isFallback } = detectLinkIcon(link.url);
                   return (
-                    <span title={label} className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
-                      <Icon className="h-3.5 w-3.5" />
+                    <span
+                      title={label}
+                      className={isFallback ? BLOCK_TILE_CLASS : `flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${badgeClass}`}
+                    >
+                      <Icon className="h-5 w-5" />
                     </span>
                   );
                 })()
@@ -2055,11 +2041,8 @@ function BlockSection({
                 (() => {
                   const TypeIcon = CONTENT_TILES.find((tile) => tile.key === link.block_type)?.Icon ?? LayoutGrid;
                   return (
-                    <span
-                      title={BLOCK_LABEL[link.block_type] ?? link.block_type}
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]"
-                    >
-                      <TypeIcon className="h-4 w-4" />
+                    <span title={BLOCK_LABEL[link.block_type] ?? link.block_type} className={BLOCK_TILE_CLASS}>
+                      <TypeIcon className="h-5 w-5" />
                     </span>
                   );
                 })()
@@ -2078,28 +2061,51 @@ function BlockSection({
                   />
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-bold text-app-ink">{link.title}</p>
+                    <p className="truncate text-[15px] font-bold leading-snug text-app-ink">{link.title}</p>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         startEditField(link, "title");
                       }}
-                      className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
+                      className="flex-shrink-0 p-1 text-app-muted opacity-0 transition-opacity hover:text-jeon-purple focus:opacity-100 group-hover:opacity-100"
                       title={t("dashboard.pages.links.linkCard.editTitle")}
                     >
                       <IconPencil className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 )}
-                {link.block_type !== "link" && blockPreviewFor(link, t) !== null && contentEditId !== link.id && (
-                  <p className="mt-0.5 truncate text-[11px] text-app-muted">{blockPreviewFor(link, t)}</p>
-                )}
+                {/* Subjudul "n klik · domain/ringkasan" -- sama persis Links
+                    (lihat catatan di sana); tiap bagian <span> terpisah. */}
+                {(() => {
+                  const parts: string[] = [];
+                  if (showsClickCount(link)) {
+                    parts.push(t("dashboard.pages.links.linkCard.clicksCount").replace("{n}", link.click_count.toLocaleString("id-ID")));
+                  }
+                  if (link.block_type === "link") {
+                    const host = linkHostname(link.url);
+                    if (host) parts.push(host);
+                  } else if (contentEditId !== link.id) {
+                    const preview = blockPreviewFor(link, t);
+                    if (preview) parts.push(preview);
+                  }
+                  if (parts.length === 0) return null;
+                  return (
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-app-muted">
+                      {parts.flatMap((part, i) => [
+                        i > 0 ? (
+                          <span key={`sep-${i}`} aria-hidden className="opacity-50">
+                            ·
+                          </span>
+                        ) : null,
+                        <span key={`part-${i}`} className={i === parts.length - 1 ? "truncate" : "flex-shrink-0 tabular-nums"}>
+                          {part}
+                        </span>,
+                      ])}
+                    </p>
+                  );
+                })()}
               </div>
-              <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-app-surface-2 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-app-muted sm:flex">
-                <IconChart className="h-3 w-3" />
-                {link.click_count.toLocaleString("id-ID")}
-              </span>
               {isBlockExpandable(link, t) && (
                 <button
                   type="button"
@@ -2112,14 +2118,17 @@ function BlockSection({
                     }
                   }}
                   aria-expanded={contentEditId === link.id}
-                  title={t("dashboard.pages.links.linkCard.editContent")}
-                  className={`flex h-8 flex-shrink-0 items-center rounded-lg px-1.5 transition-colors ${
-                    contentEditId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                  title={link.block_type === "link" ? t("dashboard.pages.links.linkCard.editLinkDetails") : t("dashboard.pages.links.linkCard.editContent")}
+                  className={`hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors sm:flex ${
+                    contentEditId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-app-surface-2 hover:text-app-ink"
                   }`}
                 >
-                  <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${contentEditId === link.id ? "rotate-90" : ""}`} />
+                  <IconChevronRight className={`h-4 w-4 transition-transform ${contentEditId === link.id ? "rotate-90" : ""}`} />
                 </button>
               )}
+              <div onClick={(e) => e.stopPropagation()}>
+                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
+              </div>
               <button
                 type="button"
                 onClick={(e) => {
@@ -2128,20 +2137,16 @@ function BlockSection({
                 }}
                 aria-expanded={toolsOpenId === link.id}
                 title={t("dashboard.pages.links.linkCard.manageTools")}
-                className={`flex h-8 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-bold transition-colors ${
-                  toolsOpenId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+                  toolsOpenId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-ink hover:bg-app-surface-2"
                 }`}
               >
-                <IconSettings className="h-4 w-4" />
-                <IconChevronRight className={`h-3 w-3 transition-transform ${toolsOpenId === link.id ? "rotate-90" : ""}`} />
+                <IconDotsVertical className="h-5 w-5" />
               </button>
-              <div onClick={(e) => e.stopPropagation()}>
-                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
-              </div>
             </div>
 
-            {(link.block_type === "link" || link.block_type === "image") && (
-              <div className="ml-6 flex items-center gap-1.5">
+            {(link.block_type === "image" || (link.block_type === "link" && contentEditId === link.id)) && (
+              <div className="sm:ml-[60px] flex items-center gap-1.5">
                 {editingField?.id === link.id && editingField.field === "url" ? (
                   <input
                     type="url"
@@ -2168,8 +2173,8 @@ function BlockSection({
               </div>
             )}
 
-            {link.block_type === "link" && (
-              <div className="ml-6 flex items-center gap-1.5">
+            {link.block_type === "link" && contentEditId === link.id && (
+              <div className="sm:ml-[60px] flex items-center gap-1.5">
                 {editingField?.id === link.id && editingField.field === "description" ? (
                   <input
                     type="text"
@@ -2204,8 +2209,12 @@ function BlockSection({
             {toolsOpenId === link.id && (
               <BlockToolsStrip
                 link={link}
-                className="ml-6"
+                className="sm:ml-[60px]"
                 iconUploading={iconUploadingId === link.id}
+                onMoveUp={() => moveLinkByOffset(index, -1)}
+                onMoveDown={() => moveLinkByOffset(index, 1)}
+                canMoveUp={index > 0}
+                canMoveDown={index < links.length - 1}
                 onSchedule={() => openScheduleForm(link)}
                 onLock={() => openLockForm(link)}
                 onToggleSensitive={() => handleToggleSensitive(link)}
@@ -2221,7 +2230,7 @@ function BlockSection({
             )}
 
             {link.block_type === "link" && link.is_featured && (
-              <div className="ml-6 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 {link.thumbnail_url ? (
                   // Ukuran TETAP 96x56 (w-24 h-14).
                   <Image src={link.thumbnail_url} alt="" width={96} height={56} className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
@@ -2260,7 +2269,7 @@ function BlockSection({
             )}
 
             {scheduleEditId === link.id ? (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <div className="flex gap-1.5">
                   <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
                     <input
@@ -2296,7 +2305,7 @@ function BlockSection({
             ) : (
               link.starts_at &&
               link.ends_at && (
-                <div className="ml-6 flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
+                <div className="sm:ml-[60px] flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
                   <span className="text-[11px] font-semibold text-jeon-warning">
                     {t("dashboard.pages.links.schedulePanel.scheduledLabel")} {new Date(link.starts_at).toLocaleString("id-ID")} {t("dashboard.pages.links.schedulePanel.until")}{" "}
                     {new Date(link.ends_at).toLocaleString("id-ID")}
@@ -2310,7 +2319,7 @@ function BlockSection({
 
             {(link.block_type === "link" || link.block_type === "button") &&
               (lockEditId === link.id ? (
-                <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <select
                     value={lockTypeInput}
                     onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
@@ -2357,7 +2366,7 @@ function BlockSection({
                 </div>
               ) : (
                 link.lock_type && (
-                  <div className="ml-6 flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+                  <div className="sm:ml-[60px] flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
                     <span className="text-[11px] font-semibold text-jeon-purple">
                       {t("dashboard.pages.links.lockPanel.lockedLabel")}{" "}
                       {link.lock_type === "code"
@@ -2390,7 +2399,7 @@ function BlockSection({
               link.block_type === "video_image" ||
               link.block_type === "embed_link") &&
               contentEditId === link.id && (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 {link.block_type === "video" ? (
                   <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
                     <input
@@ -2602,7 +2611,7 @@ function BlockSection({
                 membuka). "image_slider" reuse PERSIS panel galeri -- alias
                 tervalidasi "gallery" di backend. */}
             {(link.block_type === "gallery" || link.block_type === "image_slider") && contentEditId === link.id && (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[11px] font-semibold text-app-muted">
                     {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
@@ -2707,7 +2716,7 @@ function BlockSection({
               </div>
             )}
             {link.block_type === "audio" && contentEditId === link.id && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.audio_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
@@ -2738,7 +2747,7 @@ function BlockSection({
                 pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                 pola sama persis seperti panel Kelola audio di atas. */}
             {link.block_type === "file" && contentEditId === link.id && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.file_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.fileUploaded")
@@ -2770,7 +2779,7 @@ function BlockSection({
                 dashboard/links/page.tsx: satu endpoint uploadBuilderMediaImage
                 dipakai bersama ketiganya). */}
             {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && contentEditId === link.id && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.image_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
@@ -2800,7 +2809,7 @@ function BlockSection({
             {/* Panel "Kelola Gambar" -- blok "project_showcase" (endpoint
                 terpisah, uploadShowcaseImage). */}
             {link.block_type === "project_showcase" && contentEditId === link.id && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.image_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
@@ -2833,7 +2842,7 @@ function BlockSection({
                 PATCH ke server (autosave, tanpa draft lokal, pola SAMA
                 dashboard/links/page.tsx). */}
             {link.block_type === "list" && contentEditId === link.id && (
-              <div className="ml-6 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <ListItemsEditor
                   style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
                   items={(link.block_data?.items as ListEditorItem[] | undefined) ?? []}
@@ -2849,7 +2858,7 @@ function BlockSection({
                 grid otomatis Halaman Toko berhenti tampil (lihat gating
                 hasProdukBlock di PagePreview.tsx). */}
             {link.block_type === "produk" && contentEditId === link.id && (
-              <div className="ml-6 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <div className="sm:ml-[60px] rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <ProdukBlockEditor
                   blockData={link.block_data}
                   products={products}

@@ -38,21 +38,28 @@ test.describe("Toko & Checkout", () => {
       .locator("select")
       .selectOption({ label: "E-book" });
     // Sampul WAJIB sejak 19 Agustus 2026 (permintaan langsung pengguna:
-    // "sampul jangan dijadikan opsional") -- SATU-SATUNYA input file yang
-    // ada di form create ini (unggah File Produk terpisah masih lewat
-    // modal Kelola setelah produk ada, lihat di bawah).
-    await page
-      .locator("form", { has: page.getByPlaceholder("Nama produk") })
+    // "sampul jangan dijadikan opsional"). File produk JUGA wajib di form
+    // ini sejak 18 September 2026 (commit 48c15f4, "product file tampilkan
+    // langsung saja ... supaya user tidak lupa") -- jadi ada DUA input file,
+    // urutan DOM: file produk dulu (nth 0), lalu sampul (nth 1).
+    const createForm = page.locator("form", { has: page.getByPlaceholder("Nama produk") });
+    await createForm
       .locator('input[type="file"]')
+      .nth(0)
+      .setInputFiles({ name: "ebook.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 konten uji e2e") });
+    await createForm
+      .locator('input[type="file"]')
+      .nth(1)
       .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
     await page.locator("form", { has: page.getByPlaceholder("Nama produk") }).getByRole("button", { name: "Buat" }).click();
 
     const productRow = page.getByRole("row", { name: new RegExp(productName) });
     await expect(productRow).toBeVisible({ timeout: 10000 });
 
-    // Belum ada file & belum aktif -- TIDAK boleh muncul di halaman Toko
-    // publik sama sekali (GetPublicPage/list backend filter is_active=true,
-    // lihat riset alur checkout sebelum test ini ditulis).
+    // Produk sudah AKTIF begitu dibuat (file + sampul diunggah dari form,
+    // 18 September 2026), tapi TETAP tidak boleh muncul di Toko publik
+    // sebelum blok "produk" ditambahkan eksplisit ke Halaman Toko (grid
+    // otomatis dihapus 15 September 2026, lihat catatan di bawah).
     // URL Toko pertama akun baru = `/{username}/produk` (slug KONSTAN
     // "produk", BUKAN lagi username diulang) -- diubah lewat commit
     // 2c32957c, 9 Sept 2026 ("URL Toko tidak lagi dobel username"), lihat
@@ -64,11 +71,8 @@ test.describe("Toko & Checkout", () => {
     await page.getByRole("button", { name: "Produk" }).click();
     await productRow.getByRole("button", { name: "Kelola" }).click();
 
-    // Input file produk (BUKAN input sampul -- sampul punya atribut accept
-    // gambar, input file produk tidak, lihat page.tsx sekitar baris 1139-1166).
-    await page
-      .locator('input[type="file"]:not([accept])')
-      .setInputFiles({ name: "ebook.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 konten uji e2e") });
+    // File produk sudah terunggah dari form create (tidak ada lagi langkah
+    // unggah terpisah di modal Kelola) -- modal cuma membuktikan statusnya.
     await expect(page.getByRole("button", { name: "File Produk terunggah" })).toBeVisible({ timeout: 10000 });
 
     // Sakelar manual "Aktifkan {nama}" DIHAPUS -- permintaan langsung

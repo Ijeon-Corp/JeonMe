@@ -163,6 +163,11 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: dupTitle })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toHaveCount(2);
     const dupRow = page.locator("li", { hasText: dupTitle }).first();
+    // Redesain baris blok 18 September 2026 (referensi gambar pengguna):
+    // header tautan cuma menampilkan DOMAIN ("example.com"), URL penuh
+    // baru tampil setelah baris dibuka lewat tombol "Ubah URL & deskripsi".
+    await expect(dupRow.getByText("example.com", { exact: true })).toBeVisible();
+    await dupRow.getByTitle("Ubah URL & deskripsi").click();
     await expect(dupRow.getByText(linkUrl, { exact: true })).toBeVisible();
   });
 

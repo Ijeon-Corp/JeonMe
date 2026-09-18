@@ -131,13 +131,17 @@ const PATTERNS: { test: RegExp; Icon: LinkIconComponent; label: string; badgeCla
 const FALLBACK_BADGE_CLASS = "bg-primary-subtle text-primary";
 const FALLBACK_ICON_COLOR_CLASS = "text-primary";
 
+// isFallback -- true kalau URL tidak cocok platform mana pun (ikon rantai
+// generik). Dipakai baris blok dashboard (redesain 18 September 2026) utk
+// memilih kulit tile: platform terdeteksi = warna mereknya, generik = tile
+// putih bergaris (referensi gambar pengguna), BUKAN badgeClass fallback.
 export function detectLinkIcon(
   url: string
-): { Icon: LinkIconComponent; label: string; badgeClass: string; iconColorClass: string } {
+): { Icon: LinkIconComponent; label: string; badgeClass: string; iconColorClass: string; isFallback: boolean } {
   for (const { test, Icon, label, badgeClass, iconColorClass } of PATTERNS) {
     if (test.test(url)) {
-      return { Icon, label, badgeClass, iconColorClass };
+      return { Icon, label, badgeClass, iconColorClass, isFallback: false };
     }
   }
-  return { Icon: IconLink, label: "Tautan", badgeClass: FALLBACK_BADGE_CLASS, iconColorClass: FALLBACK_ICON_COLOR_CLASS };
+  return { Icon: IconLink, label: "Tautan", badgeClass: FALLBACK_BADGE_CLASS, iconColorClass: FALLBACK_ICON_COLOR_CLASS, isFallback: true };
 }

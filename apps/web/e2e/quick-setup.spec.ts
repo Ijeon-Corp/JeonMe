@@ -73,9 +73,9 @@ test.describe("Quick Setup", () => {
     // tersembunyi di balik "Edit Konten") -- getByText polos jadi cocok DUA
     // elemen sekaligus, bukan regresi, cuma perlu discope ke baris yang
     // dimaksud.
-    await expect(page.getByText("https://twitch.tv/", { exact: true })).toBeVisible();
-    await expect(page.locator("li", { hasText: "Tonton di YouTube" }).getByText("https://youtube.com/@", { exact: true })).toBeVisible();
-    await expect(page.getByText("https://discord.gg/", { exact: true })).toBeVisible();
+    await expect(page.getByText("twitch.tv", { exact: true })).toBeVisible();
+    await expect(page.locator("li", { hasText: "Tonton di YouTube" }).getByText("youtube.com", { exact: true })).toBeVisible();
+    await expect(page.getByText("discord.gg", { exact: true })).toBeVisible();
 
     // Tema Cyber ikut tersimpan -- terlihat lewat halaman publik (gradien
     // gelap khas tema ini, dicek lewat kelas latar di HTML).
@@ -175,12 +175,15 @@ test.describe("Quick Setup", () => {
     // "https://" polos yang dulu ditolak backend). Discope ke row-nya
     // sendiri -- alasan sama persis catatan YouTube di test "Streamer" di
     // atas (blok showcase template ini JUGA memakai PLATFORM_URL.website).
-    await expect(page.locator("li", { hasText: "Kunjungi Website Kami" }).getByText("https://websitekamu.com", { exact: true })).toBeVisible();
+    await expect(page.locator("li", { hasText: "Kunjungi Website Kami" }).getByText("websitekamu.com", { exact: true })).toBeVisible();
     // Blok FAQ ("Pertanyaan Umum") benar-benar tersimpan sebagai blok
-    // tersendiri, badge "FAQ" membuktikan block_type-nya benar (bukan
-    // salah kepetakan jadi "text" atau "link").
-    const faqRow = page.locator("div", { hasText: "Pertanyaan Umum" }).filter({ hasText: "FAQ" }).first();
+    // tersendiri. Badge teks tipe blok ("FAQ") DIHAPUS dari baris blok
+    // (commit c2cb569, 17 September 2026) -- yang membuktikan block_type-nya
+    // benar sekarang: barisnya punya tombol "Edit Konten" (tautan biasa
+    // memakai judul tombol lain, "Ubah URL & deskripsi").
+    const faqRow = page.locator("li", { hasText: "Pertanyaan Umum" }).first();
     await expect(faqRow).toBeVisible();
+    await expect(faqRow.getByRole("button", { name: "Edit Konten", exact: true })).toBeVisible();
   });
 
   test("varian layout Banner (avatar rata kiri) sungguhan tampil beda dari Centered di halaman publik", async ({ page }) => {

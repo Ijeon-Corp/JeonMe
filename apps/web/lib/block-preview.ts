@@ -117,9 +117,47 @@ export function blockPreviewFor(link: LinkItem, t: (key: string) => string): str
 // isBlockExpandable -- SATU sumber kebenaran dipakai bareng oleh cursor,
 // aria-expanded, dan onClick baris header blok (permintaan langsung
 // pengguna, 17 September 2026: "tanda panah > harusnya di blok nya langsung
-// jadi ketika blok di klik data nya keluar dan bisa diedit"). "link" &
-// tipe tanpa isi (blockPreviewFor null) sengaja TIDAK expandable, tidak
-// ada apa pun yang bisa dibuka utk keduanya.
+// jadi ketika blok di klik data nya keluar dan bisa diedit"). Tipe tanpa
+// isi (blockPreviewFor null) sengaja TIDAK expandable, tidak ada apa pun
+// yang bisa dibuka. "link" SEBELUMNYA juga dikecualikan (URL & deskripsi
+// selalu tampil inline di bawah header) -- sejak redesain baris blok 18
+// September 2026 (referensi gambar dari pengguna: kartu putih, ikon besar,
+// judul + "n klik · domain", hanya menu ⋮ di kanan) URL & deskripsi
+// tautan ikut dilipat & baru tampil saat baris dibuka, jadi "link" kini
+// expandable juga.
 export function isBlockExpandable(link: LinkItem, t: (key: string) => string): boolean {
-  return link.block_type !== "link" && blockPreviewFor(link, t) !== null;
+  return link.block_type === "link" || blockPreviewFor(link, t) !== null;
 }
+
+// linkHostname -- subjudul baris tautan di dashboard (redesain 18 September
+// 2026) menampilkan DOMAIN saja ("maps.app.goo.gl"), bukan URL penuh --
+// URL penuh tetap bisa dilihat/diedit setelah baris dibuka. null kalau URL
+// tidak bisa di-parse (mis. mailto:/tel: atau URL relatif) -- pemanggil
+// lalu tidak menampilkan apa pun, bukan string "null"/kosong.
+export function linkHostname(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const { hostname } = new URL(url);
+    return hostname.replace(/^www\./, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+// showsClickCount -- chip "📊 n" SEBELUMNYA tampil utk SEMUA tipe blok,
+// termasuk Teks/FAQ/Galeri yang tidak pernah diklik (angka nol yang tidak
+// bermakna, temuan audit baris blok 18 September 2026). Sekarang jumlah
+// klik hanya ditampilkan utk tipe yang memang punya tautan (link/button)
+// atau blok apa pun yang SUDAH punya klik tercatat.
+export function showsClickCount(link: LinkItem): boolean {
+  return link.block_type === "link" || link.block_type === "button" || link.click_count > 0;
+}
+
+// BLOCK_TILE_CLASS -- tile ikon 48px baris blok dashboard (Links & Toko),
+// redesain 18 September 2026 mengikuti referensi gambar pengguna: kotak
+// putih bergaris tipis dengan glyph ikon di tengah. Bayangan ditulis
+// sebagai nilai arbitrer (bukan `shadow-sm`) karena skala boxShadow di
+// tailwind.config sudah dikustomisasi -- lihat catatan "kelas yang
+// diam-diam no-op" di CLAUDE.md.
+export const BLOCK_TILE_CLASS =
+  "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-app-border bg-app-surface text-app-ink shadow-[0_1px_2px_rgba(17,17,17,0.06)]";
