@@ -211,16 +211,23 @@ const DESIGN_SECTION_ENTRIES: [BuilderDesignSection, string][] = [
 // teks jenis blok nya"); (4) 13 September 2026 (permintaan ini,
 // screenshot tree menunjukkan campuran judul kustom & cuplikan isi):
 // "nama nama blok ini harusnya itu nama tiap blok bukan nama tiap isi
-// dari blok" -- SEMUA blok, TERMASUK "text", sekarang SELALU nama tipe
-// generik. `node.title` (isi kustom yg diketik kreator) TIDAK LAGI
-// dipakai sama sekali di tree ini -- baris (3) sudah menghapus itu utk
-// sebagian tipe, permintaan ini menuntaskannya utk SEMUA tipe termasuk
-// "text" yang tadinya masih pengecualian.
+// dari blok" -- SEMUA blok, TERMASUK "text", jadi SELALU nama tipe
+// generik; (5) 18 September 2026 (screenshot tree: "Link / Link / Text /
+// FAQ / Image Grid / Video / Link" -- tujuh baris yang tidak bisa
+// dibedakan): "ubah nama tiap blok ini jadi judul yang diisi" -- label =
+// JUDUL blok (`node.title`, field judul yang diketik kreator sendiri)
+// kalau terisi, fallback nama tipe generik kalau kosong. Ini BUKAN
+// membatalkan (4): yang ditolak di (4) adalah CUPLIKAN ISI blok
+// (block_data teks/jumlah item), dan isi memang TETAP tidak pernah
+// dipakai di sini -- blok Teks tanpa judul tetap berlabel "Teks" walau
+// isinya panjang (e2e builder-mode.spec.ts mengandalkan ini).
 function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): string {
   if (node.kind === "column-slot") {
     const lastSeg = node.path[node.path.length - 1];
     return `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`;
   }
+  const customTitle = node.title?.trim();
+  if (customTitle) return customTitle;
   return t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
 }
 
