@@ -29,8 +29,13 @@ import {
   IconX,
 } from "@/components/icons";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   Clapperboard,
+  ExternalLink,
+  Eye,
+  EyeOff,
   ClipboardList,
   Code2,
   Columns3,
@@ -77,10 +82,12 @@ import {
   buildTree,
   findNodeByPath,
   selectionOf,
+  type BuilderNodePatch,
   type BuilderSeg,
   type BuilderSelection,
   type BuilderTreeNode,
 } from "@/lib/builder-blocks";
+import Toggle from "@/components/Toggle";
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
 import FormField from "@/components/FormField";
 import BlockPanelHeaderView from "@/components/dashboard/page/BlockPanelHeader";
@@ -106,6 +113,17 @@ import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPick
 // "blok" (isi/urutan blok) di sini SUDAH jadi tab "content" tersendiri di
 // level atas panel ini, tidak perlu diduplikasi sebagai sub-tab Design.
 export type BuilderDesignSection = "tema" | "header" | "tombol" | "font" | "stiker";
+
+// BuilderPageSettings -- subset field halaman yang diedit tab "Pengaturan"
+// Builder (18 September 2026); semuanya kolom `pages` yang SUDAH diterima
+// updateMyPage/updateExtraPage, cuma belum pernah bisa diubah dari Builder.
+export interface BuilderPageSettings {
+  is_published: boolean;
+  hide_watermark: boolean;
+  noindex: boolean;
+  seo_title: string;
+  seo_description: string;
+}
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), lihat
 // juga const yang sama di dashboard/links/page.tsx (galeri lama, jalur
@@ -901,7 +919,7 @@ function NodeFieldEditor({
   onProductCreated,
 }: {
   node: BuilderTreeNode;
-  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  onUpdateNode: (target: BuilderSelection, patch: BuilderNodePatch) => void;
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
@@ -1597,17 +1615,22 @@ function TreeNodeView({
   onFileChanged,
   products,
   onProductCreated,
+  siblingIds,
+  onReorderRoot,
+  onReorderChildren,
 }: {
   node: BuilderTreeNode;
   depth: number;
   selection: BuilderSelection | null;
   onSelect: (node: BuilderTreeNode) => void;
   onDeselect: () => void;
+  // onDelete -- sejak 18 September 2026 ini MEMINTA hapus (rute Builder
+  // menampilkan dialog konfirmasi dulu), bukan langsung menghapus.
   onDelete: (target: BuilderSelection) => void;
   onClone: (target: BuilderSelection) => void;
   collapsed: Set<string>;
   onToggleCollapsed: (id: string) => void;
-  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  onUpdateNode: (target: BuilderSelection, patch: BuilderNodePatch) => void;
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
@@ -1615,8 +1638,27 @@ function TreeNodeView({
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
+  // siblingIds/onReorderRoot/onReorderChildren -- item "Pindah ke atas/
+  // bawah" di menu ⋮ (perbaikan Builder 18 September 2026): alternatif
+  // drag yang bisa dipakai keyboard/sentuh, urutan saudara diambil dari
+  // pemanggil (rootIds utk root, childIds utk anak) lalu dikirim ke handler
+  // reorder yang SAMA dipakai drag & drop.
+  siblingIds: string[];
+  onReorderRoot: (orderedIds: string[]) => void;
+  onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
 }) {
   const { t } = useLocale();
+  const siblingIndex = siblingIds.indexOf(node.id);
+  const canMoveUp = siblingIndex > 0;
+  const canMoveDown = siblingIndex !== -1 && siblingIndex < siblingIds.length - 1;
+  function moveBy(delta: -1 | 1) {
+    if (siblingIndex === -1) return;
+    const reordered = arrayMove(siblingIds, siblingIndex, siblingIndex + delta);
+    if (node.path.length === 0) onReorderRoot(reordered);
+    else onReorderChildren(node.rootId, node.path.slice(0, -1), reordered);
+  }
+  const isRoot = node.path.length === 0;
+  const isInactive = isRoot && node.isActive === false;
   // menuOpen -- permintaan langsung pengguna, 12 September 2026 ("tambahkan
   // titik tiga diujung tiap blok untuk hapus dan clone"): menggantikan
   // ikon hapus lama yang cuma tampil saat baris terpilih -- menu ini
@@ -1730,10 +1772,15 @@ function TreeNodeView({
         <button
           type="button"
           onClick={() => (isThisSelected ? onDeselect() : onSelect(node))}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+          className={`flex min-w-0 flex-1 items-center gap-1.5 text-left ${isInactive ? "opacity-50" : ""}`}
         >
           {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
           <span className={`truncate ${isThisSelected ? "font-bold text-jeon-purple" : "font-semibold text-app-ink"}`}>{label}</span>
+          {isInactive && (
+            <span className="flex-shrink-0 rounded-full bg-app-surface-2 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-app-muted">
+              {t("dashboard.pages.linksBuilder.inactiveBadge")}
+            </span>
+          )}
         </button>
         {node.kind === "block" && (
           <div
@@ -1761,7 +1808,9 @@ function TreeNodeView({
                 e.stopPropagation();
                 if (!menuOpen) {
                   const rect = e.currentTarget.getBoundingClientRect();
-                  const estimatedMenuHeight = 90;
+                  // ~5 item x ~36px sejak menu punya Naik/Turun/Nonaktifkan
+                  // (18 September 2026), dulu 90px utk 2 item.
+                  const estimatedMenuHeight = 200;
                   setMenuFlipUp(window.innerHeight - rect.bottom < estimatedMenuHeight);
                 }
                 setMenuOpen((prev) => !prev);
@@ -1791,6 +1840,51 @@ function TreeNodeView({
                     penyebabnya. Rute clone yang benar (createLink) kehilangan
                     field ikon/kunci/jadwal, jadi bukan solusi -- paling aman
                     cuma disembunyikan sama sekali. */}
+                {/* Naik/Turun + Aktif/Nonaktif -- perbaikan Builder 18
+                    September 2026 (paritas dgn Mode Simple: BlockToolsStrip
+                    punya Pindah ke atas/bawah & tiap baris punya sakelar
+                    aktif; Builder sebelumnya cuma Duplikat+Hapus, satu-
+                    satunya cara menyembunyikan blok = menghapusnya). */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canMoveUp}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    moveBy(-1);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                  {t("dashboard.pages.linksBuilder.moveUp")}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canMoveDown}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    moveBy(1);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                  {t("dashboard.pages.linksBuilder.moveDown")}
+                </button>
+                {isRoot && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onUpdateNode(selectionOf(node), { isActive: isInactive });
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2"
+                  >
+                    {isInactive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {isInactive ? t("dashboard.pages.linksBuilder.activateBlock") : t("dashboard.pages.linksBuilder.deactivateBlock")}
+                  </button>
+                )}
                 {node.blockType !== "link" && (
                   <button
                     type="button"
@@ -1810,8 +1904,10 @@ function TreeNodeView({
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
+                    // Konfirmasi ditampilkan rute Builder (18 September 2026)
+                    // -- deselect TIDAK lagi di sini; dilakukan handleDelete
+                    // sesudah pengguna benar-benar mengonfirmasi.
                     onDelete(selectionOf(node));
-                    if (isThisSelected) onDeselect();
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
                 >
@@ -1868,6 +1964,9 @@ function TreeNodeView({
                   onFileChanged={onFileChanged}
                   products={products}
                   onProductCreated={onProductCreated}
+                  siblingIds={childIds}
+                  onReorderRoot={onReorderRoot}
+                  onReorderChildren={onReorderChildren}
                 />
               ))}
             </SortableContext>
@@ -1908,6 +2007,9 @@ export default function BuilderLeftPanel({
   onDesignSectionChange,
   products,
   onProductCreated,
+  pageSettings,
+  onPageSettingsChange,
+  publicUrl,
 }: {
   links: LinkItem[];
   // selection/onSelectionChange -- dinaikkan ke rute builder (permintaan
@@ -1923,7 +2025,7 @@ export default function BuilderLeftPanel({
   onClone: (target: BuilderSelection) => void;
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
-  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  onUpdateNode: (target: BuilderSelection, patch: BuilderNodePatch) => void;
   // onEnsureRootPersisted -- ditemukan lewat tinjauan kode sendiri (bukan
   // dari plan): upload gambar blok (lihat onMediaImageChanged/
   // onGalleryImagesChanged di bawah) butuh id ROOT ASLI dari backend --
@@ -1981,6 +2083,15 @@ export default function BuilderLeftPanel({
   // kebenaran, ini cuma menambal state lokal biar konsisten tanpa refetch).
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
+  // pageSettings/onPageSettingsChange/publicUrl -- tab "Pengaturan" (18
+  // September 2026): SEBELUMNYA cuma placeholder + tautan keluar, memakan
+  // 1/3 tab bar. Sekarang berisi pengaturan halaman yang paling sering
+  // dibutuhkan saat membangun (terbit/draft, watermark, noindex, SEO,
+  // alamat publik) -- semua ditulis ke DRAFT lokal rute Builder (pola sama
+  // field desain), terkirim saat Simpan lewat diffPageDesignPatch.
+  pageSettings: BuilderPageSettings;
+  onPageSettingsChange: (patch: Partial<BuilderPageSettings>) => void;
+  publicUrl: string | null;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<"content" | "design" | "settings">("content");
@@ -2204,6 +2315,9 @@ export default function BuilderLeftPanel({
                       onFileChanged={onFileChanged}
                       products={products}
                       onProductCreated={onProductCreated}
+                      siblingIds={rootIds}
+                      onReorderRoot={onReorderRoot}
+                      onReorderChildren={onReorderChildren}
                     />
                   ))}
                 </SortableContext>
@@ -2243,23 +2357,93 @@ export default function BuilderLeftPanel({
       )}
 
       {tab === "settings" && (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-            <IconSettings className="h-6 w-6 text-app-muted" />
-            <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.settingsPlaceholder")}</p>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+          <section className="flex flex-col gap-3 rounded-2xl border border-app-border bg-app-surface p-4">
+            <div className="flex items-center gap-2">
+              <IconSettings className="h-4 w-4 text-app-muted" />
+              <h3 className="text-sm font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.title")}</h3>
+            </div>
+            <label className="flex items-start justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block text-xs font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.publish")}</span>
+                <span className="block text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.settings.publishHint")}</span>
+              </span>
+              <Toggle checked={pageSettings.is_published} onChange={() => onPageSettingsChange({ is_published: !pageSettings.is_published })} label={t("dashboard.pages.linksBuilder.settings.publish")} />
+            </label>
+            <label className="flex items-start justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block text-xs font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.hideWatermark")}</span>
+                <span className="block text-[11px] text-app-muted">
+                  {isPremium ? t("dashboard.pages.linksBuilder.settings.hideWatermarkHint") : t("dashboard.pages.linksBuilder.settings.premiumOnly")}
+                </span>
+              </span>
+              <Toggle
+                checked={pageSettings.hide_watermark}
+                disabled={!isPremium}
+                onChange={() => onPageSettingsChange({ hide_watermark: !pageSettings.hide_watermark })}
+                label={t("dashboard.pages.linksBuilder.settings.hideWatermark")}
+              />
+            </label>
+            <label className="flex items-start justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block text-xs font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.noindex")}</span>
+                <span className="block text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.settings.noindexHint")}</span>
+              </span>
+              <Toggle checked={pageSettings.noindex} onChange={() => onPageSettingsChange({ noindex: !pageSettings.noindex })} label={t("dashboard.pages.linksBuilder.settings.noindex")} />
+            </label>
+          </section>
+
+          <section className="flex flex-col gap-3 rounded-2xl border border-app-border bg-app-surface p-4">
+            <h3 className="text-sm font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.seoTitle")}</h3>
+            <FormField label={t("dashboard.pages.linksBuilder.settings.seoTitleLabel")}>
+              <input
+                type="text"
+                maxLength={70}
+                defaultValue={pageSettings.seo_title}
+                key={`seo-title-${pageSettings.seo_title}`}
+                onBlur={(e) => {
+                  if (e.target.value.trim() !== pageSettings.seo_title) onPageSettingsChange({ seo_title: e.target.value.trim() });
+                }}
+                placeholder={t("dashboard.pages.linksBuilder.settings.seoTitlePlaceholder")}
+                className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink outline-none focus:border-jeon-purple"
+              />
+            </FormField>
+            <FormField label={t("dashboard.pages.linksBuilder.settings.seoDescriptionLabel")}>
+              <textarea
+                rows={3}
+                maxLength={160}
+                defaultValue={pageSettings.seo_description}
+                key={`seo-desc-${pageSettings.seo_description}`}
+                onBlur={(e) => {
+                  if (e.target.value.trim() !== pageSettings.seo_description) onPageSettingsChange({ seo_description: e.target.value.trim() });
+                }}
+                placeholder={t("dashboard.pages.linksBuilder.settings.seoDescriptionPlaceholder")}
+                className="w-full resize-none rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink outline-none focus:border-jeon-purple"
+              />
+            </FormField>
+          </section>
+
+          <section className="flex flex-col gap-2 rounded-2xl border border-app-border bg-app-surface p-4">
+            <h3 className="text-sm font-bold text-app-ink">{t("dashboard.pages.linksBuilder.settings.publicUrl")}</h3>
+            {publicUrl ? (
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 break-all text-xs font-semibold text-jeon-purple hover:underline">
+                {publicUrl.replace(/^https?:\/\//, "")}
+                <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+              </a>
+            ) : (
+              <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.settings.publicUrlUnavailable")}</p>
+            )}
             {/* target="_blank" -- bug ditemukan lewat audit (13 September
                 2026): tanpa ini, navigasi client-side Next.js TIDAK
                 memicu listener beforeunload (page.tsx) ATAUPUN lewat
                 handleBack (yang punya window.confirm) -- klik tautan ini
                 membuang SELURUH draft belum tersimpan TANPA peringatan
-                apa pun. Tautan Katalog (BuilderLeftPanel.tsx, panel
-                "catalog") sudah benar pakai target="_blank" -- disamakan
-                di sini. */}
-            <Link href={settingsHref} target="_blank" className="flex items-center gap-1 text-xs font-bold text-jeon-purple hover:underline">
+                apa pun. */}
+            <Link href={settingsHref} target="_blank" className="flex items-center gap-1 text-xs font-bold text-app-muted hover:text-jeon-purple">
               {t("dashboard.pages.linksBuilder.openSettingsPage")}
               <IconExternal className="h-3.5 w-3.5" />
             </Link>
-          </div>
+          </section>
         </div>
       )}
 

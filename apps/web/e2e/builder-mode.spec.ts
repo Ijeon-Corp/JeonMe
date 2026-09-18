@@ -50,9 +50,13 @@ function richTextEditor(page: Page) {
 // ke dropdown ini (pola ARIA menu-button baku) -- role EKSPLISIT itu
 // menimpa role implisit "button" bawaan elemen <button>, jadi item di
 // dalamnya sekarang dicari lewat role "menuitem", bukan "button" lagi.
+// Sejak 18 September 2026 "Hapus blok ini" membuka dialog konfirmasi dulu
+// (paritas dgn Mode Simple) -- tombol "Hapus" di dialog itu yang benar-
+// benar menghapus dari draft.
 async function deleteBlock(page: Page, label: string) {
   await page.getByRole("button", { name: label, exact: true }).locator("..").getByLabel("Menu blok").click();
   await page.getByRole("menuitem", { name: "Hapus blok ini" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Hapus", exact: true }).click();
 }
 
 test.describe("Canvas Page Builder", () => {
@@ -167,6 +171,17 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "Tambah Komponen" }).click();
     await page.getByRole("button", { name: "Tombol", exact: true }).first().click();
     await expect(page.getByRole("button", { name: "Tombol", exact: true }).first()).toBeVisible({ timeout: 10000 });
+    // Tombol WAJIB punya tautan tujuan sebelum Simpan (18 September 2026,
+    // rootsMissingUrl di app/builder/[pageId]/page.tsx) -- dulu tersimpan
+    // diam-diam dgn placeholder example.com. Pilih barisnya dulu supaya
+    // editor field-nya terbuka.
+    await page.getByRole("button", { name: "Tombol", exact: true }).first().click();
+    await page.getByLabel("Tautan Tujuan").fill("https://example.com/tombol");
+    await page.getByLabel("Tautan Tujuan").blur();
+    // Klik ulang = lepas seleksi, supaya editor inline-nya tertutup dan
+    // geometri baris kembali normal sebelum uji drag di bawah.
+    await page.getByRole("button", { name: "Tombol", exact: true }).first().click();
+    await expect(page.getByLabel("Tautan Tujuan")).toHaveCount(0);
 
     // Drag-and-drop (@dnd-kit) di level root: seret baris Tombol (paling
     // bawah) ke atas Pemisah -- urutan baru disimpan lewat reorderLinks

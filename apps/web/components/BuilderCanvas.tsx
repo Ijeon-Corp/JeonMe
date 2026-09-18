@@ -152,8 +152,14 @@ export default function BuilderCanvas({
       <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
         {page && (
           <div className="mx-auto [-ms-overflow-style:none] [scrollbar-width:none]" style={{ width: BUILDER_DEVICE_WIDTHS[device], zoom }}>
+            {/* Scrollbar bingkai SENGAJA terlihat lagi (18 September 2026):
+                sebelumnya disembunyikan total, sehingga konten di bawah
+                lipatan bingkai tidak terlihat bisa digulir -- kreator
+                mengira halamannya terpotong. `scrollbar-thin` (arbitrary
+                property) supaya tetap tipis, tidak mengganggu tampilan
+                "perangkat". */}
             <div
-              className="overflow-y-auto overflow-x-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="overflow-y-auto overflow-x-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card [scrollbar-width:thin]"
               style={{ height: BUILDER_DEVICE_HEIGHTS[device] }}
               onClick={handleCanvasClick}
             >

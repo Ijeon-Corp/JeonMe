@@ -17,6 +17,7 @@ import {
   createExtraPageBlock,
   deleteLink,
   getExtraPage,
+  getMe,
   getMyPage,
   listExtraPageLinks,
   listLinks,
@@ -38,6 +39,7 @@ import {
   BuilderRoot,
   BuilderSeg,
   BuilderSelection,
+  type BuilderNodePatch,
   buildTree,
   findNodeByPath,
   findSelectionByNodeId,
@@ -50,8 +52,10 @@ import {
 } from "@/lib/builder-blocks";
 import { useLocale } from "@/lib/locale-context";
 import { useToast } from "@/components/Toast";
-import { IconChevronRight, IconPencil } from "@/components/icons";
-import BuilderLeftPanel, { type BuilderDesignSection } from "@/components/BuilderLeftPanel";
+import { IconChevronRight, IconClose, IconPencil } from "@/components/icons";
+import { ExternalLink } from "lucide-react";
+import { SITE_URL } from "@/lib/site";
+import BuilderLeftPanel, { type BuilderDesignSection, type BuilderPageSettings } from "@/components/BuilderLeftPanel";
 import BuilderCanvas, { BUILDER_DEVICE_WIDTHS, type BuilderDeviceWidth } from "@/components/BuilderCanvas";
 import type { DesignSectionPage, DesignSectionPatch } from "@/components/dashboard/page/design-sections";
 
@@ -126,6 +130,13 @@ function extractPageDesignPatch(p: MyPage): Partial<MyPage> {
     social_linkedin: p.social_linkedin,
     social_telegram: p.social_telegram,
     social_email: p.social_email,
+    // Pengaturan halaman dari tab "Pengaturan" Builder (18 September 2026)
+    // -- ikut model draft yang sama, hanya terkirim kalau berubah.
+    is_published: p.is_published,
+    hide_watermark: p.hide_watermark,
+    noindex: p.noindex,
+    seo_title: p.seo_title,
+    seo_description: p.seo_description,
   };
 }
 
@@ -332,6 +343,15 @@ export default function BuilderPage() {
   const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
   const [renamingTitle, setRenamingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  // ownerUsername -- utk tautan "Lihat halaman" & alamat publik di tab
+  // Pengaturan (18 September 2026): halaman utama sudah bawa `username`,
+  // halaman tambahan (ExtraPageDetail) tidak -- diambil dari getMe().
+  const [ownerUsername, setOwnerUsername] = useState("");
+  // confirmDelete -- dialog konfirmasi hapus blok (18 September 2026):
+  // SEBELUMNYA menu ⋮ menghapus seketika tanpa tanya, sementara Mode
+  // Simple sudah lama memakai dialog. Satu state di rute ini supaya jalur
+  // menu ⋮ maupun tombol Delete keyboard memakai dialog yang sama.
+  const [confirmDelete, setConfirmDelete] = useState<BuilderSelection | null>(null);
 
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const tree = useMemo(() => buildTree(links), [links]);
@@ -379,9 +399,17 @@ export default function BuilderPage() {
   const fetchPageData = useCallback(async () => {
     if (isMain) {
       const [p, l, prod] = await Promise.all([getMyPage(), listLinks(), listProducts()]);
-      return { page: p, extraPageType: undefined as "bio" | "landing" | "produk" | undefined, extraPageSlug: undefined as string | undefined, extraPageName: undefined as string | undefined, links: l, products: prod };
+      return {
+        page: p,
+        extraPageType: undefined as "bio" | "landing" | "produk" | undefined,
+        extraPageSlug: undefined as string | undefined,
+        extraPageName: undefined as string | undefined,
+        links: l,
+        products: prod,
+        ownerUsername: p.username,
+      };
     }
-    const [detail, l, prod] = await Promise.all([getExtraPage(pageId), listExtraPageLinks(pageId), listProducts()]);
+    const [detail, l, prod, me] = await Promise.all([getExtraPage(pageId), listExtraPageLinks(pageId), listProducts(), getMe()]);
     const shimmed: MyPage = {
       ...(detail as ExtraPageDetail),
       username: "",
@@ -394,10 +422,12 @@ export default function BuilderPage() {
       extraPageName: detail.name as string | undefined,
       links: l,
       products: prod,
+      ownerUsername: me.username,
     };
   }, [isMain, pageId]);
 
   const applyPageData = useCallback((result: Awaited<ReturnType<typeof fetchPageData>>) => {
+    setOwnerUsername(result.ownerUsername);
     setPage(result.page);
     setServerPage(result.page);
     setExtraPageType(result.extraPageType);
@@ -667,7 +697,7 @@ export default function BuilderPage() {
     });
   }
 
-  function handleUpdateNode(target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) {
+  function handleUpdateNode(target: BuilderSelection, patch: BuilderNodePatch) {
     setError(null);
     setLinks((prev) => {
       if (target.path.length === 0) {
@@ -679,6 +709,9 @@ export default function BuilderPage() {
                 ...(patch.url !== undefined ? { url: patch.url } : {}),
                 ...(patch.description !== undefined ? { description: patch.description } : {}),
                 ...(patch.blockData !== undefined ? { block_data: { ...l.block_data, ...patch.blockData } } : {}),
+                // isActive -- hanya root (kolom `links.is_active`), lihat
+                // BuilderNodePatch; ikut draft & terkirim di commitSave.
+                ...(patch.isActive !== undefined ? { is_active: patch.isActive } : {}),
               }
             : l
         );
@@ -919,8 +952,31 @@ export default function BuilderPage() {
   // berhasil (bukan cuma di akhir) -- kalau satu langkah gagal di tengah,
   // langkah-langkah SEBELUMNYA yang sudah sukses tidak diulang percuma
   // saat pengguna menekan Save lagi (retry aman, bukan duplikat).
+  // rootsMissingUrl -- blok ROOT yang backend WAJIBKAN punya url (button/
+  // maps/project_showcase, lihat createRootOnServer) tapi masih kosong di
+  // draft. Perbaikan Builder 18 September 2026: SEBELUMNYA blok begini
+  // tetap tersimpan dgn fallback "https://example.com" (lihat catatan di
+  // createRootOnServer) & begitu diterbitkan jadi tombol sungguhan menuju
+  // example.com -- data palsu yang terlihat asli. Sekarang Simpan ditolak
+  // dgn pesan yang MENYEBUT blok mana yang belum diisi, bukan menyuntik
+  // placeholder diam-diam. (Blok bersarang tidak diwajibkan backend, jadi
+  // tidak dicek di sini.)
+  function rootsMissingUrl(): LinkItem[] {
+    return links.filter((l) => (l.block_type === "button" || l.block_type === "maps" || l.block_type === "project_showcase") && !l.url?.trim());
+  }
+
   async function commitSave(publish: boolean) {
     if (!page || !serverPage) return;
+    const missingUrl = rootsMissingUrl();
+    if (missingUrl.length > 0) {
+      const names = missingUrl
+        .map((l) => l.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[l.block_type] ?? "typeText"}`))
+        .join(", ");
+      setError(t("dashboard.pages.linksBuilder.errors.rootsMissingUrl").replace("{names}", names));
+      const first = missingUrl[0];
+      setSelection({ rootId: first.id, path: [], kind: "block", blockType: first.block_type });
+      return;
+    }
     setSaving(publish ? "publish" : "save");
     setError(null);
     try {
@@ -951,7 +1007,16 @@ export default function BuilderPage() {
           nextDraftLinks = [...nextDraftLinks, root];
           continue;
         }
-        const created = await createRootOnServer(root);
+        let created = await createRootOnServer(root);
+        // Root baru yang SUDAH dinonaktifkan di draft sebelum pernah
+        // disimpan (menu ⋮ > Nonaktifkan, 18 September 2026): createBlock
+        // selalu membuat baris aktif, jadi status nonaktif menyusul lewat
+        // PATCH terpisah -- kalau PATCH ini gagal, blok tetap ada (aktif)
+        // & retry Save berikutnya mengirimnya lagi lewat langkah 3.
+        if (root.is_active === false) {
+          await updateLink(created.id, { is_active: false });
+          created = { ...created, is_active: false };
+        }
         setSelection((prev) => (prev && prev.rootId === root.id ? { ...prev, rootId: created.id } : prev));
         // setLinks per-iterasi (BUKAN sekali di luar loop) -- bug ditemukan
         // lewat audit (13 September 2026): SEBELUMNYA hanya `serverLinks`
@@ -982,6 +1047,7 @@ export default function BuilderPage() {
           before.title !== root.title ||
           before.url !== root.url ||
           before.description !== root.description ||
+          before.is_active !== root.is_active ||
           JSON.stringify(before.block_data) !== JSON.stringify(root.block_data);
         if (!changed) continue;
         // url: root.url || undefined -- BUKAN root.url mentah (bug ditemukan
@@ -993,7 +1059,7 @@ export default function BuilderPage() {
         // links.go tidak merelaksasi field ini seperti CreateBlock).
         // createRootOnServer (langkah 2 di atas) sudah benar sejak awal,
         // cabang UPDATE ini yang sebelumnya lupa filter yang sama.
-        await updateLink(root.id, { title: root.title, url: root.url || undefined, description: root.description, block_data: root.block_data });
+        await updateLink(root.id, { title: root.title, url: root.url || undefined, description: root.description, block_data: root.block_data, is_active: root.is_active });
         nextServerLinks = nextServerLinks.map((l) => (l.id === root.id ? root : l));
         setServerLinks(nextServerLinks);
       }
@@ -1051,6 +1117,28 @@ export default function BuilderPage() {
     if (isDirty && !window.confirm(t("dashboard.pages.linksBuilder.unsavedChangesWarning"))) return;
     router.push(extraPageType === "produk" ? "/dashboard/products" : "/dashboard/links");
   }
+
+  // requestDelete -- jalur hapus dari menu ⋮ (BuilderLeftPanel) maupun
+  // keyboard: buka dialog konfirmasi dulu, handleDelete baru dipanggil
+  // dari tombol "Hapus" dialog (lihat confirmDelete).
+  function requestDelete(target: BuilderSelection) {
+    setConfirmDelete(target);
+  }
+
+  function handlePageSettingsChange(patch: Partial<BuilderPageSettings>) {
+    setError(null);
+    setPage((prev) => (prev ? { ...prev, ...patch } : prev));
+  }
+
+  const publicUrl = ownerUsername ? (isMain ? `${SITE_URL}/${ownerUsername}` : extraPageSlug ? `${SITE_URL}/${ownerUsername}/${extraPageSlug}` : null) : null;
+
+  // confirmDeleteLabel -- judul blok yang akan dihapus utk dialog.
+  const confirmDeleteLabel = useMemo(() => {
+    if (!confirmDelete) return "";
+    const node = findNodeByPath(tree, confirmDelete.rootId, confirmDelete.path);
+    if (!node) return "";
+    return node.title?.trim() || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
+  }, [confirmDelete, tree, t]);
 
   function startRenameTitle() {
     if (isMain || !extraPageName) return;
@@ -1168,6 +1256,28 @@ export default function BuilderPage() {
               {!isMain && <IconPencil className="h-3 w-3 flex-shrink-0 text-app-muted" />}
             </button>
           )}
+          {/* Badge status + tautan "Lihat halaman" (18 September 2026):
+              sebelumnya dari dalam Builder tidak terlihat apakah halaman
+              sudah terbit, dan tidak ada jalan cepat membuka hasilnya. */}
+          <span
+            className={`ml-2 hidden flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${
+              page.is_published ? "bg-jeon-lime text-[#111111]" : "bg-app-surface-2 text-app-muted"
+            }`}
+          >
+            {page.is_published ? t("dashboard.pages.linksBuilder.statusPublished") : t("dashboard.pages.linksBuilder.statusDraft")}
+          </span>
+          {publicUrl && (
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={t("dashboard.pages.linksBuilder.viewPublic")}
+              className="ml-1 hidden flex-shrink-0 items-center gap-1 text-[11px] font-bold text-app-muted hover:text-jeon-purple sm:inline-flex"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {t("dashboard.pages.linksBuilder.viewPublic")}
+            </a>
+          )}
         </div>
 
         <div className="hidden items-center gap-1.5 rounded-full bg-app-surface-2 p-1 sm:flex">
@@ -1224,7 +1334,44 @@ export default function BuilderPage() {
           </button>
         </div>
       </div>
-      {error && <p className="flex-shrink-0 bg-red-50 px-4 py-2 text-center text-xs text-red-600">{error}</p>}
+      {error && (
+        <div role="alert" className="flex flex-shrink-0 items-center justify-center gap-3 bg-red-50 px-4 py-2 text-xs text-red-600">
+          <span className="min-w-0 text-center">{error}</span>
+          {/* Tombol tutup (18 September 2026): bar error sebelumnya cuma
+              hilang saat aksi berikutnya memanggil setError(null). */}
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            aria-label={t("dashboard.pages.linksBuilder.dismissError")}
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full hover:bg-red-100"
+          >
+            <IconClose className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmDelete(null)} role="dialog" aria-modal="true">
+          <div className="w-full max-w-sm rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-app-ink">{t("dashboard.pages.linksBuilder.confirmDeleteTitle")}</h3>
+            <p className="mt-2 text-sm text-app-muted">{t("dashboard.pages.linksBuilder.confirmDeleteBody").replace("{title}", confirmDeleteLabel)}</p>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={() => setConfirmDelete(null)} className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2">
+                {t("dashboard.pages.linksBuilder.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDelete(confirmDelete);
+                  setConfirmDelete(null);
+                }}
+                className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700"
+              >
+                {t("dashboard.pages.linksBuilder.confirmDeleteButton")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* grid-rows-[minmax(0,1fr)_minmax(0,1fr)] -- bug ditemukan lewat
           audit ROUND 2 (13 September 2026): di bawah breakpoint `lg`
           (tablet/HP, `grid-cols-1`), grid ini TIDAK PUNYA baris eksplisit
@@ -1244,7 +1391,7 @@ export default function BuilderPage() {
           selection={selection}
           onSelectionChange={setSelection}
           onAdd={handleAdd}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           onClone={handleClone}
           onReorderRoot={handleReorderRoot}
           onReorderChildren={handleReorderChildren}
@@ -1269,6 +1416,15 @@ export default function BuilderPage() {
           onDesignSectionChange={setDesignSection}
           products={products}
           onProductCreated={(p) => setProducts((prev) => [...prev, p])}
+          pageSettings={{
+            is_published: page.is_published,
+            hide_watermark: page.hide_watermark,
+            noindex: page.noindex,
+            seo_title: page.seo_title ?? "",
+            seo_description: page.seo_description ?? "",
+          }}
+          onPageSettingsChange={handlePageSettingsChange}
+          publicUrl={publicUrl}
         />
         <BuilderCanvas
           page={page}

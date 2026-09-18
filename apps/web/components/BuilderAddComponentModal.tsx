@@ -190,14 +190,18 @@ export default function BuilderAddComponentModal({
   const { t } = useLocale();
   const [category, setCategory] = useState<BuilderComponentCategory>("general");
   const [search, setSearch] = useState("");
-  const categories = buildBuilderComponentCategories(t).map((c) => ({
-    ...c,
-    tiles: nested ? c.tiles.filter((tile) => !ROOT_ONLY_TYPES.has(tile.type)) : c.tiles,
-  }));
+  // Tipe root-only TIDAK lagi disembunyikan senyap saat `nested` (perbaikan
+  // Builder 18 September 2026): tile-nya tetap tampil tapi nonaktif dengan
+  // label "Hanya di level akar", supaya kreator tahu blok itu ADA dan di
+  // mana bisa dipakai -- sebelumnya seolah-olah blok itu hilang.
+  const categories = buildBuilderComponentCategories(t);
+  const isRootOnlyHere = (type: AddableBlockType) => Boolean(nested) && ROOT_ONLY_TYPES.has(type);
   const searchLower = search.trim().toLowerCase();
 
+  // Pencarian mencocokkan label DAN deskripsi (18 September 2026) --
+  // "formulir"/"peta"/"testimoni" dst. sering ada di deskripsi, bukan label.
   const visibleTiles = searchLower
-    ? categories.flatMap((c) => c.tiles).filter((tile) => tile.label.toLowerCase().includes(searchLower))
+    ? categories.flatMap((c) => c.tiles).filter((tile) => tile.label.toLowerCase().includes(searchLower) || tile.description.toLowerCase().includes(searchLower))
     : (categories.find((c) => c.key === category)?.tiles ?? []);
 
   return (
@@ -246,26 +250,48 @@ export default function BuilderAddComponentModal({
           )}
 
           {visibleTiles.length === 0 ? (
-            <p className="py-8 text-center text-sm text-app-muted">{t("dashboard.components.builderAddComponentModal.comingSoon")}</p>
+            // "Tidak ada hasil" vs "segera hadir" -- dua situasi berbeda yang
+            // dulu memakai satu string (18 September 2026): semua kategori
+            // sudah terisi, jadi daftar kosong SELALU berarti pencarian tidak
+            // cocok, bukan fitur yang belum ada.
+            <p className="py-8 text-center text-sm text-app-muted">
+              {searchLower
+                ? t("dashboard.components.builderAddComponentModal.noSearchResults").replace("{q}", search.trim())
+                : t("dashboard.components.builderAddComponentModal.comingSoon")}
+            </p>
           ) : (
             <div className="flex flex-col gap-1">
-              {visibleTiles.map((tile) => (
-                <button
-                  key={tile.type}
-                  type="button"
-                  onClick={() => onSelect(tile.type)}
-                  aria-label={tile.label}
-                  className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
-                >
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd bg-jeon-lavender text-[#111111]">
-                    <tile.Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-app-ink">{tile.label}</p>
-                    <p className="truncate text-xs text-app-muted">{tile.description}</p>
-                  </div>
-                </button>
-              ))}
+              {visibleTiles.map((tile) => {
+                const rootOnly = isRootOnlyHere(tile.type);
+                return (
+                  <button
+                    key={tile.type}
+                    type="button"
+                    onClick={() => {
+                      if (!rootOnly) onSelect(tile.type);
+                    }}
+                    aria-label={tile.label}
+                    aria-disabled={rootOnly}
+                    title={rootOnly ? t("dashboard.components.builderAddComponentModal.rootOnlyHint") : undefined}
+                    className={`flex items-center gap-3 rounded-xl px-2 py-2.5 text-left ${rootOnly ? "cursor-not-allowed opacity-50" : "hover:bg-app-surface-2"}`}
+                  >
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd bg-jeon-lavender text-[#111111]">
+                      <tile.Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-app-ink">
+                        {tile.label}
+                        {rootOnly && (
+                          <span className="rounded-full border border-app-border px-1.5 py-0.5 text-[10px] font-bold text-app-muted">
+                            {t("dashboard.components.builderAddComponentModal.rootOnlyHint")}
+                          </span>
+                        )}
+                      </p>
+                      <p className="truncate text-xs text-app-muted">{tile.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

@@ -220,7 +220,25 @@ export interface BuilderTreeNode {
   url?: string;
   description?: string;
   blockData?: Record<string, unknown>;
+  // isActive -- HANYA root (baris `links` punya kolom is_active; blok
+  // bersarang murni JSON tanpa status sendiri). Perbaikan Builder 18
+  // September 2026: sebelumnya TIDAK ADA cara menonaktifkan blok di
+  // Builder selain menghapusnya -- sekarang ada di menu ⋮ baris root.
+  isActive?: boolean;
   children: BuilderTreeNode[];
+}
+
+// BuilderNodePatch -- patch draft SATU node (root maupun bersarang) yang
+// dipahami handleUpdateNode (app/builder/[pageId]/page.tsx). Diekstrak jadi
+// tipe bersama (18 September 2026) karena sebelumnya bentuk objek ini
+// disalin literal di 4 tanda tangan berbeda; `isActive` hanya berlaku utk
+// root (diabaikan utk node bersarang, lihat catatan BuilderTreeNode.isActive).
+export interface BuilderNodePatch {
+  title?: string;
+  url?: string;
+  description?: string;
+  blockData?: Record<string, unknown>;
+  isActive?: boolean;
 }
 
 function buildChildNodes(rootId: string, parentPath: BuilderSeg[], children: EmbeddedBuilderBlock[]): BuilderTreeNode[] {
@@ -261,7 +279,10 @@ function buildBlockNode(
 }
 
 export function buildTree(links: LinkItem[]): BuilderTreeNode[] {
-  return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data));
+  return links.map((link) => ({
+    ...buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data),
+    isActive: link.is_active,
+  }));
 }
 
 // findNodeByPath -- pencarian rekursif SATU node persis (rootId+path),
