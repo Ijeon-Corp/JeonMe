@@ -233,17 +233,17 @@ export default function BuyProductButton({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
           <div
-            className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
+            className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-white p-5 shadow-brutal"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
-              <h2 className="font-display text-sm font-bold text-app-ink">{openLabel}</h2>
+              <h2 className="font-display text-sm font-bold text-[#111111]">{openLabel}</h2>
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={loading}
                 aria-label="Tutup"
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10 disabled:opacity-40"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-black/50 hover:bg-jeon-purple/10 disabled:opacity-40"
               >
                 <IconClose className="h-4 w-4" />
               </button>
@@ -251,14 +251,22 @@ export default function BuyProductButton({
 
             <form onSubmit={handleBuy} className="mt-3 flex flex-col gap-2">
               {productName && (
-                <div className="rounded-md border border-app-border bg-jeon-purple/5 px-2.5 py-1.5">
-                  <p className="text-[11px] text-app-muted">Kamu akan membeli</p>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-xs font-bold text-app-ink">{productName}</p>
+                <div className="rounded-md border border-black/10 bg-jeon-purple/5 px-2.5 py-1.5">
+                  <p className="text-[11px] text-black/55">Kamu akan membeli</p>
+                  {/* min-w-0 WAJIB di sini -- tanpa ini `truncate` (white-space:
+                      nowrap) membuat lebar minimum item flex ini SAMA DENGAN
+                      lebar penuh nama produk (default min-width:auto), jadi
+                      alih-alih terpotong rapi dgn "...", nama malah memaksa
+                      seluruh baris melebar & baru dipotong brutal oleh
+                      overflow-hidden induknya (bug ditemukan lewat laporan
+                      langsung pengguna, screenshot: "Kamu akan membeli J...").
+                      Pola sama persis catatan CSS overflow di CLAUDE.md. */}
+                  <div className="flex min-w-0 items-baseline justify-between gap-2">
+                    <p className="min-w-0 truncate text-xs font-bold text-[#111111]">{productName}</p>
                     {displayAmountIDR !== undefined && (
-                      <p className="flex-shrink-0 text-xs font-bold text-app-ink">
+                      <p className="flex-shrink-0 text-xs font-bold text-[#111111]">
                         {voucherResult && rawAmount !== undefined && (
-                          <span className="mr-1 font-normal text-app-muted line-through">{formatIDR(rawAmount)}</span>
+                          <span className="mr-1 font-normal text-black/40 line-through">{formatIDR(rawAmount)}</span>
                         )}
                         {formatIDR(displayAmountIDR)}
                       </p>
@@ -278,13 +286,13 @@ export default function BuyProductButton({
                   sama alasannya -- daripada menampilkan instruksi generik
                   utk sesuatu yang kategorinya benar-benar tidak diketahui. */}
               {category && (
-                <p className="rounded-md bg-jeon-purple/5 px-2.5 py-1.5 text-[11px] text-app-muted">
+                <p className="rounded-md bg-jeon-purple/5 px-2.5 py-1.5 text-[11px] text-black/55">
                   {getCategoryInstruction(category)}
                 </p>
               )}
               {pwywMinPriceIdr !== undefined && (
                 <div>
-                  <label className="text-[11px] font-semibold text-app-muted">
+                  <label className="text-[11px] font-semibold text-black/55">
                     Bayar berapa saja, min Rp{pwywMinPriceIdr.toLocaleString("id-ID")}
                   </label>
                   <input
@@ -293,7 +301,7 @@ export default function BuyProductButton({
                     min={pwywMinPriceIdr}
                     value={buyerAmount}
                     onChange={(e) => setBuyerAmount(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-app-border px-2.5 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+                    className="mt-1 w-full rounded-md border border-black/10 px-2.5 py-2 text-sm text-[#111111] focus:border-jeon-purple focus:outline-none"
                   />
                 </div>
               )}
@@ -306,8 +314,8 @@ export default function BuyProductButton({
                   onChange={(e) => setName(e.target.value)}
                   onBlur={() => setNameTouched(true)}
                   aria-invalid={!!nameError}
-                  className={`w-full rounded-md border px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
-                    nameError ? "border-red-400 focus:border-red-400" : "border-app-border focus:border-jeon-purple"
+                  className={`w-full rounded-md border px-2.5 py-2 text-sm text-[#111111] focus:outline-none ${
+                    nameError ? "border-red-400 focus:border-red-400" : "border-black/10 focus:border-jeon-purple"
                   }`}
                 />
                 {nameError && <p className="mt-0.5 text-[11px] text-red-600">{nameError}</p>}
@@ -321,8 +329,8 @@ export default function BuyProductButton({
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => setEmailTouched(true)}
                   aria-invalid={!!emailError}
-                  className={`w-full rounded-md border px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
-                    emailError ? "border-red-400 focus:border-red-400" : "border-app-border focus:border-jeon-purple"
+                  className={`w-full rounded-md border px-2.5 py-2 text-sm text-[#111111] focus:outline-none ${
+                    emailError ? "border-red-400 focus:border-red-400" : "border-black/10 focus:border-jeon-purple"
                   }`}
                 />
                 {emailError && <p className="mt-0.5 text-[11px] text-red-600">{emailError}</p>}
@@ -339,15 +347,22 @@ export default function BuyProductButton({
                   tidak pernah benar-benar dipakai. */}
               {!hideVoucher && (
                 <div>
+                  {/* Placeholder DIPERSINGKAT (permintaan langsung pengguna,
+                      screenshot: teks placeholder kepotong di layar sempit
+                      "Nomor Whats..."/tanpa elipsis, browser memotong
+                      placeholder native tanpa "..." begitu lebih panjang
+                      dari lebar input) -- "(opsional)" tetap ada, sengaja
+                      DIPERPENDEK bukan dihapus supaya pembeli tetap tahu
+                      field ini boleh dilewati. */}
                   <input
                     type="tel"
-                    placeholder="Nomor WhatsApp (opsional)"
+                    placeholder="WhatsApp (opsional)"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
                     onBlur={() => setWhatsappTouched(true)}
                     aria-invalid={!!whatsappError}
-                    className={`w-full rounded-md border px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
-                      whatsappError ? "border-red-400 focus:border-red-400" : "border-app-border focus:border-jeon-purple"
+                    className={`w-full rounded-md border px-2.5 py-2 text-sm text-[#111111] focus:outline-none ${
+                      whatsappError ? "border-red-400 focus:border-red-400" : "border-black/10 focus:border-jeon-purple"
                     }`}
                   />
                   {whatsappError && <p className="mt-0.5 text-[11px] text-red-600">{whatsappError}</p>}
@@ -361,11 +376,11 @@ export default function BuyProductButton({
                   utk dukungan/donasi). */}
               {!hideVoucher && (
                 <textarea
-                  placeholder="Catatan untuk penjual (opsional)"
+                  placeholder="Catatan (opsional)"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-app-border px-2.5 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+                  className="w-full rounded-md border border-black/10 px-2.5 py-2 text-sm text-[#111111] focus:border-jeon-purple focus:outline-none"
                 />
               )}
 
@@ -374,7 +389,7 @@ export default function BuyProductButton({
                   <button
                     type="button"
                     onClick={() => setShowVoucher(true)}
-                    className="text-left text-[11px] font-semibold text-app-muted underline"
+                    className="text-left text-[11px] font-semibold text-black/55 underline"
                   >
                     Punya kode voucher?
                   </button>
@@ -390,13 +405,13 @@ export default function BuyProductButton({
                           setVoucherResult(null);
                           setVoucherMessage(null);
                         }}
-                        className="min-w-0 flex-1 rounded-md border border-app-border px-2.5 py-2 text-sm uppercase text-app-ink focus:border-jeon-purple focus:outline-none"
+                        className="min-w-0 flex-1 rounded-md border border-black/10 px-2.5 py-2 text-sm uppercase text-[#111111] focus:border-jeon-purple focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={handleApplyVoucher}
                         disabled={checkingVoucher || !voucherCode.trim()}
-                        className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-2 text-xs font-bold text-app-ink disabled:opacity-60"
+                        className="flex-shrink-0 rounded-md border border-black/10 px-2.5 py-2 text-xs font-bold text-[#111111] disabled:opacity-60"
                       >
                         {checkingVoucher ? "..." : "Terapkan"}
                       </button>
