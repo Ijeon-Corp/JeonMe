@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 import { IconClose } from "@/components/icons";
 import { getCategoryInstruction } from "@/lib/product-categories";
@@ -260,7 +261,22 @@ export default function BuyProductButton({
         {openLabel}
       </button>
 
-      {open && (
+      {/* createPortal ke document.body -- ditemukan lewat laporan langsung
+          pengguna (screenshot): kartu produk di banyak tema pakai
+          `backdrop-blur` (lib/page-themes.ts, productCard) pada elemen yang
+          MEMBUNGKUS tombol Beli ini -- `backdrop-filter` (sama seperti
+          `filter`/`transform`) membuat elemen itu jadi containing block baru
+          utk descendant `position: fixed`, jadi modal ini (fixed inset-0)
+          berhenti relatif ke viewport & malah terkurung relatif ke KARTU
+          produk itu sendiri: lebarnya kepotong jadi selebar 1 kolom kartu
+          (pada grid 2 kolom), dan posisinya ikut geser saat halaman di-
+          scroll alih-alih tetap di tengah viewport. Perilaku CSS standar,
+          bukan bug browser -- pola & penjelasan panjang identik dgn portal
+          lightbox GalleryBlock.tsx (ditemukan sebelumnya lewat kasus serupa,
+          efek hover-transform kartu). `document` dijamin ada di sini: cabang
+          ini HANYA true setelah `handleOpen` dipanggil dari klik pengguna,
+          yang cuma bisa terjadi pasca-hidrasi di klien. */}
+      {open && createPortal(
         // max-w-md -- permintaan langsung pengguna, 19 September 2026:
         // "perbesar layout nya sesuai lebar layout utama" -- SAMA PERSIS
         // lebar kolom halaman publik (`max-w-md`, PagePreview.tsx), dulu
@@ -479,7 +495,8 @@ export default function BuyProductButton({
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
