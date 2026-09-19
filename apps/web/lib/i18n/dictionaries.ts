@@ -1136,6 +1136,16 @@ export const dictionaries = {
             design: "Desain",
             settings: "Pengaturan",
           },
+          // mobileTabContent/mobileTabPreview -- perbaikan Builder 19
+          // September 2026: tab "Edit"/"Pratinjau" HANYA muncul di bawah
+          // breakpoint `lg` (lihat mobileView, app/builder/[pageId]/page.tsx),
+          // memilih panel MANA (kiri/kanvas) yang tampil penuh layar. Label
+          // SENGAJA "Edit" (bukan "Konten") -- begitu tab ini aktif, panel
+          // kiri MASIH menampilkan tab internalnya sendiri (Konten/Desain/
+          // Pengaturan, `tab.*` di atas) di bawahnya; dua tab bertumpuk
+          // sama-sama berlabel "Konten" akan sangat membingungkan.
+          mobileTabContent: "Edit",
+          mobileTabPreview: "Pratinjau",
           emptyRoot: "Belum ada blok -- tambahkan lewat tombol di atas.",
           emptyContainer: "Kosong -- tambahkan blok di dalamnya.",
           columnLabel: "Kolom",
@@ -4415,6 +4425,8 @@ export const dictionaries = {
             design: "Design",
             settings: "Settings",
           },
+          mobileTabContent: "Edit",
+          mobileTabPreview: "Preview",
           emptyRoot: "No blocks yet -- add one with the button above.",
           emptyContainer: "Empty -- add a block inside it.",
           columnLabel: "Column",

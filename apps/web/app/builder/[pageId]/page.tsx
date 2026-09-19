@@ -407,6 +407,19 @@ export default function BuilderPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<"" | "save" | "publish">("");
   const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
+  // mobileView -- perbaikan Builder 19 September 2026 (audit: "mobile
+  // splits 50/50 rows ... kanvas cuma separuh layar dan zoom bisa jatuh
+  // ke 0.2"). Di bawah breakpoint `lg`, panel Konten & Kanvas dulu SELALU
+  // tampil BERSAMAAN, berbagi tinggi layar 50/50 -- keduanya jadi terlalu
+  // sempit utk dipakai sungguhan. Sekarang di bawah `lg` HANYA SATU yang
+  // tampil (toggle "Konten"/Pratinjau" di atas grid, lihat di bawah),
+  // penuh tinggi layar; di `lg`+ toggle disembunyikan & KEDUANYA tetap
+  // tampil sisi-bersisi seperti sebelumnya (state ini tidak berpengaruh
+  // sama sekali di desktop). Kedua panel TETAP mounted (disembunyikan via
+  // `hidden`, bukan dilepas dari DOM) -- BuilderCanvas punya ResizeObserver
+  // + PagePreview dynamic import yang lebih aman tidak di-remount tiap
+  // pindah tab (scroll & state tree kiri juga ikut awet).
+  const [mobileView, setMobileView] = useState<"content" | "preview">("content");
   const [renamingTitle, setRenamingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   // ownerUsername -- utk tautan "Lihat halaman" & alamat publik di tab
@@ -1551,7 +1564,18 @@ export default function BuilderPage() {
             <Redo2 className="h-4 w-4" />
           </button>
         </div>
-        <div className="hidden items-center gap-1.5 rounded-full bg-app-surface-2 p-1 sm:flex">
+        {/* Toggle perangkat -- TIDAK LAGI disembunyikan di bawah `sm`
+            (perbaikan Builder 19 September 2026). Sebelumnya hilang total
+            di layar sempit -- ditemukan jadi masalah NYATA begitu tab
+            Edit/Pratinjau (mobileView) ditambahkan: tanpa toggle ini,
+            pengunjung ponsel yang membuka tab "Pratinjau" TERKUNCI pada
+            simulasi "Desktop" (1280px) yang diperkecil paksa via zoom ke
+            layar 390px -- teks jadi nyaris tak terbaca & sisa tinggi
+            layar terbuang kosong (bingkai yang diperkecil jauh lebih
+            pendek dari panel yang tersedia). Topbar masih punya ruang
+            kosong di lebar ini (lihat screenshot verifikasi), jadi aman
+            ditampilkan permanen, bukan cuma dipindah lokasi. */}
+        <div className="flex items-center gap-1.5 rounded-full bg-app-surface-2 p-1">
           {(Object.keys(BUILDER_DEVICE_WIDTHS) as BuilderDeviceWidth[]).map((key) => (
             <button
               key={key}
@@ -1643,20 +1667,46 @@ export default function BuilderPage() {
           </div>
         </div>
       )}
-      {/* grid-rows-[minmax(0,1fr)_minmax(0,1fr)] -- bug ditemukan lewat
-          audit ROUND 2 (13 September 2026): di bawah breakpoint `lg`
-          (tablet/HP, `grid-cols-1`), grid ini TIDAK PUNYA baris eksplisit
-          sama sekali -- CSS Grid default `grid-auto-rows: auto` menyusun
-          tinggi tiap baris berdasar KONTEN, bukan membagi tinggi grid yang
-          sebenarnya sudah pasti (dari `flex-1` di parent flex-col). Kedua
-          panel (BuilderLeftPanel/BuilderCanvas) sama-sama pakai `h-full` +
-          scroll internal sendiri -- `h-full` yg resolve ke baris "auto"
-          kehilangan tinggi pasti utk dibagi, scroll internal jadi tidak
-          aktif & seluruh halaman (tanpa overflow-hidden di root) terpaksa
-          tumbuh memuat SELURUH tree + SELURUH bingkai kanvas ditumpuk
-          vertikal. `lg:grid-rows-1` mengembalikan ke satu baris implisit
-          di desktop (sisi-bersisi, tidak perlu dibagi). */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[420px_1fr] lg:grid-rows-1">
+      {/* Tab Konten/Pratinjau -- HANYA di bawah `lg` (lihat catatan lengkap
+          di deklarasi `mobileView`); di `lg`+ disembunyikan total, kedua
+          panel grid di bawah tampil sisi-bersisi seperti sebelumnya. */}
+      <div className="flex flex-shrink-0 gap-1 border-b border-app-border bg-app-surface px-3 pt-2 lg:hidden">
+        {(["content", "preview"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMobileView(key)}
+            className={`rounded-t-lg border-b-2 px-3 py-2 text-xs font-bold transition-colors ${
+              mobileView === key ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
+            }`}
+          >
+            {key === "content" ? t("dashboard.pages.linksBuilder.mobileTabContent") : t("dashboard.pages.linksBuilder.mobileTabPreview")}
+          </button>
+        ))}
+      </div>
+      {/* grid-rows-1 -- SEBELUM 19 September 2026 ini
+          `grid-rows-[minmax(0,1fr)_minmax(0,1fr)]` supaya kedua panel
+          sama-sama kebagian tinggi begitu keduanya SELALU tampil
+          bersamaan di bawah `lg` (bug ROUND 2, 13 September 2026: CSS
+          Grid default `grid-auto-rows:auto` menyusun tinggi tiap baris
+          dari KONTEN, bukan membagi tinggi grid yang sudah pasti dari
+          `flex-1` di induk -- lihat riwayat lengkap di git blame kalau
+          perlu). Sekarang HANYA SATU panel yang visible pada satu waktu
+          di bawah `lg` (`hidden` pada yang tidak aktif, lihat mobileView)
+          -- grid tetap perlu SATU baris eksplisit (bukan "auto") supaya
+          panel yang visible itu mengisi PENUH tinggi yang tersedia, tapi
+          sekarang cukup SATU baris di SEMUA breakpoint (bukan lagi
+          bersyarat lg: seperti sebelumnya) karena tidak pernah ada 2
+          baris konten sekaligus lagi. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 gap-3 p-3 lg:grid-cols-[420px_1fr]">
+        {/* Wrapper block/hidden (BUKAN flex/hidden) -- grid item SUDAH
+            stretch penuh ke sel gridnya secara default (align-items/
+            justify-items: stretch bawaan Grid), `block` polos sudah
+            memenuhi lebar 100% dgn sendirinya; `h-full` eksplisit di sini
+            (bukan cuma andalkan stretch) supaya `h-full` DI DALAM
+            BuilderLeftPanel/BuilderCanvas (root div masing-masing) selalu
+            py punya tinggi pasti utk diresolusi, di breakpoint mana pun. */}
+        <div className={`h-full min-h-0 ${mobileView === "content" ? "block" : "hidden"} lg:block`}>
         <BuilderLeftPanel
           links={links}
           selection={selection}
@@ -1701,6 +1751,8 @@ export default function BuilderPage() {
           onPageSettingsChange={handlePageSettingsChange}
           publicUrl={publicUrl}
         />
+        </div>
+        <div className={`h-full min-h-0 ${mobileView === "preview" ? "block" : "hidden"} lg:block`}>
         <BuilderCanvas
           page={page}
           links={links}
@@ -1713,6 +1765,7 @@ export default function BuilderPage() {
           editableStickers={designSection === "stiker"}
           onStickersChange={handleStickersChange}
         />
+        </div>
       </div>
     </div>
   );
