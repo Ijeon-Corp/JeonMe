@@ -83,7 +83,9 @@ import { getLibraryIcon } from "@/lib/icon-library";
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
+import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
 import {
+  ArrowLeft,
   ChevronDown,
   Clapperboard,
   ClipboardList,
@@ -3104,7 +3106,7 @@ export default function DashboardLinksPage() {
                   (redesain 18 September 2026, subjudul header sudah
                   menampilkan domainnya); "image" tetap selalu tampil karena
                   tautan tujuannya opsional & butuh ajakan "tambah link". */}
-              {(link.block_type === "image" || (link.block_type === "link" && contentEditId === link.id)) && (
+              {link.block_type === "image" && (
                 <div className="sm:ml-[60px] flex items-center gap-1.5">
                   {editingField?.id === link.id && editingField.field === "url" ? (
                     <input
@@ -3114,7 +3116,7 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      placeholder={link.block_type === "image" ? t("dashboard.pages.links.linkCard.imageLinkPlaceholder") : undefined}
+                      placeholder={t("dashboard.pages.links.linkCard.imageLinkPlaceholder")}
                       className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : link.url ? (
@@ -3124,47 +3126,13 @@ export default function DashboardLinksPage() {
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
-                  ) : link.block_type === "image" ? (
+                  ) : (
                     // "image" -- link tujuan OPSIONAL (beda dari "link" yang
                     // urlnya wajib & selalu ada), tampilkan ajakan tambah
                     // alih-alih baris kosong.
                     <button type="button" onClick={() => startEditField(link, "url")} className="text-[11px] font-semibold text-jeon-purple hover:underline">
                       {t("dashboard.pages.links.linkCard.addImageLink")}
                     </button>
-                  ) : null}
-                </div>
-              )}
-
-              {/* description -- permintaan langsung pengguna, 24 Agustus
-                  2026: subjudul opsional di bawah judul (kartu
-                  ikon+judul+deskripsi+panah, contoh template "Dimas Dev"),
-                  diedit inline sama seperti judul/URL di atas. */}
-              {link.block_type === "link" && contentEditId === link.id && (
-                <div className="sm:ml-[60px] flex items-center gap-1.5">
-                  {editingField?.id === link.id && editingField.field === "description" ? (
-                    <input
-                      type="text"
-                      autoFocus
-                      value={editingValue}
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onBlur={() => saveEditField(link)}
-                      onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      maxLength={240}
-                      placeholder={t("dashboard.pages.links.linkCard.descriptionPlaceholder")}
-                      className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
-                    />
-                  ) : (
-                    <>
-                      <p className="truncate text-xs italic text-app-muted">{link.description || t("dashboard.pages.links.linkCard.noDescription")}</p>
-                      <button
-                        type="button"
-                        onClick={() => startEditField(link, "description")}
-                        className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
-                        title={t("dashboard.pages.links.linkCard.editDescription")}
-                      >
-                        <IconPencil className="h-3 w-3" />
-                      </button>
-                    </>
                   )}
                 </div>
               )}
@@ -3199,11 +3167,115 @@ export default function DashboardLinksPage() {
                   onClearIconColor={() => handleClearIconColor(link)}
                   onRemoveIcon={() => handleRemoveIcon(link)}
                   onToggleFeatured={() => handleToggleFeatured(link)}
+                  hideFeaturedToggle
                   onDuplicate={() => handleDuplicate(link)}
                   onDelete={() => setConfirmDeleteId(link.id)}
                 />
               )}
 
+              {/* Halaman penuh per blok -- permintaan langsung pengguna, 19
+                  September 2026 ("apakah lebih bagus ketika blok di klik
+                  masuk ke page baru untuk setting blok tersebut", referensi
+                  screenshot Linktree): sejak sekarang membuka isi blok TIDAK
+                  lagi meluas di tempat (accordion inline di antara blok
+                  lain) -- seluruh isi blok (URL/deskripsi tautan, panel
+                  Tampilan Classic/Featured + thumbnail, editor konten per
+                  tipe di bawah) dirender sbg overlay layar-penuh via CSS
+                  `fixed inset-0` (BUKAN portal ke document.body) -- kartu
+                  <li> ini & leluhurnya di dashboard TIDAK punya
+                  backdrop-filter/transform aktif (beda dari kartu produk
+                  halaman publik yang butuh portal, lihat catatan BuyProductButton.tsx),
+                  jadi tetap presisi menutupi viewport TANPA memindahkan
+                  posisi DOM-nya -- scoping test e2e yang query berbasis
+                  `<li>` (mis. `row.getByTitle(...)`) tetap valid. Tombol ⋮
+                  (BlockToolsStrip: jadwal/kunci/ikon/duplikat/hapus) SENGAJA
+                  TIDAK ikut pindah ke sini -- tetap accordion inline seperti
+                  sebelumnya (di atas), supaya cakupan perubahan ini tetap
+                  pada "isi/tampilan blok", bukan menulis ulang seluruh
+                  interaksi kartu. */}
+              {contentEditId === link.id && (
+                <div className="fixed inset-0 z-40 flex flex-col bg-app-surface">
+                  <div className="flex flex-shrink-0 items-center gap-3 border-b border-app-border px-4 py-3 sm:px-6">
+                    <button
+                      type="button"
+                      onClick={() => setContentEditId(null)}
+                      aria-label={t("dashboard.pages.links.contentEditorPage.back")}
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-app-ink hover:bg-app-surface-2"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <h2 className="min-w-0 flex-1 truncate text-base font-bold text-app-ink">
+                      {link.title || blockTypeLabel[link.block_type] || link.block_type}
+                    </h2>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+                      {link.block_type === "link" && (
+                        <div className="flex items-center gap-1.5">
+                          {editingField?.id === link.id && editingField.field === "url" ? (
+                            <input
+                              type="url"
+                              autoFocus
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onBlur={() => saveEditField(link)}
+                              onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                              className="w-full rounded-md border border-jeon-purple px-2.5 py-2 text-sm text-app-ink focus:outline-none"
+                            />
+                          ) : (
+                            <>
+                              <p className="min-w-0 flex-1 truncate rounded-md border border-app-border px-2.5 py-2 text-sm text-app-muted">{link.url}</p>
+                              <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 p-1.5 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
+                                <IconPencil className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {link.block_type === "link" && (
+                        <div className="flex items-center gap-1.5">
+                          {editingField?.id === link.id && editingField.field === "description" ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onBlur={() => saveEditField(link)}
+                              onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                              maxLength={240}
+                              placeholder={t("dashboard.pages.links.linkCard.descriptionPlaceholder")}
+                              className="w-full rounded-md border border-jeon-purple px-2.5 py-2 text-sm text-app-muted focus:outline-none"
+                            />
+                          ) : (
+                            <>
+                              <p className="min-w-0 flex-1 truncate rounded-md border border-app-border px-2.5 py-2 text-sm italic text-app-muted">
+                                {link.description || t("dashboard.pages.links.linkCard.noDescription")}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => startEditField(link, "description")}
+                                className="flex-shrink-0 p-1.5 text-app-muted hover:text-jeon-purple"
+                                title={t("dashboard.pages.links.linkCard.editDescription")}
+                              >
+                                <IconPencil className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {link.block_type === "link" && (
+                        <LinkDisplayModePicker
+                          active={Boolean(link.is_featured)}
+                          onSelect={(featured) => {
+                            // handleToggleFeatured MEMBALIK status saat ini (dipakai
+                            // jg oleh BlockToolsStrip lama) -- picker ini kirim status
+                            // TUJUAN eksplisit (klik "Classic"=false/"Featured"=true),
+                            // jadi cuma panggil toggle kalau memang beda dari sekarang
+                            // (klik kotak yang sudah aktif = no-op, bukan flip terbalik).
+                            if (featured !== Boolean(link.is_featured)) handleToggleFeatured(link);
+                          }}
+                        />
+                      )}
               {link.block_type === "link" && link.is_featured && (
                 <div className="sm:ml-[60px] flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.thumbnail_url ? (
@@ -3948,6 +4020,10 @@ export default function DashboardLinksPage() {
                     >
                       {savingContent ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                     </button>
+                  </div>
+                </div>
+              )}
+                    </div>
                   </div>
                 </div>
               )}

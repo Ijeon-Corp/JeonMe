@@ -939,6 +939,24 @@ export const dictionaries = {
             changeThumbnail: "Ganti Thumbnail",
             uploadThumbnail: "Unggah Thumbnail",
           },
+          // displayModePicker -- pemilih Classic/Featured 2-kotak (permintaan
+          // langsung pengguna 19 September 2026, referensi screenshot
+          // Linktree), pengganti ikon bintang kecil "Unggulan" yang dulu ada
+          // di BlockToolsStrip. Dipakai bersama Simple Mode (halaman penuh
+          // per blok) & Builder (RootToolsPanel).
+          displayModePicker: {
+            sectionLabel: "Tampilan",
+            classicLabel: "Classic",
+            featuredLabel: "Featured",
+          },
+          // contentEditorPage -- header halaman penuh per blok (permintaan
+          // langsung pengguna 19 September 2026: "apakah lebih bagus ketika
+          // blok di klik masuk ke page baru", referensi Linktree) --
+          // menggantikan accordion inline utk isi blok (tombol tools ⋮ tetap
+          // inline di kartu, TIDAK ikut pindah ke sini).
+          contentEditorPage: {
+            back: "Kembali",
+          },
           galleryPanel: {
             photoCountSuffix: "foto",
             deletePhoto: "Hapus foto",
@@ -4238,6 +4256,14 @@ export const dictionaries = {
             noThumbnail: "No thumbnail yet -- YouTube links fill in automatically, for other links upload one manually below.",
             changeThumbnail: "Change Thumbnail",
             uploadThumbnail: "Upload Thumbnail",
+          },
+          displayModePicker: {
+            sectionLabel: "Display",
+            classicLabel: "Classic",
+            featuredLabel: "Featured",
+          },
+          contentEditorPage: {
+            back: "Back",
           },
           galleryPanel: {
             photoCountSuffix: "photos",

@@ -82,6 +82,7 @@ export default function BlockToolsStrip({
   onClearIconColor,
   onRemoveIcon,
   onToggleFeatured,
+  hideFeaturedToggle = false,
   onDuplicate,
   onDelete,
 }: {
@@ -106,6 +107,14 @@ export default function BlockToolsStrip({
   onClearIconColor: () => void;
   onRemoveIcon: () => void;
   onToggleFeatured: () => void;
+  // hideFeaturedToggle -- Simple Mode (dashboard/links/page.tsx) memindahkan
+  // kontrol Featured ke LinkDisplayModePicker (2 kotak Classic/Featured yang
+  // lebih prominent, permintaan langsung pengguna 19 September 2026) di
+  // halaman penuh per blok, jadi ikon bintang di sini jadi duplikat & harus
+  // disembunyikan di sana. Toko (ProdukPageEditor.tsx) TIDAK diubah --
+  // default false mempertahankan ikon bintang lama, tidak mendadak
+  // kehilangan cara mengubah Featured di sana.
+  hideFeaturedToggle?: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
@@ -131,7 +140,7 @@ export default function BlockToolsStrip({
             onClick={onToggleSensitive}
           />
         )}
-        {link.block_type === "link" && (
+        {link.block_type === "link" && !hideFeaturedToggle && (
           <ToolButton
             icon={IconStar}
             label={L("featured")}

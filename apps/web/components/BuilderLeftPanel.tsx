@@ -30,7 +30,6 @@ import {
   IconPaintbrush,
   IconPlus,
   IconSettings,
-  IconStar,
   IconTrash,
   IconX,
 } from "@/components/icons";
@@ -105,6 +104,7 @@ import Toggle from "@/components/Toggle";
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
 import FormField from "@/components/FormField";
 import BlockPanelHeaderView from "@/components/dashboard/page/BlockPanelHeader";
+import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
@@ -1956,15 +1956,18 @@ function RootToolsPanel({
         ) : (
           <RootToolButton icon={TriangleAlert} label={t("dashboard.pages.links.linkCard.toolLabels.sensitive")} active={node.lockType === "sensitive"} onClick={toggleSensitive} />
         )}
-        {node.blockType === "link" && (
-          <RootToolButton
-            icon={IconStar}
-            label={t("dashboard.pages.links.linkCard.toolLabels.featured")}
-            active={Boolean(node.isFeatured)}
-            onClick={() => onUpdateNode(sel, { isFeatured: !node.isFeatured })}
-          />
-        )}
       </div>
+
+      {/* LinkDisplayModePicker -- permintaan langsung pengguna, 19 September
+          2026 (referensi screenshot Linktree "Classic"/"Featured"):
+          menggantikan ikon bintang kecil "Unggulan" yang tadinya diselipkan
+          di strip ikon di atas, sekarang jadi 2 kotak pilihan besar yang
+          jelas -- data & logika di baliknya (isFeatured) TIDAK berubah,
+          murni reskin tampilan. Komponen bersama, dipakai juga oleh Simple
+          Mode (dashboard/links/page.tsx, halaman penuh per blok). */}
+      {node.blockType === "link" && (
+        <LinkDisplayModePicker active={Boolean(node.isFeatured)} onSelect={(featured) => onUpdateNode(sel, { isFeatured: featured })} />
+      )}
 
       {scheduleOpen && (
         <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
