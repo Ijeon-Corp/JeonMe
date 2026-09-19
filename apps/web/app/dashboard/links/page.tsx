@@ -80,7 +80,7 @@ import { getLibraryIcon } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
-import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
@@ -141,39 +141,6 @@ const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEd
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
 const PREMIUM_EXTRA_PAGE_LIMIT = 5;
-
-// buildBlockTypeLabel -- FUNGSI (bukan konstanta modul) supaya labelnya ikut
-// berganti bahasa, sama seperti pola buildNavItems(t) di dashboard/layout.tsx.
-function buildBlockTypeLabel(t: (key: string) => string): Record<string, string> {
-  return {
-    video: t("dashboard.pages.links.blockTypes.video"),
-    contact_form: t("dashboard.pages.links.blockTypes.contactForm"),
-    faq: t("dashboard.pages.links.blockTypes.faq"),
-    maps: t("dashboard.pages.links.blockTypes.maps"),
-    text: t("dashboard.pages.links.blockTypes.text"),
-    accordion: t("dashboard.pages.links.blockTypes.accordion"),
-    gallery: t("dashboard.pages.links.blockTypes.gallery"),
-    audio: t("dashboard.pages.links.blockTypes.audio"),
-    file: t("dashboard.pages.links.blockTypes.file"),
-    project_showcase: t("dashboard.pages.links.blockTypes.projectShowcase"),
-    catalog: t("dashboard.pages.links.blockTypes.catalog"),
-    // 9 tipe blok yang sebelumnya HANYA ada di mode Builder (Canvas) --
-    // "full parity" mode Simple vs Builder, permintaan langsung pengguna 12
-    // September 2026 ("sesuaikan juga dengan blok blok yang ada di mode
-    // builder"), dikonfirmasi via AskUserQuestion. section/column SENGAJA
-    // dilewati -- konsep tree/nesting Builder yang tidak cocok dengan
-    // struktur list datar mode Simple.
-    button: t("dashboard.pages.links.blockTypes.button"),
-    image: t("dashboard.pages.links.blockTypes.image"),
-    video_image: t("dashboard.pages.links.blockTypes.videoImage"),
-    image_slider: t("dashboard.pages.links.blockTypes.imageSlider"),
-    list: t("dashboard.pages.links.blockTypes.list"),
-    countdown: t("dashboard.pages.links.blockTypes.countdown"),
-    produk: t("dashboard.pages.links.blockTypes.produk"),
-    embed_link: t("dashboard.pages.links.blockTypes.embedLink"),
-    embed: t("dashboard.pages.links.blockTypes.embed"),
-  };
-}
 
 // buildWhatsappButtonUrl -- blok "button" mode WhatsApp (permintaan langsung
 // pengguna, 14 September 2026: "WA = kanal closing utama kebanyakan
@@ -1099,7 +1066,17 @@ export default function DashboardLinksPage() {
     if (tile.key === "link") openLinkFormPrefilled("", "");
     else if (tile.key === "video") openVideoFormPrefilled("");
     else if (tile.key === "maps") openMapsFormPrefilled();
-    else openBlockFormPrefilled(tile.key, tile.label);
+    // judul blok baru dikosongkan (bukan lagi label tipe generik) --
+    // permintaan langsung pengguna, 19 September 2026 ("judul blok juga
+    // itu optional untuk bisa ditampilkan seperti contoh nya kedua blok
+    // ini" -- referensi blok "video", yang SUDAH mulai kosong lewat
+    // openVideoFormPrefilled("") di atas). Pola & pengecualian SAMA PERSIS
+    // fix serupa utk blok bersarang (BlockDrilldownEditor.tsx, 15
+    // September 2026): "catalog" TETAP diberi label -- baris blok katalog
+    // baru butuh identitas awal yg jelas di daftar, tipe lain semuanya
+    // boleh mulai tanpa judul (halaman publik SEKARANG menyembunyikannya
+    // total kalau kosong, baris dashboard tetap jatuh balik ke nama tipe).
+    else openBlockFormPrefilled(tile.key, tile.key === "catalog" ? tile.label : "");
   }
 
   async function handleToggleActive(link: LinkItem) {
@@ -2959,7 +2936,19 @@ export default function DashboardLinksPage() {
                     />
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-[15px] font-bold leading-snug text-app-ink">{link.title}</p>
+                      {/* Fallback label tipe blok -- permintaan langsung
+                          pengguna, 19 September 2026 ("judul blok juga itu
+                          optional untuk bisa ditampilkan"): judul sekarang
+                          bisa dikosongkan (blok baru non-link/video/maps
+                          TIDAK LAGI dipaksa terisi label generik, lihat
+                          handleSelectContentTile) supaya di halaman publik
+                          bisa benar-benar tidak menampilkan apa pun. Baris
+                          daftar DASHBOARD ini tetap butuh SESUATU utk
+                          diidentifikasi -- fallback ke nama tipe blok
+                          (blockTypeLabel), TIDAK PERNAH dipakai di
+                          rendering halaman publik, pola sama persis
+                          blockDisplayLabel di BlockDrilldownEditor.tsx. */}
+                      <p className="truncate text-[15px] font-bold leading-snug text-app-ink">{link.title || blockTypeLabel[link.block_type] || link.block_type}</p>
                       {/* Permintaan langsung pengguna, 14 Agustus 2026: "judul nya
                           bisa diedit juga sama seperti yang lain" -- sebelumnya
                           cuma tautan biasa yang bisa ubah judul inline, sekarang

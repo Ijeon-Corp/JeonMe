@@ -88,7 +88,12 @@ export default function AudioPlayerBlock({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className={`truncate text-sm font-semibold ${titleClassName}`}>{title || "Audio"}</p>
+          {/* title opsional -- permintaan langsung pengguna, 19 September
+              2026 ("judul blok juga itu optional untuk bisa ditampilkan"):
+              SEBELUMNYA `title || "Audio"` selalu menampilkan label generik
+              begitu judul dikosongkan, tidak seperti VideoEmbedBlock/
+              EmbedBlock yang sudah `{title && ...}` sejak awal -- disamakan. */}
+          {title && <p className={`truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
           <div className={`mt-1 flex items-center gap-2 ${titleClassName}`}>
             <span className="flex-shrink-0 text-[10px] tabular-nums opacity-70">{formatTime(currentTime)}</span>
             <input

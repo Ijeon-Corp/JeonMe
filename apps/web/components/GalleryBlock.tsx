@@ -170,10 +170,19 @@ export default function GalleryBlock({
             ))}
           </div>
           <div className="flex w-full flex-col items-center">
-            <p className={`flex items-center gap-1.5 ${isFan ? "text-2xl" : "text-lg"} font-bold leading-tight ${titleClassName}`}>
-              {icon}
-              <span>{title}</span>
-            </p>
+            {/* title opsional -- permintaan langsung pengguna, 19 September
+                2026 ("judul blok juga itu optional untuk bisa ditampilkan"):
+                mode grid galeri (renderTiles lain di file ini) sudah
+                `{title && ...}` sejak awal, mode tumpukan/kipas ini
+                sebelumnya SELALU merender baris judul (kosong pun tetap
+                jadi baris kosong) -- disamakan, subjudul "Galeri · N foto"
+                di bawah tetap tampil apa pun kondisinya. */}
+            {title && (
+              <p className={`flex items-center gap-1.5 ${isFan ? "text-2xl" : "text-lg"} font-bold leading-tight ${titleClassName}`}>
+                {icon}
+                <span>{title}</span>
+              </p>
+            )}
             <p className="mt-1 flex items-center gap-1.5 text-sm opacity-70">
               {isFan && <Images className="h-4 w-4" aria-hidden />}
               Galeri · {images.length} foto
@@ -188,9 +197,11 @@ export default function GalleryBlock({
                 className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white text-[#111111] shadow-2xl sm:rounded-3xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex-shrink-0 border-b border-black/5 px-6 py-4 text-center">
-                  <h2 className="truncate text-base font-semibold">{title}</h2>
-                </div>
+                {title && (
+                  <div className="flex-shrink-0 border-b border-black/5 px-6 py-4 text-center">
+                    <h2 className="truncate text-base font-semibold">{title}</h2>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto px-4 pb-24 pt-4 sm:px-6">
                   <div className="flex flex-col gap-8">
                     {images.map((src, i) => {

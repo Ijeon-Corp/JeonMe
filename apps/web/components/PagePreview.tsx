@@ -2156,7 +2156,11 @@ export function renderLinkOrBlock(
           // ukuran tampil tetap dari CSS.
           <Image src={imageUrl} alt="" width={448} height={252} className="mb-3 aspect-video h-auto w-full rounded-lg object-cover" />
         )}
-        <p className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>
+        {/* title opsional -- permintaan langsung pengguna, 19 September
+            2026 ("judul blok juga itu optional untuk bisa ditampilkan"):
+            SEBELUMNYA `<p>{link.title}</p>` tanpa gerbang, judul kosong
+            tetap merender paragraf kosong (baris kosong terbuang). */}
+        {link.title && <p className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>}
         {/* Rich text (susulan 12 September 2026) -- whitespace-pre-line
             utk kompatibilitas mundur konten lama (plain string ber-"\n"). */}
         {link.description && (
@@ -2337,7 +2341,10 @@ export function renderLinkOrBlock(
           // murni petunjuk srcset pada rasio 16:9.
           <Image src={imageUrl} alt="" width={448} height={252} className="-m-2.5 mb-0 aspect-video h-auto w-[calc(100%+20px)] object-cover" />
         )}
-        <p className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>
+        {/* title opsional -- permintaan langsung pengguna, 19 September
+            2026 ("judul blok juga itu optional untuk bisa ditampilkan"),
+            sama seperti project_showcase di atas. */}
+        {link.title && <p className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>}
         {link.description && (
           <p
             className={`jeon-rich-text-content whitespace-pre-line text-[11px] ${theme.bio}`}

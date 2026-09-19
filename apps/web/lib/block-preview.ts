@@ -14,6 +14,38 @@ import { GALLERY_DISPLAY_OPTIONS, normalizeGalleryDisplay } from "@/lib/gallery-
 // sumber kebenaran validasinya.
 export const maxGalleryImages = 9;
 
+// buildBlockTypeLabel -- dipindah dari app/dashboard/links/page.tsx (19
+// September 2026) supaya dipakai bersama ProdukPageEditor.tsx (Toko) juga
+// -- dibutuhkan sbg fallback label baris daftar DASHBOARD begitu judul
+// blok dikosongkan (lihat handleSelectContentTile: blok baru non-link/
+// video/maps/catalog SEKARANG mulai TANPA judul, permintaan langsung
+// pengguna "judul blok juga itu optional untuk bisa ditampilkan"). FUNGSI
+// (bukan konstanta modul) supaya labelnya ikut berganti bahasa.
+export function buildBlockTypeLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    video: t("dashboard.pages.links.blockTypes.video"),
+    contact_form: t("dashboard.pages.links.blockTypes.contactForm"),
+    faq: t("dashboard.pages.links.blockTypes.faq"),
+    maps: t("dashboard.pages.links.blockTypes.maps"),
+    text: t("dashboard.pages.links.blockTypes.text"),
+    accordion: t("dashboard.pages.links.blockTypes.accordion"),
+    gallery: t("dashboard.pages.links.blockTypes.gallery"),
+    audio: t("dashboard.pages.links.blockTypes.audio"),
+    file: t("dashboard.pages.links.blockTypes.file"),
+    project_showcase: t("dashboard.pages.links.blockTypes.projectShowcase"),
+    catalog: t("dashboard.pages.links.blockTypes.catalog"),
+    button: t("dashboard.pages.links.blockTypes.button"),
+    image: t("dashboard.pages.links.blockTypes.image"),
+    video_image: t("dashboard.pages.links.blockTypes.videoImage"),
+    image_slider: t("dashboard.pages.links.blockTypes.imageSlider"),
+    list: t("dashboard.pages.links.blockTypes.list"),
+    countdown: t("dashboard.pages.links.blockTypes.countdown"),
+    produk: t("dashboard.pages.links.blockTypes.produk"),
+    embed_link: t("dashboard.pages.links.blockTypes.embedLink"),
+    embed: t("dashboard.pages.links.blockTypes.embed"),
+  };
+}
+
 // stripHtmlToText -- redesain "Konsisten & Ringkas" (14 September 2026,
 // Opsi A): blok "text"/"accordion" menyimpan RAW HTML (RichTextEditor,
 // TipTap) di block_data.text -- baris ringkasan accordion butuh cuplikan

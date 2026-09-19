@@ -934,7 +934,13 @@ function BlockSection({
   // sebelumnya) -- tipe lain buka form kosong dgn blockType terpilih.
   function handleSelectContentTile(tile: ContentTile) {
     setBlockType(tile.key as BlockType);
-    setTitle(tile.key === "link" ? "" : tile.label);
+    // judul blok baru dikosongkan (bukan lagi label tipe generik) --
+    // permintaan langsung pengguna, 19 September 2026 ("judul blok juga
+    // itu optional untuk bisa ditampilkan"), disamakan dgn perbaikan
+    // sepadan di dashboard/links/page.tsx (Links) -- "catalog" tetap
+    // diberi label (butuh identitas awal jelas di daftar), tipe lain
+    // mulai tanpa judul (halaman publik menyembunyikannya kalau kosong).
+    setTitle(tile.key === "catalog" ? tile.label : "");
     setAdding(true);
     setAddModalOpen(false);
   }
@@ -2063,7 +2069,13 @@ function BlockSection({
                   />
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate text-[15px] font-bold leading-snug text-app-ink">{link.title}</p>
+                    {/* Fallback label tipe blok -- permintaan langsung
+                        pengguna, 19 September 2026 ("judul blok juga itu
+                        optional untuk bisa ditampilkan"), disamakan dgn
+                        dashboard/links/page.tsx -- `BLOCK_LABEL` sudah ada
+                        di file ini (dipakai tile "Tambah Blok"), TIDAK
+                        PERNAH dipakai di rendering halaman publik. */}
+                    <p className="truncate text-[15px] font-bold leading-snug text-app-ink">{link.title || BLOCK_LABEL[link.block_type] || link.block_type}</p>
                     <button
                       type="button"
                       onClick={(e) => {

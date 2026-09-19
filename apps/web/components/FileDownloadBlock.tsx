@@ -63,7 +63,13 @@ export default function FileDownloadBlock({
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm font-semibold ${titleClassName}`}>{title || "Unduh File"}</p>
+        {/* title opsional -- permintaan langsung pengguna, 19 September 2026
+            ("judul blok juga itu optional untuk bisa ditampilkan"): SEBELUMNYA
+            `title || "Unduh File"` selalu menampilkan label generik begitu
+            judul dikosongkan. `detailLabel` (nama file asli) tetap tampil
+            apa pun kondisinya -- blok file selalu punya file terunggah, jadi
+            baris ini tidak akan pernah kosong total. */}
+        {title && <p className={`truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
         {detailLabel && <p className={`mt-0.5 truncate text-[11px] opacity-70 ${titleClassName}`}>{detailLabel}</p>}
       </div>
       <IconDownload className={`h-5 w-5 flex-shrink-0 ${titleClassName}`} />
