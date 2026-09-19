@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 import { IconClose } from "@/components/icons";
 import { getCategoryInstruction } from "@/lib/product-categories";
@@ -88,6 +88,32 @@ export default function BuyProductButton({
   category?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // entered -- animasi buka/tutup (permintaan langsung pengguna, 19
+  // September 2026: "kasih animasi saat membuka form dan menutup").
+  // `open` TETAP menentukan mounted/tidaknya modal di DOM (kontrak lama,
+  // dipakai `{open && (...)}` di bawah TIDAK diubah) -- `entered` murni
+  // kelas CSS transisi: mulai `false` (posisi/opacity "tersembunyi") tiap
+  // kali modal baru di-mount, di-flip ke `true` SATU FRAME sesudahnya
+  // (dua nested requestAnimationFrame -- pola tahan-banting utk "tunggu
+  // satu render dicat dulu" sebelum transisi CSS mulai berjalan, kalau
+  // langsung true di render yang sama, browser tidak sempat melihat
+  // state awal & transisi tidak pernah terlihat). Saat MENUTUP: `entered`
+  // dibalik ke false DULU (memicu transisi keluar), `open` baru menyusul
+  // false 200ms kemudian (match `duration-200` di kelas transisi) --
+  // supaya modal-nya SENDIRI tidak langsung lenyap sebelum sempat
+  // teranimasi keluar.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [open]);
   // name/note -- permintaan langsung pengguna, 15 September 2026: "di form
   // pembelian tambahkan beberapa field lagi yang penting selain 2 field
   // yang sekarang" (sebelumnya cuma email+WhatsApp). `name` WAJIB (lihat
@@ -217,7 +243,11 @@ export default function BuyProductButton({
   // request itu selesai, membingungkan kalau modalnya sudah "ditutup".
   function handleClose() {
     if (loading) return;
-    setOpen(false);
+    // entered=false DULU (memicu transisi keluar via kelas CSS), open
+    // baru menyusul false 200ms kemudian (samakan dgn duration-200 di
+    // JSX) -- lihat catatan lengkap di deklarasi `entered`.
+    setEntered(false);
+    setTimeout(() => setOpen(false), 200);
   }
 
   return (
@@ -231,9 +261,21 @@ export default function BuyProductButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
+        // max-w-md -- permintaan langsung pengguna, 19 September 2026:
+        // "perbesar layout nya sesuai lebar layout utama" -- SAMA PERSIS
+        // lebar kolom halaman publik (`max-w-md`, PagePreview.tsx), dulu
+        // `max-w-sm` (24rem) lebih sempit dari halaman di belakangnya.
+        // transition-opacity pada backdrop + transition (transform+opacity)
+        // pada panel -- animasi buka/tutup, lihat catatan lengkap di
+        // deklarasi state `entered`.
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 transition-opacity duration-200 ${entered ? "opacity-100" : "opacity-0"}`}
+          onClick={handleClose}
+        >
           <div
-            className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-white p-5 shadow-brutal"
+            className={`max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-white p-5 shadow-brutal transition-all duration-200 ${
+              entered ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-95 opacity-0"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
