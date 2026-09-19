@@ -1294,6 +1294,7 @@ export const dictionaries = {
           catalogItemTitleLabel: "Judul item",
           catalogItemTitlePlaceholder: "mis. Tipe 36",
           catalogItemDescriptionLabel: "Deskripsi",
+          catalogItemPhotosLabel: "Foto (opsional, maks 6)",
           catalogAddItem: "Tambah Item",
           catalogRemoveItem: "Hapus item",
           // produk* -- blok "Produk" (permintaan langsung pengguna 10
@@ -4526,6 +4527,7 @@ export const dictionaries = {
           catalogItemTitleLabel: "Item title",
           catalogItemTitlePlaceholder: "e.g. Type 36",
           catalogItemDescriptionLabel: "Description",
+          catalogItemPhotosLabel: "Photos (optional, max 6)",
           catalogAddItem: "Add Item",
           catalogRemoveItem: "Remove item",
           produkSelectExisting: "Select an existing product",

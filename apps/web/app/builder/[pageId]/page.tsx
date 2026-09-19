@@ -1049,6 +1049,23 @@ export default function BuilderPage() {
     setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, thumbnail_url: "", is_featured: false } : l)));
   }
 
+  // handleCatalogItemImagesChanged -- foto per item Katalog (19 September
+  // 2026, pemulihan kapabilitas yang hilang -- lihat catatan lengkap di
+  // CatalogItemPhotos, BuilderLeftPanel.tsx). Katalog SELALU root (path
+  // kosong, lihat ROOT_ONLY_TYPES) -- applyFieldToPath(rootId, [], ...)
+  // MENIMPA `items[]` UTUH dgn hasil map, sama seperti handleGalleryImages
+  // Changed dkk: immediate-write ke `links` MAUPUN `serverLinks` sekaligus
+  // (BUKAN lewat onUpdateNode/BuilderNodePatch yang draft-only) supaya
+  // field ini tidak ikut dianggap draft belum tersimpan ATAUPUN tertimpa
+  // balik draft field lain (title/description item) kalau Save ditekan
+  // belakangan.
+  function handleCatalogItemImagesChanged(rootId: string, itemId: string, images: string[]) {
+    applyFieldToPath(rootId, [], (bd) => {
+      const items = (bd.items as CatalogItem[] | undefined) ?? [];
+      return { ...bd, items: items.map((it) => (it.id === itemId ? { ...it, images } : it)) };
+    });
+  }
+
   // handlePatch/handleStyleOverride/handleDesignLocalChange -- redesain
   // arsitektur draft: SEKARANG murni `setPage` (draft lokal), TIDAK ADA
   // panggilan API lagi (dulu handlePatch langsung PATCH ke backend dengan
@@ -1657,6 +1674,7 @@ export default function BuilderPage() {
           onIconChanged={handleIconChanged}
           onThumbnailChanged={handleThumbnailChanged}
           onThumbnailRemoved={handleThumbnailRemoved}
+          onCatalogItemImagesChanged={handleCatalogItemImagesChanged}
           onEnsureRootPersisted={ensureRootPersisted}
           settingsHref="/dashboard/settings"
           page={designPage}

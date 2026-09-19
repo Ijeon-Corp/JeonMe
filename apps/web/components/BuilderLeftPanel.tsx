@@ -73,12 +73,14 @@ import {
   ApiError,
   deleteAudioBlock,
   deleteBuilderMediaImage,
+  deleteCatalogItemImage,
   deleteFileBlock,
   deleteGalleryImage,
   deleteLinkIcon,
   deleteLinkThumbnail,
   uploadAudioBlock,
   uploadBuilderMediaImage,
+  uploadCatalogItemImage,
   uploadFileBlock,
   uploadGalleryImage,
   uploadLinkIcon,
@@ -341,21 +343,170 @@ function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (
   );
 }
 
+// maxCatalogItemImages -- SAMA PERSIS batas backend (maxCatalogImagesPerItem,
+// links.go).
+const maxCatalogItemImages = 6;
+
+// CatalogItemPhotos -- perbaikan Builder 19 September 2026 (audit: "editor
+// foto & blok tertanam Katalog native di Builder"). Ditemukan lewat
+// tinjauan kode SEBELUM implementasi (bukan asumsi dari daftar audit
+// begitu saja): `item.images[]` MASIH dirender di halaman publik
+// (PagePreview.tsx, galeri geser per item) -- TAPI sejak 15 September 2026
+// (redesain CatalogItemFrame, "layar item katalog tidak lagi punya field
+// title/description/photo manual") UI untuk MENGISINYA dihapus dari
+// KEDUA editor (klasik maupun Builder yang baru ditambah C10 sehari
+// sebelumnya) -- item lama yang sudah punya foto tetap tampil apa adanya,
+// tapi TIDAK ADA cara menambah foto baru ke item mana pun, di mana pun,
+// dari 15 September sampai sekarang. Ini PEMULIHAN kapabilitas yang
+// hilang, BUKAN pembalikan keputusan 15 September itu (yang mencabut
+// field title/description/photo WAJIB di layar item -- title/description
+// tetap ada sbg field OPSIONAL di CatalogItemsEditor, lihat di bawah;
+// panel ini murni menambahkan galeri foto opsional yang sudah lama
+// didukung backend & tampilan publik). Pola upload SAMA PERSIS
+// MediaImageEditor (ensureRootPersisted dulu -- item katalog BARU yang
+// root-nya "temp-..." harus dipersist dulu sebelum upload bisa
+// menunjuk itemId yang benar ke server) + GalleryGridEditor (banyak
+// foto, hapus per-indeks).
+function CatalogItemPhotos({
+  rootId,
+  itemId,
+  images,
+  onEnsureRootPersisted,
+  onChanged,
+}: {
+  rootId: string;
+  itemId: string;
+  images: string[];
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  // onChanged -- SELALU sertakan `resolvedRootId` (id ASLI dari
+  // onEnsureRootPersisted, BUKAN prop `rootId` yang bisa saja masih
+  // "temp-..."), pola SAMA PERSIS MediaImageEditor/GalleryGridEditor.
+  // Bug ditemukan lewat verifikasi live (19 September 2026): versi
+  // pertama fungsi ini cuma mengirim `images` tanpa id, pemanggil
+  // (CatalogItemsEditor) lalu memakai `node.rootId` dari closure RENDER
+  // (nilai "temp-..." LAMA, sudah diganti id server oleh
+  // ensureRootPersistedImpl SAAT upload ini masih berjalan) -- update
+  // ke `applyFieldToPath` mencari id lama yang sudah tidak ada di
+  // `links`, gagal DIAM-DIAM (early return `if (!root) return list`),
+  // foto ke-1 pada item BARU tidak pernah tersimpan di UI walau upload
+  // ke server sukses (200).
+  onChanged: (images: string[], resolvedRootId: string) => void;
+}) {
+  const { t } = useLocale();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await uploadCatalogItemImage(realRootId, itemId, file);
+      onChanged(res.images, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // uploading dijadikan guard bersama upload & hapus -- alasan SAMA
+  // PERSIS GalleryGridEditor (hapus berbasis indeks, dua klik cepat
+  // berurutan bisa menghapus foto yang salah kalau tidak saling menunggu).
+  async function handleDelete(index: number) {
+    if (uploading) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await deleteCatalogItemImage(realRootId, itemId, index);
+      onChanged(res.images, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
+        {images.map((src, i) => (
+          <div key={src} className="group relative h-14 w-14 flex-shrink-0">
+            <Image src={src} alt="" fill sizes="56px" className="rounded-md object-cover ring-1 ring-black/5" />
+            <button
+              type="button"
+              onClick={() => handleDelete(i)}
+              disabled={uploading}
+              title={t("dashboard.pages.linksBuilder.removePhoto")}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+            >
+              <IconX className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        {images.length < maxCatalogItemImages && (
+          <label
+            className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+              uploading ? "opacity-60" : ""
+            }`}
+          >
+            {uploading ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+            ) : (
+              <IconPlus className="h-4 w-4" />
+            )}
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              onChange={handleUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+      <p className="text-[10px] text-app-muted">
+        {images.length}/{maxCatalogItemImages}
+      </p>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 // CatalogItemsEditor -- audit ROUND 2 (C10, 14 September 2026): SEBELUMNYA
 // blok "catalog" di Builder cuma menampilkan judul blok + link keluar ke
 // halaman Tautan, jalan buntu total kalau mau isi item apa pun dari dalam
 // Builder sendiri. Pola SAMA PERSIS FaqItemsEditor di atas (kartu bernomor,
 // key `${i}-${items.length}` supaya baris yang bergeser index-nya tidak
 // menampilkan teks basi dari baris lain, defaultValue+onBlur utk title,
-// RichTextEditor utk deskripsi) -- CAKUPAN SENGAJA dibatasi ke judul+
-// deskripsi teks saja, TIDAK termasuk foto (`images[]`) atau blok tertanam
-// (`blocks[]`, sampai 5 tipe termasuk katalog bersarang) yang TETAP hanya
-// bisa diatur lewat BlockDrilldownEditor.tsx di halaman Tautan (link
-// "fitur lanjutan" di bawah) -- port PENUH drill-down itu (upload gambar
-// path-aware + navigasi bertingkat per blok tertanam) ke UI panel sempit
-// Builder adalah pekerjaan tersendiri yang jauh lebih besar, di luar
-// cakupan perbaikan bug/dead-end ini.
-function CatalogItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (items: CatalogItem[]) => void }) {
+// RichTextEditor utk deskripsi). 19 September 2026: galeri foto per item
+// (CatalogItemPhotos di atas) ditambahkan -- lihat catatan lengkap di
+// sana kenapa ini pemulihan, bukan fitur baru. Blok tertanam (`blocks[]`,
+// sampai 5 tipe termasuk katalog bersarang, navigasi drill-down
+// bertingkat) TETAP hanya bisa diatur lewat BlockDrilldownEditor.tsx di
+// halaman Tautan (link "fitur lanjutan" di bawah) -- port PENUH navigasi
+// drill-down itu ke panel sempit Builder adalah pekerjaan tersendiri yang
+// jauh lebih besar, di luar cakupan perbaikan ini.
+function CatalogItemsEditor({
+  node,
+  onUpdate,
+  onEnsureRootPersisted,
+  onItemImagesChanged,
+}: {
+  node: BuilderTreeNode;
+  onUpdate: (items: CatalogItem[]) => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  // onItemImagesChanged -- BEDA dari `onUpdate` (draft, dipakai title/
+  // description): foto upload/hapus IMMEDIATE-write (langsung ke server,
+  // sama pola onGalleryImagesChanged dkk), lihat catatan lengkap di
+  // CatalogItemPhotos & handleCatalogItemImagesChanged
+  // (app/builder/[pageId]/page.tsx) kenapa dipisah dari jalur draft biasa.
+  onItemImagesChanged: (rootId: string, itemId: string, images: string[]) => void;
+}) {
   const { t } = useLocale();
   const items = (node.blockData?.items as CatalogItem[] | undefined) ?? [];
   const subtitle =
@@ -394,6 +545,15 @@ function CatalogItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdat
             </FormField>
             <FormField label={t("dashboard.pages.linksBuilder.catalogItemDescriptionLabel")}>
               <RichTextEditor html={item.description ?? ""} onChange={(html) => updateItem(i, { description: html })} />
+            </FormField>
+            <FormField label={t("dashboard.pages.linksBuilder.catalogItemPhotosLabel")}>
+              <CatalogItemPhotos
+                rootId={node.rootId}
+                itemId={item.id}
+                images={item.images ?? []}
+                onEnsureRootPersisted={onEnsureRootPersisted}
+                onChanged={(images, resolvedRootId) => onItemImagesChanged(resolvedRootId, item.id, images)}
+              />
             </FormField>
           </div>
         ))}
@@ -932,6 +1092,7 @@ function NodeFieldEditor({
   onGalleryImagesChanged,
   onAudioChanged,
   onFileChanged,
+  onCatalogItemImagesChanged,
   products,
   onProductCreated,
 }: {
@@ -942,6 +1103,10 @@ function NodeFieldEditor({
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
+  // onCatalogItemImagesChanged -- foto per item Katalog (19 September
+  // 2026), immediate-write spt onGalleryImagesChanged dkk di atas, lihat
+  // catatan lengkap di CatalogItemPhotos/CatalogItemsEditor.
+  onCatalogItemImagesChanged: (rootId: string, itemId: string, images: string[]) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
 }) {
@@ -1472,7 +1637,12 @@ function NodeFieldEditor({
             />
           </FormField>
         </div>
-        <CatalogItemsEditor node={node} onUpdate={(items) => onUpdateNode(sel, { blockData: { items } })} />
+        <CatalogItemsEditor
+          node={node}
+          onUpdate={(items) => onUpdateNode(sel, { blockData: { items } })}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onItemImagesChanged={onCatalogItemImagesChanged}
+        />
         <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
           {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
         </Link>
@@ -1986,6 +2156,7 @@ function TreeNodeView({
   onIconChanged,
   onThumbnailChanged,
   onThumbnailRemoved,
+  onCatalogItemImagesChanged,
   products,
   onProductCreated,
   siblingIds,
@@ -2017,6 +2188,7 @@ function TreeNodeView({
   onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
   onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
   onThumbnailRemoved: (rootId: string) => void;
+  onCatalogItemImagesChanged: (rootId: string, itemId: string, images: string[]) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
   // siblingIds/onReorderRoot/onReorderChildren -- item "Pindah ke atas/
@@ -2311,6 +2483,7 @@ function TreeNodeView({
             onGalleryImagesChanged={onGalleryImagesChanged}
             onAudioChanged={onAudioChanged}
             onFileChanged={onFileChanged}
+            onCatalogItemImagesChanged={onCatalogItemImagesChanged}
             products={products}
             onProductCreated={onProductCreated}
           />
@@ -2367,6 +2540,7 @@ function TreeNodeView({
                   onIconChanged={onIconChanged}
                   onThumbnailChanged={onThumbnailChanged}
                   onThumbnailRemoved={onThumbnailRemoved}
+                  onCatalogItemImagesChanged={onCatalogItemImagesChanged}
                   products={products}
                   onProductCreated={onProductCreated}
                   siblingIds={childIds}
@@ -2400,6 +2574,7 @@ export default function BuilderLeftPanel({
   onIconChanged,
   onThumbnailChanged,
   onThumbnailRemoved,
+  onCatalogItemImagesChanged,
   settingsHref,
   page,
   isPremium,
@@ -2461,6 +2636,7 @@ export default function BuilderLeftPanel({
   onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
   onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
   onThumbnailRemoved: (rootId: string) => void;
+  onCatalogItemImagesChanged: (rootId: string, itemId: string, images: string[]) => void;
   settingsHref: string;
   // page/isPremium/onPatch/onLocalChange/onStyleOverride/onUploadAvatar/
   // onUploadBackground/onError/stickers/onStickersChange/designSection/
@@ -2727,6 +2903,7 @@ export default function BuilderLeftPanel({
                       onIconChanged={onIconChanged}
                       onThumbnailChanged={onThumbnailChanged}
                       onThumbnailRemoved={onThumbnailRemoved}
+                      onCatalogItemImagesChanged={onCatalogItemImagesChanged}
                       products={products}
                       onProductCreated={onProductCreated}
                       siblingIds={rootIds}
