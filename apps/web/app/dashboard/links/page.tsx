@@ -85,7 +85,6 @@ import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
 import {
-  ArrowLeft,
   ChevronDown,
   Clapperboard,
   ClipboardList,
@@ -659,6 +658,15 @@ export default function DashboardLinksPage() {
   // perlu sinkronisasi manual.
   const [drilldownBlockId, setDrilldownBlockId] = useState<string | null>(null);
   const drilldownBlock = links.find((l) => l.id === drilldownBlockId) ?? null;
+  // contentEditingLink -- permintaan langsung pengguna, 19 September 2026
+  // ("bukan buka halaman penuh tapi ketika klik blok berganti isi blok nya
+  // seperti referensi linktree"): koreksi dari implementasi awal (overlay
+  // `fixed inset-0` menutupi SELURUH viewport termasuk kolom Pratinjau
+  // Langsung) -- pola yang BENAR ternyata SAMA PERSIS `drilldownBlock` di
+  // atas: editor blok menggantikan ISI KOLOM KIRI ("1fr") saja, kolom kanan
+  // (LivePreviewPanel, 360px) TETAP terlihat sepanjang waktu. LIVE (bukan
+  // snapshot) dengan alasan sama seperti drilldownBlock.
+  const contentEditingLink = links.find((l) => l.id === contentEditId) ?? null;
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
@@ -2083,7 +2091,7 @@ export default function DashboardLinksPage() {
           supaya kembali dari drill-down mendarat persis di tempat semula,
           dan otomatis mencegah pill halaman-tambahan (switchToPage) diklik
           selagi sedang di dalam editor blok. */}
-      <div className={`min-w-0 ${drilldownBlock ? "hidden" : ""}`}>
+      <div className={`min-w-0 ${drilldownBlock || contentEditingLink ? "hidden" : ""}`}>
         {/* Pill navigasi halaman -- Modul Halaman Tambahan Fase 2 (permintaan
             langsung pengguna, 28 Agustus 2026, referensi UI kompetitor "+
             Page" + navigation pill): "Home" = halaman utama, satu pill per
@@ -3173,43 +3181,43 @@ export default function DashboardLinksPage() {
                 />
               )}
 
-              {/* Halaman penuh per blok -- permintaan langsung pengguna, 19
-                  September 2026 ("apakah lebih bagus ketika blok di klik
-                  masuk ke page baru untuk setting blok tersebut", referensi
-                  screenshot Linktree): sejak sekarang membuka isi blok TIDAK
-                  lagi meluas di tempat (accordion inline di antara blok
-                  lain) -- seluruh isi blok (URL/deskripsi tautan, panel
-                  Tampilan Classic/Featured + thumbnail, editor konten per
-                  tipe di bawah) dirender sbg overlay layar-penuh via CSS
-                  `fixed inset-0` (BUKAN portal ke document.body) -- kartu
-                  <li> ini & leluhurnya di dashboard TIDAK punya
-                  backdrop-filter/transform aktif (beda dari kartu produk
-                  halaman publik yang butuh portal, lihat catatan BuyProductButton.tsx),
-                  jadi tetap presisi menutupi viewport TANPA memindahkan
-                  posisi DOM-nya -- scoping test e2e yang query berbasis
-                  `<li>` (mis. `row.getByTitle(...)`) tetap valid. Tombol ⋮
-                  (BlockToolsStrip: jadwal/kunci/ikon/duplikat/hapus) SENGAJA
-                  TIDAK ikut pindah ke sini -- tetap accordion inline seperti
-                  sebelumnya (di atas), supaya cakupan perubahan ini tetap
-                  pada "isi/tampilan blok", bukan menulis ulang seluruh
-                  interaksi kartu. */}
-              {contentEditId === link.id && (
-                <div className="fixed inset-0 z-40 flex flex-col bg-app-surface">
-                  <div className="flex flex-shrink-0 items-center gap-3 border-b border-app-border px-4 py-3 sm:px-6">
-                    <button
-                      type="button"
-                      onClick={() => setContentEditId(null)}
-                      aria-label={t("dashboard.pages.links.contentEditorPage.back")}
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-app-ink hover:bg-app-surface-2"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                    </button>
-                    <h2 className="min-w-0 flex-1 truncate text-base font-bold text-app-ink">
-                      {link.title || blockTypeLabel[link.block_type] || link.block_type}
-                    </h2>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                    <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+
+              {/* Statistik klik pindah jadi chip ringkas di baris header
+                  kartu (restrukturisasi UX 31 Agustus 2026) -- footer
+                  terpisah yang lama memboroskan satu baris penuh per kartu. */}
+            </li>
+          ))}
+          {links.length === 0 && <EmptyState as="li" text={t("dashboard.pages.links.emptyState")} />}
+        </ul>
+
+      </div>
+
+      {/* Editor blok -- permintaan langsung pengguna, 19 September 2026
+          ("bukan buka halaman penuh tapi ketika klik blok berganti isi
+          blok nya seperti referensi linktree"): pola SAMA PERSIS
+          drilldownBlock di bawah -- menggantikan isi kolom kiri, kolom
+          Pratinjau Langsung (kanan) tetap terlihat. IIFE + `const link =
+          contentEditingLink` supaya seluruh JSX di bawah (dipindah apa
+          adanya dari accordion inline lama) tidak perlu diubah satu per
+          satu -- semuanya masih merujuk `link` seperti sebelumnya. */}
+      {contentEditingLink && (() => {
+        const link = contentEditingLink;
+        return (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setContentEditId(null)}
+                className="flex flex-shrink-0 items-center gap-1 rounded-full border-2 border-[#111111] bg-jeon-lavender px-3 py-1.5 text-xs font-bold text-[#111111] transition-transform hover:-translate-x-0.5"
+              >
+                <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
+                {t("dashboard.pages.links.contentEditorPage.back")}
+              </button>
+              <h2 className="min-w-0 flex-1 truncate font-display text-lg font-bold text-app-ink">
+                {link.title || blockTypeLabel[link.block_type] || link.block_type}
+              </h2>
+            </div>
+            <div className="flex flex-col gap-4 rounded-jmd border border-app-border bg-app-surface p-4 shadow-card">
                       {link.block_type === "link" && (
                         <div className="flex items-center gap-1.5">
                           {editingField?.id === link.id && editingField.field === "url" ? (
@@ -4023,20 +4031,10 @@ export default function DashboardLinksPage() {
                   </div>
                 </div>
               )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Statistik klik pindah jadi chip ringkas di baris header
-                  kartu (restrukturisasi UX 31 Agustus 2026) -- footer
-                  terpisah yang lama memboroskan satu baris penuh per kartu. */}
-            </li>
-          ))}
-          {links.length === 0 && <EmptyState as="li" text={t("dashboard.pages.links.emptyState")} />}
-        </ul>
-
-      </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {drilldownBlock && (
         <BlockDrilldownEditor
@@ -4214,6 +4212,7 @@ export default function DashboardLinksPage() {
         pageType={activePage?.pageType}
         pageSlug={activePage?.slug}
         openUrl={activePage ? `${SITE_URL}/${accountUsername}/${activePage.slug}` : undefined}
+        highlightLinkId={contentEditId ?? undefined}
       />
     </div>
     </>

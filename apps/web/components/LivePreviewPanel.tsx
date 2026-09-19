@@ -36,6 +36,7 @@ export default function LivePreviewPanel({
   openUrl,
   editableStickers,
   onStickersChange,
+  highlightLinkId,
 }: {
   page: MyPage | null;
   links: LinkItem[];
@@ -48,6 +49,11 @@ export default function LivePreviewPanel({
   // kanvas mockup terpisah -- lihat catatan panjang di PagePreview.tsx.
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
+  // highlightLinkId -- permintaan langsung pengguna, 19 September 2026:
+  // saat blok ini sedang dibuka di editor konten (Simple Mode), sorot blok
+  // yang sama di pratinjau supaya jelas blok mana yang sedang diedit --
+  // lihat catatan lengkap di PagePreviewData.highlightLinkId.
+  highlightLinkId?: string;
 }) {
   return (
     // min-w-0 (bug overflow horizontal, 18 Agustus 2026): panel ini SELALU
@@ -116,6 +122,7 @@ export default function LivePreviewPanel({
                 ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products),
                 pageType,
                 pageSlug,
+                highlightLinkId,
               }}
               editableStickers={editableStickers}
               onStickersChange={onStickersChange}

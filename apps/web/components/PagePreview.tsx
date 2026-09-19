@@ -280,6 +280,15 @@ export interface PagePreviewData {
   // togglenya mati -- lihat kondisi render pil watermark di bawah.
   hideWatermark?: boolean;
   links: PagePreviewLink[];
+  // highlightLinkId -- permintaan langsung pengguna, 19 September 2026
+  // ("ketika sedang klik blok nya di pratinjau highlight blok tersebut lebih
+  // terang dari blok lain nya", referensi editor Linktree): dipakai HANYA
+  // oleh LivePreviewPanel.tsx (Simple Mode) saat sebuah blok sedang dibuka
+  // di editor konten sebelah kiri -- blok yang cocok idnya digarisbawahi
+  // (ring + skala), blok lain diredupkan. undefined (bawaan, dipakai
+  // halaman publik & pemakai LivePreviewPanel lain) = tidak ada efek sama
+  // sekali, tampilan identik seperti sebelum field ini ada.
+  highlightLinkId?: string;
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
@@ -3162,7 +3171,20 @@ export default function PagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView))}
+            {data.links.map((link) => {
+              if (!data.highlightLinkId) return renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView);
+              const isHighlighted = link.id === data.highlightLinkId;
+              return (
+                <div
+                  key={link.id}
+                  className={`w-full rounded-2xl transition-all duration-200 ${
+                    isHighlighted ? "opacity-100 ring-2 ring-jeon-purple" : "opacity-30"
+                  }`}
+                >
+                  {renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView)}
+                </div>
+              );
+            })}
           </div>
         )}
 

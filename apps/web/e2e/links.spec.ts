@@ -167,8 +167,14 @@ test.describe("Tautan", () => {
     // header tautan cuma menampilkan DOMAIN ("example.com"), URL penuh
     // baru tampil setelah baris dibuka lewat tombol "Ubah URL & deskripsi".
     await expect(dupRow.getByText("example.com", { exact: true })).toBeVisible();
+    // "Ubah URL & deskripsi" sekarang membuka editor blok yang menggantikan
+    // ISI KOLOM KIRI (bukan lagi meluas di dalam <li> itu sendiri, redesain
+    // 19 September 2026: "ketika klik blok berganti isi blok nya seperti
+    // referensi linktree", kolom kanan/Pratinjau Langsung tetap terlihat) --
+    // jadi field URL-nya dicari di seluruh halaman, bukan lagi di-scope ke
+    // `dupRow`.
     await dupRow.getByTitle("Ubah URL & deskripsi").click();
-    await expect(dupRow.getByText(linkUrl, { exact: true })).toBeVisible();
+    await expect(page.getByText(linkUrl, { exact: true })).toBeVisible();
   });
 
   // Konten Sensitif -- permintaan langsung pengguna, 20 Agustus 2026:
