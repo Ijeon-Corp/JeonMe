@@ -87,7 +87,8 @@ export default function ImageSliderBlock({
           )}
         </div>
       ) : (
-        <p className="text-xs text-red-500">Slider belum berisi foto.</p>
+        // Netral, bukan gaya-error -- lihat catatan lengkap di AudioPlayerBlock.tsx.
+        <p className={`text-xs opacity-50 ${titleClassName}`}>Slider belum berisi foto.</p>
       )}
     </div>
   );

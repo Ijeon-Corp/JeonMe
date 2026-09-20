@@ -67,9 +67,14 @@ export default function AudioPlayerBlock({
   }
 
   if (!audioUrl) {
+    // Bukan pesan gaya-error (bukan text-red-500) -- audit UI/UX 20
+    // September 2026: blok yang belum dikonfigurasi/kosong TIDAK BOLEH
+    // terlihat seperti sesuatu yang RUSAK di mata pengunjung publik, cukup
+    // status netral senada tema (opacity rendah dari titleClassName, bukan
+    // warna literal tetap yang akan mencolok di tema gelap sekalipun).
     return (
       <div className={cardClassName}>
-        <p className="text-xs text-red-500">Audio belum diunggah.</p>
+        <p className={`text-xs opacity-50 ${titleClassName}`}>Audio belum diunggah.</p>
       </div>
     );
   }

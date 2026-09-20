@@ -79,7 +79,8 @@ export default function ListBlock({
         </p>
       )}
       {items.length === 0 ? (
-        <p className="text-xs text-red-500">Belum ada item.</p>
+        // Netral, bukan gaya-error -- lihat catatan lengkap di AudioPlayerBlock.tsx.
+        <p className={`text-xs opacity-50 ${titleClassName}`}>Belum ada item.</p>
       ) : style === "card" ? (
         <div className="grid grid-cols-2 gap-2">
           {items.map((item, i) => (

@@ -395,7 +395,11 @@ export default function GalleryBlock({
           <span className="truncate">{title}</span>
         </p>
       )}
-      {images.length > 0 ? renderTiles() : <p className="text-xs text-red-500">Galeri belum berisi foto.</p>}
+      {/* Netral, bukan gaya-error -- audit UI/UX 20 September 2026: laporan
+          langsung pengguna, galeri kosong sebelumnya tampil sbg teks merah
+          "Galeri belum berisi foto." di halaman PUBLIK, terlihat seperti
+          error alih-alih sekadar belum diisi. Sama seperti AudioPlayerBlock.tsx. */}
+      {images.length > 0 ? renderTiles() : <p className={`text-xs opacity-50 ${titleClassName}`}>Galeri belum berisi foto.</p>}
 
       {/* createPortal ke document.body -- ditemukan lewat verifikasi live
           (bukan cuma baca kode): kartu blok di tema APAPUN yang pakai efek

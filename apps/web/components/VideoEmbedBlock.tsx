@@ -120,7 +120,8 @@ export default function VideoEmbedBlock({
           )}
         </div>
       ) : (
-        <p className="text-xs text-red-500">Video tidak dapat ditampilkan.</p>
+        // Netral, bukan gaya-error -- lihat catatan lengkap di AudioPlayerBlock.tsx.
+        <p className={`text-xs opacity-50 ${titleClassName}`}>Video tidak dapat ditampilkan.</p>
       )}
     </div>
   );

@@ -40,9 +40,10 @@ export default function FileDownloadBlock({
   titleClassName: string;
 }) {
   if (!fileUrl) {
+    // Netral, bukan gaya-error -- lihat catatan lengkap di AudioPlayerBlock.tsx.
     return (
       <div className={cardClassName}>
-        <p className="text-xs text-red-500">File belum diunggah.</p>
+        <p className={`text-xs opacity-50 ${titleClassName}`}>File belum diunggah.</p>
       </div>
     );
   }

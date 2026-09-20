@@ -88,7 +88,8 @@ export default function EmbedBlock({
           <iframe src={result.src} title={title || "Embed"} className="h-full w-full" loading="lazy" />
         </div>
       ) : (
-        <p className="text-xs text-red-500">Embed tidak dapat ditampilkan.</p>
+        // Netral, bukan gaya-error -- lihat catatan lengkap di AudioPlayerBlock.tsx.
+        <p className={`text-xs opacity-50 ${titleClassName}`}>Embed tidak dapat ditampilkan.</p>
       )}
     </div>
   );
