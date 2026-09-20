@@ -145,10 +145,19 @@ export default function GalleryBlock({
     const isFan = display === "fan";
     const fan = images.slice(0, 3);
     const tilt = isFan
-      ? [
-          "left-[15%] right-[15%] top-[10%] bottom-[10%] rotate-0 z-30",
-          "left-[1%] right-[31%] top-[3%] bottom-[7%] -rotate-6 z-20",
-          "left-[31%] right-[1%] top-[3%] bottom-[7%] rotate-6 z-10",
+      ? // Foto depan diperlebar (dulu 70% lebar/left-15,right-15) supaya
+        // benar2 MENUTUPI sebagian besar foto belakang -- permintaan
+        // langsung pengguna, 21 September 2026: "gambar paling depan
+        // tutupi gambar dibelakang nya dan biarkan sisa foto kanan kiri
+        // yang tidak tertutup ... terlihat". Foto belakang digeser SEDIKIT
+        // lebih dekat ke tengah juga (dulu left-1/right-31 & left-31/
+        // right-1, sisi terbuka 14 poin persen) supaya sisi yang terbuka
+        // jadi potongan tipis yang jelas "mengintip", bukan potongan besar
+        // yang terasa seperti 3 kartu terpisah cuma bersinggungan dikit.
+        [
+          "left-[10%] right-[10%] top-[10%] bottom-[10%] rotate-0 z-30",
+          "left-[3%] right-[26%] top-[3%] bottom-[7%] -rotate-6 z-20",
+          "left-[26%] right-[3%] top-[3%] bottom-[7%] rotate-6 z-10",
         ]
       : ["inset-x-[6%] inset-y-[8%] rotate-0 z-30", "inset-x-[6%] inset-y-[8%] -rotate-6 z-20 scale-95", "inset-x-[6%] inset-y-[8%] rotate-6 z-10 scale-95"];
     return (
