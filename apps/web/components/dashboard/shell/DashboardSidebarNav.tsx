@@ -19,6 +19,7 @@ import {
   IconHeart,
   IconInbox,
   IconLink,
+  IconLogout,
   IconMail,
   IconPaintbrush,
   IconPhone,
@@ -283,7 +284,19 @@ export default function DashboardSidebarNav(props: {
 // Kartu upgrade + Bantuan (spec §6.4 #13-14) -- di bawah nav, hanya
 // non-Premium yang melihat kartu upgrade. Benefit dijelaskan (aturan §8.10:
 // "selalu jelaskan benefit, bukan hanya Premium").
-export function SidebarFooterV2({ isPremium, onNavigate }: { isPremium: boolean; onNavigate: () => void }) {
+// onLogout -- permintaan langsung pengguna, 20 September 2026 (audit UI/UX:
+// "logout tidak bisa diakses sama sekali di mobile web"): satu-satunya
+// tombol Keluar tersisa ada di dropdown avatar TOPBAR DESKTOP (`hidden
+// md:flex`, app/dashboard/layout.tsx) -- drawer mobile (yang berbagi
+// sidebarContent, jadi juga merender SidebarFooterV2 ini) sebelumnya tidak
+// punya jalan keluar sama sekali sejak dihapus dari halaman Profil & Akun
+// 3 September 2026 dengan alasan "logout tetap ada lewat dropdown akun
+// topbar" -- alasan itu keliru khusus utk mobile (topbar mobile cuma
+// logo+hamburger, tidak ada avatar/dropdown). Dikembalikan di sini
+// (footer sidebar, tampil di drawer mobile MAUPUN <aside> desktop) supaya
+// pengguna mobile punya jalan keluar lagi, TANPA mengubah dropdown topbar
+// desktop yang sudah ada (dua jalur independen, tidak saling menggantikan).
+export function SidebarFooterV2({ isPremium, onNavigate, onLogout }: { isPremium: boolean; onNavigate: () => void; onLogout: () => void }) {
   const { t } = useLocale();
   return (
     <div className="flex flex-col gap-2">
@@ -309,6 +322,17 @@ export function SidebarFooterV2({ isPremium, onNavigate }: { isPremium: boolean;
         <IconPlayCircle className="h-4 w-4 flex-shrink-0" />
         {t("dashboard.nav.help")}
       </Link>
+      <button
+        type="button"
+        onClick={() => {
+          onNavigate();
+          onLogout();
+        }}
+        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-300 hover:bg-white/5 hover:text-red-200"
+      >
+        <IconLogout className="h-4 w-4 flex-shrink-0" />
+        {t("dashboard.logout")}
+      </button>
     </div>
   );
 }

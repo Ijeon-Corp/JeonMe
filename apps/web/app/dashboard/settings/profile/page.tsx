@@ -163,9 +163,13 @@ export default function SettingsProfilePage() {
   }
 
   // Tombol Keluar DIHAPUS dari halaman ini (permintaan pengguna, 3
-  // September 2026) -- logout tetap ada lewat dropdown akun di topbar
-  // (avatar kanan atas, lihat handleLogout di app/dashboard/layout.tsx),
-  // jadi pengguna tidak kehilangan cara keluar.
+  // September 2026) dengan alasan "logout tetap ada lewat dropdown akun
+  // topbar" -- alasan itu TERNYATA KELIRU utk mobile (dropdown avatar
+  // topbar `hidden md:flex`, desktop-only), mengunci pengguna mobile tanpa
+  // cara logout sama sekali sampai ditemukan lewat audit UI/UX 20 September
+  // 2026. Tombol Keluar TIDAK dikembalikan ke halaman ini -- sudah
+  // ditambahkan ke SidebarFooterV2.tsx (footer drawer mobile & sidebar
+  // desktop) yang menjangkau kedua ukuran layar sekaligus.
 
   if (loading) {
     return <PageSkeleton />;

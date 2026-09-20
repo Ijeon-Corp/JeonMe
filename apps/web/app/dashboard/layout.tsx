@@ -272,9 +272,14 @@ export default function DashboardLayout({
   // profileMenuOpen -- permintaan langsung pengguna, 30 Agustus 2026: "saat
   // klik profile di dashboard navbar muncul langsung pilihan profile atau
   // logout". Dropdown ini HANYA relevan di top bar desktop (avatar tidak
-  // pernah dirender di top bar mobile, lihat catatan di handleLogout
-  // profile/page.tsx) -- Keluar tetap ada juga di halaman Profil & Akun
-  // supaya mobile (yang tidak punya dropdown ini) tetap bisa logout.
+  // pernah dirender di top bar mobile). Komentar lama di sini pernah
+  // mengklaim "Keluar tetap ada di halaman Profil & Akun" sbg jalan keluar
+  // utk mobile -- klaim itu jadi SALAH sejak 3 September 2026 begitu tombol
+  // itu dihapus dari halaman Profil & Akun (lihat settings/profile/page.tsx),
+  // membuat mobile terkunci tanpa cara logout sama sekali sampai ditemukan
+  // lewat audit UI/UX 20 September 2026. Tombol Keluar SEKARANG kembali ada
+  // di SidebarFooterV2.tsx (footer drawer mobile & <aside> desktop),
+  // independen dari dropdown ini.
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   // isPremium -- permintaan langsung pengguna, 28 Agustus 2026: "akun saya
@@ -595,7 +600,7 @@ export default function DashboardLayout({
       </div>
 
       <div className="flex flex-col gap-3">
-        <SidebarFooterV2 isPremium={isPremium} onNavigate={() => setMobileOpen(false)} />
+        <SidebarFooterV2 isPremium={isPremium} onNavigate={() => setMobileOpen(false)} onLogout={handleLogout} />
         {/* Dark/light + bahasa (mobile SAJA) -- permintaan langsung pengguna,
             29 Agustus 2026. Gaya di sini SENGAJA beda dari topbar desktop
             (border/teks putih transparan, bukan border-app-border/bg-app-
