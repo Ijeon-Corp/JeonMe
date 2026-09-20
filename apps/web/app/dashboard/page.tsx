@@ -284,8 +284,20 @@ export default function DashboardHomePage() {
           aktivitas, assistant) tetap tampil di bawah. */}
       {!loading && summary && (
           <>
-            {/* KPI §9.2.4: Views / Klik / CTR / Pendapatan (brand tunggal). */}
-            <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {/* KPI §9.2.4: Views / Klik / CTR / Pendapatan (brand tunggal).
+                mt-3 (bukan mt-4) di mobile -- audit UI/UX 20 September 2026:
+                di layar sempit (grid 2 kolom, 4 kartu KPI jadi 2 baris)
+                kartu terakhir (Pendapatan) sedikit terselip di bawah bar
+                navigasi bawah `.nav-glass` (fixed, translucent+blur) tepat
+                saat halaman baru dimuat (belum discroll sama sekali) --
+                diukur presisi via boundingBox, cuma tumpang tindih beberapa
+                px. Pemangkasan kecil ini bukan solusi sempurna di semua
+                tinggi layar (variasi tinggi browser chrome HP nyata tidak
+                bisa diprediksi persis), tapi mengurangi kemungkinan tanpa
+                mengubah spacing PageHeader/RangeControl (komponen bersama,
+                dipakai banyak halaman lain -- risiko regresi lebih besar
+                drpd manfaatnya utk masalah sekecil ini). */}
+            <section className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 lg:grid-cols-4">
               <KpiCard
                 icon={<IconChart className="h-4 w-4" />}
                 label={t("dashboard.pages.home.statLabelViews")}
