@@ -60,7 +60,11 @@ export default function ForgotPasswordPage() {
 
         {/* role=status (bukan alert): pesan ini bisa sukses ATAU gagal, jadi
             live-region sopan (§22 form error association / status). */}
-        {message && <p id="forgot-message" role="status" className="rounded-jmd bg-jeon-lavender/30 px-3.5 py-2.5 text-sm text-app-ink">{message}</p>}
+        {/* break-all -- audit UI/UX 20 September 2026: dev_reset_token (hex
+            ~64 karakter, satu "kata" tanpa spasi, cuma tampil saat SMTP
+            belum dikonfigurasi/dev-staging) memaksa seluruh halaman
+            melebar horizontal parah di mobile tanpa ini. */}
+        {message && <p id="forgot-message" role="status" className="break-all rounded-jmd bg-jeon-lavender/30 px-3.5 py-2.5 text-sm text-app-ink">{message}</p>}
 
         <button
           type="submit"

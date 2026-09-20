@@ -86,7 +86,18 @@ export default function PageHeader({
             <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-dash-muted">{eyebrow}</p>
           )}
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="font-heading text-2xl font-bold leading-tight text-dash-ink">{title}</h1>
+            {/* break-words + min-w-0 -- audit UI/UX 20 September 2026: title
+                dinamis (mis. "Selamat pagi, {username}" di Beranda) bisa
+                berupa satu "kata" panjang tanpa spasi (username), yang TIDAK
+                wrap sama sekali secara default. break-words SAJA TIDAK CUKUP
+                -- h1 ini flex item di dalam "flex flex-wrap items-center"
+                (bersama `status`), dan flex item defaultnya min-width:auto
+                (pola berulang di repo ini, lihat CLAUDE.md) -- menolak
+                menyusut di bawah lebar intrinsik kontennya, jadi
+                overflow-wrap tidak pernah sempat berlaku sebelum flow
+                melebar duluan. min-w-0 memaksa item ini benar2 boleh
+                menyusut, baru break-words bisa memutus kata panjangnya. */}
+            <h1 className="min-w-0 break-words font-heading text-2xl font-bold leading-tight text-dash-ink">{title}</h1>
             {status}
           </div>
           {description && <p className="mt-1 max-w-2xl text-sm text-dash-muted">{description}</p>}
