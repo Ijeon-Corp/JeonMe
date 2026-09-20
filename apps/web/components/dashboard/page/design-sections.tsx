@@ -107,6 +107,16 @@ export function TemaSection({
   // token auth) -- disuntikkan pemanggil (ProdukPageEditor.tsx / rute Builder)
   // supaya komponen ini sendiri TIDAK perlu tahu jalur endpoint mana yang benar.
   onUploadBackground,
+  // onLocked -- OPSIONAL, permintaan langsung pengguna 20 September 2026
+  // ("custom di design itu sebenernya apa fungsinya karena setelah klik
+  // tidak ada lanjutannya"): panel ini (termasuk galeri tema + tile Custom)
+  // sekarang JUGA dipakai app/dashboard/design/theme/page.tsx (Bio) --
+  // SEBELUMNYA klik tile Custom tanpa Premium di Bio langsung navigasi ke
+  // /dashboard/settings/subscription (lebih jelas arahnya drpd sekadar
+  // toast error), beda dari perilaku bawaan komponen ini (toast lewat
+  // onError). Default TETAP toast (Toko/Builder, pemanggil lama, tidak
+  // berubah) -- Bio menyuntikkan router.push sendiri lewat prop ini.
+  onLocked,
 }: {
   page: DesignSectionPage;
   isPremium: boolean;
@@ -120,6 +130,7 @@ export function TemaSection({
   // berhasil diunggah ke server. Kreator melihat kanvas/pratinjau TIDAK
   // BERUBAH SAMA SEKALI sampai reload halaman penuh, tanpa error apa pun.
   onUploadBackground: (file: File) => Promise<string>;
+  onLocked?: () => void;
 }) {
   const { t } = useLocale();
   const [bgUploading, setBgUploading] = useState(false);
@@ -162,7 +173,7 @@ export function TemaSection({
         customTile={{
           isPremium,
           onSelect: () => onPatch({ theme: "custom", custom_style_override: false }),
-          onLocked: () => onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly")),
+          onLocked: onLocked ?? (() => onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly"))),
         }}
       />
 
