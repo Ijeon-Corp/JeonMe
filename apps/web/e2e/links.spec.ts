@@ -107,29 +107,34 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: linkTitle }).first();
-    // Strip alat kelola (jadwal/kunci/sensitif/ikon/duplikat/hapus) dilipat
-    // di balik tombol "Kelola" sejak restrukturisasi UX 31 Agustus 2026 --
-    // harus dibuka dulu sebelum ikon aksi per-baris kelihatan.
-    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
-    await row.getByTitle("Pilih dari galeri ikon").click();
+    // Strip alat kelola (jadwal/kunci/sensitif/ikon/duplikat/hapus) SEKARANG
+    // pindah ke dalam panel yang terbuka begitu blok diklik (permintaan
+    // langsung pengguna, 20 September 2026: "untuk semua options seperti
+    // ganti icon dll di setiap blok itu di pindahkan saja saat setelah
+    // blok di klik") -- BUKAN lagi accordion inline di balik tombol ⋮ di
+    // baris (yang sudah dihapus total). Panel menggantikan kolom kiri
+    // (di luar <li>), jadi tombolnya dicari lewat `page`, bukan `row`.
+    await row.click();
+    await page.getByTitle("Pilih dari galeri ikon").click();
 
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toBeVisible();
     await expect(page.getByText("Media Sosial", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Instagram", exact: true }).click();
 
-    // Modal tertutup begitu ikon dipilih, tombol galeri di baris tautan ini
-    // ikut berubah warna (text-jeon-purple) menandakan ada icon_key tersimpan.
+    // Modal tertutup begitu ikon dipilih, tombol galeri di panel ikut
+    // berubah warna (text-jeon-purple) menandakan ada icon_key tersimpan.
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toHaveCount(0);
-    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
+    await expect(page.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
 
     // Reload penuh -- membuktikan pilihannya benar-benar tersimpan ke
-    // backend (icon_key), bukan cuma state lokal sesi ini. Strip "Kelola"
-    // kembali terlipat sesudah reload (toolsOpenId ikut ter-reset), buka
-    // lagi galerinya, opsi "Instagram" harus tampil TERPILIH (border-jeon-purple).
+    // backend (icon_key), bukan cuma state lokal sesi ini. Panel blok
+    // kembali tertutup sesudah reload (contentEditId ikut ter-reset), buka
+    // lagi baris & galerinya, opsi "Instagram" harus tampil TERPILIH
+    // (border-jeon-purple).
     await page.reload();
-    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
-    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
-    await row.getByTitle("Pilih dari galeri ikon").click();
+    await row.click();
+    await expect(page.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
+    await page.getByTitle("Pilih dari galeri ikon").click();
     await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-jeon-purple/);
   });
 
@@ -153,10 +158,13 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: linkTitle }).first();
-    // Strip alat kelola dilipat di balik tombol "Kelola" -- lihat catatan
-    // lengkap di test "ikon brand" di atas.
-    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
-    await row.getByTitle("Duplikat").click();
+    // Strip alat kelola pindah ke dalam panel (buka blok dulu) -- lihat
+    // catatan lengkap di test "ikon brand" di atas. Panel menggantikan
+    // daftar (list disembunyikan selagi terbuka), jadi tutup lagi lewat
+    // "Kembali" sebelum memeriksa baris baru muncul di daftar.
+    await row.click();
+    await page.getByTitle("Duplikat").click();
+    await page.getByRole("button", { name: "Kembali" }).click();
 
     // Baris baru muncul dengan judul berakhiran " (Salinan)", URL sama persis.
     const dupTitle = `${linkTitle} (Salinan)`;
@@ -213,11 +221,11 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: blockTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: blockTitle }).first();
-    // Strip alat kelola dilipat di balik tombol "Kelola" -- lihat catatan
-    // lengkap di test "ikon brand" di atas.
-    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
-    await row.getByTitle("Tandai konten sensitif").click();
-    await expect(row.getByTitle("Batalkan peringatan konten sensitif")).toBeVisible({ timeout: 5000 });
+    // Strip alat kelola pindah ke dalam panel (buka blok dulu) -- lihat
+    // catatan lengkap di test "ikon brand" di atas.
+    await row.click();
+    await page.getByTitle("Tandai konten sensitif").click();
+    await expect(page.getByTitle("Batalkan peringatan konten sensitif")).toBeVisible({ timeout: 5000 });
 
     // Halaman publik: SEBELUM diklik, teks asli TIDAK boleh terlihat sama
     // sekali -- cuma peringatan generik + tombol "Lihat Konten".

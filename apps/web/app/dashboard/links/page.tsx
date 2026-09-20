@@ -56,7 +56,6 @@ import { slugifyTitle } from "@/lib/slug";
 import {
   IconCamera,
   IconChevronRight,
-  IconDotsVertical,
   IconColumns,
   IconFileText,
   IconGrid,
@@ -80,7 +79,7 @@ import { getLibraryIcon } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
-import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, isBlockExpandable, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
@@ -438,16 +437,6 @@ export default function DashboardLinksPage() {
   // sebelumnya.
   const [newDescription, setNewDescription] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
-  // toolsOpenId -- restrukturisasi UX baris link (permintaan langsung
-  // pengguna, 31 Agustus 2026: "design dan struktur tiap page masih kurang
-  // secara ui dan ux"): strip 8+ ikon aksi tanpa label (jadwal/kunci/
-  // sensitif/ikon x4/featured/duplikat/hapus) yang SEBELUMNYA selalu
-  // tampil di TIAP kartu membuat baris gemuk & membingungkan -- sekarang
-  // dilipat di balik satu tombol "Kelola" per kartu (accordion inline,
-  // markup & handler aksi TIDAK berubah sama sekali, cuma dibungkus
-  // kondisional). Jumlah klik ikut pindah jadi chip ringkas di baris
-  // header (menggantikan footer sendiri yang memboroskan satu baris penuh).
-  const [toolsOpenId, setToolsOpenId] = useState<string | null>(null);
 
   // Permintaan langsung pengguna: unggah gambar kustom per tautan
   // (menggantikan ikon platform otomatis di halaman publik).
@@ -2812,7 +2801,7 @@ export default function DashboardLinksPage() {
         )}
 
         <ul className="mt-4 flex flex-col gap-3">
-          {links.map((link, index) => (
+          {links.map((link) => (
             <li
               key={link.id}
               draggable
@@ -2853,14 +2842,23 @@ export default function DashboardLinksPage() {
                   // yang di dalamnya ada <button> lain -- pelanggaran
                   // aksesibilitas nested-interactive). onClick baris ini
                   // MURNI perluasan target klik MOUSE, bukan pengganti.
-                  if (!isBlockExpandable(link, t)) return;
+                  // isBlockExpandable TIDAK dipakai lagi di sini -- SEMUA
+                  // tipe blok sekarang bisa dibuka (permintaan langsung
+                  // pengguna, 20 September 2026: strip alat kelola/Tools
+                  // pindah ke panel ini, jadi bahkan tipe tanpa field
+                  // konten sama sekali mis. "contact_form" tetap punya
+                  // sesuatu utk ditampilkan di panelnya -- SEBELUMNYA tipe
+                  // begitu cuma bisa diakses lewat tombol ⋮ terpisah yang
+                  // kini sudah dihapus). Toko (ProdukPageEditor.tsx) TIDAK
+                  // ikut berubah -- masih pakai isBlockExpandable lama, lihat
+                  // catatan drift di project memory.
                   if (link.block_type === "catalog" || link.block_type === "faq") {
                     setDrilldownBlockId(link.id);
                   } else {
                     toggleContentEdit(link);
                   }
                 }}
-                className={`relative flex items-center gap-3 ${isBlockExpandable(link, t) ? "cursor-pointer" : ""}`}
+                className="relative flex cursor-pointer items-center gap-3"
               >
                 {/* Grip drag -- redesain baris blok 18 September 2026: kolom
                     ▲/grip/▼ yang dulu selalu tampil di kiri DIHAPUS dari header
@@ -3041,11 +3039,12 @@ export default function DashboardLinksPage() {
                     catalog spec, level halaman) tetap cocok tepat satu
                     tombol. Nama tombol konstan per tipe, status buka/tutup
                     lewat aria-expanded (jangan diubah jadi dinamis, pernah
-                    merusak 4 test). */}
-                {isBlockExpandable(link, t) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
+                    merusak 4 test). Gerbang isBlockExpandable DIHAPUS 20
+                    September 2026 -- lihat catatan lengkap di onClick baris
+                    header di atas, SEMUA tipe blok sekarang expandable. */}
+                <button
+                  type="button"
+                  onClick={(e) => {
                       // stopPropagation WAJIB -- tombol ini sekarang ANAK
                       // dari baris header yang juga onClick (lihat catatan
                       // di atas), tanpa ini klik di sini akan memicu toggle
@@ -3069,7 +3068,6 @@ export default function DashboardLinksPage() {
                   >
                     <IconChevronRight className={`h-4 w-4 transition-transform ${contentEditId === link.id ? "rotate-90" : ""}`} />
                   </button>
-                )}
                 {/* Wrapper stopPropagation -- Toggle sendiri (Toggle.tsx)
                     dipakai luas di banyak tempat lain yang tidak bersarang
                     dlm baris yang klik-able, jadi stopPropagation ditaruh
@@ -3078,25 +3076,6 @@ export default function DashboardLinksPage() {
                 <div onClick={(e) => e.stopPropagation()}>
                   <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
                 </div>
-                {/* Menu ⋮ -- redesain 18 September 2026: menggantikan tombol
-                    gear+chevron (yang chevron-nya kembar dgn chevron isi di
-                    sebelahnya, temuan audit). Membuka BlockToolsStrip
-                    berlabel di bawah baris; `title` dipertahankan persis
-                    (e2e links.spec.ts getByTitle). */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setToolsOpenId((v) => (v === link.id ? null : link.id));
-                  }}
-                  aria-expanded={toolsOpenId === link.id}
-                  title={t("dashboard.pages.links.linkCard.manageTools")}
-                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
-                    toolsOpenId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-ink hover:bg-app-surface-2"
-                  }`}
-                >
-                  <IconDotsVertical className="h-5 w-5" />
-                </button>
               </div>
 
               {/* Baris URL -- utk "link" baru tampil saat baris dibuka
@@ -3134,43 +3113,6 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {/* Strip alat kelola -- jadwal/kunci/sensitif/kontrol ikon/
-                  featured/duplikat/hapus. Dilipat di balik tombol "Kelola"
-                  di header (restrukturisasi UX 31 Agustus 2026, lihat
-                  catatan toolsOpenId) -- markup & handler di dalamnya
-                  TIDAK berubah, cuma dibungkus kondisional + kontainer. */}
-              {/* Strip alat kelola -- dipindah ke komponen bersama
-                  BlockToolsStrip.tsx (18 September 2026, redesain berlabel
-                  atas laporan pengguna "icon di settings blok secara ui/ux
-                  sangat tidak user friendly"); catatan alasan tiap gerbang
-                  (jadwal semua tipe, kunci penuh cuma link/button, sensitif
-                  utk tipe lain, featured cuma link, hapus lewat dialog
-                  konfirmasi) ikut pindah ke sana. */}
-              {toolsOpenId === link.id && (
-                <BlockToolsStrip
-                  link={link}
-                  className="sm:ml-[60px]"
-                  iconUploading={iconUploadingId === link.id}
-                  onMoveUp={() => moveLinkByOffset(index, -1)}
-                  onMoveDown={() => moveLinkByOffset(index, 1)}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < links.length - 1}
-                  onSchedule={() => openScheduleForm(link)}
-                  onLock={() => openLockForm(link)}
-                  onToggleSensitive={() => handleToggleSensitive(link)}
-                  onIconUpload={(e) => handleIconUpload(e, link)}
-                  onOpenIconGallery={() => setIconPickerLinkId(link.id)}
-                  onIconColorChange={(color) => handleIconColorChange(link, color)}
-                  onClearIconColor={() => handleClearIconColor(link)}
-                  onRemoveIcon={() => handleRemoveIcon(link)}
-                  onToggleFeatured={() => handleToggleFeatured(link)}
-                  hideFeaturedToggle
-                  onDuplicate={() => handleDuplicate(link)}
-                  onDelete={() => setConfirmDeleteId(link.id)}
-                />
-              )}
-
-
               {/* Statistik klik pindah jadi chip ringkas di baris header
                   kartu (restrukturisasi UX 31 Agustus 2026) -- footer
                   terpisah yang lama memboroskan satu baris penuh per kartu. */}
@@ -3191,6 +3133,14 @@ export default function DashboardLinksPage() {
           satu -- semuanya masih merujuk `link` seperti sebelumnya. */}
       {contentEditingLink && (() => {
         const link = contentEditingLink;
+        // index -- dibutuhkan BlockToolsStrip (Naik/Turun) sekarang blok
+        // itu pindah ke sini (di luar `.map()` daftar blok, jadi `index`
+        // loop lama tidak tersedia lagi) -- permintaan langsung pengguna,
+        // 20 September 2026: "untuk semua options seperti ganti icon dll
+        // di setiap blok itu di pindahkan saja saat setelah klik blok
+        // nya... sesuaikan lagi isi tiap blok nya setelah blok di klik
+        // tambah selengkap mungkin yang akan dibutuhkan user".
+        const index = links.findIndex((l) => l.id === link.id);
         return (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -3316,6 +3266,38 @@ export default function DashboardLinksPage() {
                   </div>
                 </div>
               )}
+
+              {/* Strip alat kelola -- jadwal/kunci/sensitif/kontrol ikon/
+                  duplikat/hapus/urutan. PINDAH ke sini (sebelumnya accordion
+                  inline terpisah di balik tombol ⋮ di baris kompak) --
+                  permintaan langsung pengguna, 20 September 2026: "untuk
+                  semua options seperti ganti icon dll di setiap blok itu di
+                  pindahkan saja saat setelah blok di klik... tambah
+                  selengkap mungkin yang akan dibutuhkan user". Selalu
+                  tampil (tanpa toggle ⋮ terpisah lagi) -- membuka blok ini
+                  sendiri SUDAH jadi gerbangnya, konsisten dgn semangat
+                  referensi Linktree (satu halaman/panel berisi semua
+                  pengaturan blok, bukan tersebar di banyak tombol). */}
+              <BlockToolsStrip
+                link={link}
+                iconUploading={iconUploadingId === link.id}
+                onMoveUp={() => moveLinkByOffset(index, -1)}
+                onMoveDown={() => moveLinkByOffset(index, 1)}
+                canMoveUp={index > 0}
+                canMoveDown={index < links.length - 1}
+                onSchedule={() => openScheduleForm(link)}
+                onLock={() => openLockForm(link)}
+                onToggleSensitive={() => handleToggleSensitive(link)}
+                onIconUpload={(e) => handleIconUpload(e, link)}
+                onOpenIconGallery={() => setIconPickerLinkId(link.id)}
+                onIconColorChange={(color) => handleIconColorChange(link, color)}
+                onClearIconColor={() => handleClearIconColor(link)}
+                onRemoveIcon={() => handleRemoveIcon(link)}
+                onToggleFeatured={() => handleToggleFeatured(link)}
+                hideFeaturedToggle
+                onDuplicate={() => handleDuplicate(link)}
+                onDelete={() => setConfirmDeleteId(link.id)}
+              />
 
               {/* Panel "Kelola foto" -- blok "gallery" (hasil analisa galeri
                   tema kompetitor, 17 Agustus 2026). SEBELUMNYA selalu
