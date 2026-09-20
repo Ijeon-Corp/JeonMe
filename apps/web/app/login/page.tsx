@@ -196,21 +196,31 @@ function LoginPageInner() {
           kan daftar dengan google nya dibagian bawah setelah password" --
           SEBELUMNYA di atas form (di atas divider "atau"), sekarang di
           bawah form email/password. */}
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-app-border" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
-        <div className="h-px flex-1 bg-app-border" />
-      </div>
-      {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
-          "tambahkan juga login via apple". Kedua tombol soft-fail sendiri-
-          sendiri (tidak dirender kalau kredensial masing-masing belum
-          diisi), jadi urutan/keberadaan salah satu tidak bergantung yang
-          lain -- flex-col gap-2.5 supaya rapi kalau cuma satu yang tampil
-          MAUPUN keduanya. */}
-      <div className="flex flex-col gap-2.5">
-        <GoogleAuthButton label="Masuk dengan Google" />
-        <AppleAuthButton label="Masuk dengan Apple" />
-      </div>
+      {/* hasOAuthProvider -- audit UI/UX 20 September 2026: divider "atau"
+          SEBELUMNYA tetap dirender apa pun kondisinya walau KEDUA tombol
+          soft-fail (comment di bawah sudah sadar soal soft-fail per tombol,
+          tapi belum menerapkan hal sama ke divider-nya sendiri) --
+          menggantung sendiri tanpa tombol di bawahnya kalau kredensial
+          OAuth belum diisi. Sama seperti app/register/page.tsx. */}
+      {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_APPLE_CLIENT_ID) && (
+        <>
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-app-border" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
+            <div className="h-px flex-1 bg-app-border" />
+          </div>
+          {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
+              "tambahkan juga login via apple". Kedua tombol soft-fail sendiri-
+              sendiri (tidak dirender kalau kredensial masing-masing belum
+              diisi), jadi urutan/keberadaan salah satu tidak bergantung yang
+              lain -- flex-col gap-2.5 supaya rapi kalau cuma satu yang tampil
+              MAUPUN keduanya. */}
+          <div className="flex flex-col gap-2.5">
+            <GoogleAuthButton label="Masuk dengan Google" />
+            <AppleAuthButton label="Masuk dengan Apple" />
+          </div>
+        </>
+      )}
 
       {/* Lupa password -- halaman sendiri sekarang (permintaan langsung
           pengguna, 31 Agustus 2026: "harusnya lupa password itu jadi page

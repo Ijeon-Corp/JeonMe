@@ -58,7 +58,7 @@ function RegisterPageInner() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!consentAccepted) {
-      setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+      setError("kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
       return;
     }
     setError(null);
@@ -98,7 +98,7 @@ function RegisterPageInner() {
   // konfirmasi lain.
   function requireConsent(): boolean {
     if (!consentAccepted) {
-      setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+      setError("kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
       return false;
     }
     return true;
@@ -239,20 +239,31 @@ function RegisterPageInner() {
           atasnya begitu discroll ke sini). onBeforeRedirect TIDAK berubah
           -- checkbox tetap wajib tercentang dulu sebelum redirect ke
           Google, cuma posisi tombolnya yang pindah. */}
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-app-border" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
-        <div className="h-px flex-1 bg-app-border" />
-      </div>
-      {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
-          "tambahkan juga login via apple". onBeforeRedirect sama persis
-          dengan Google -- checkbox persetujuan data pribadi wajib
-          tercentang dulu untuk KEDUA tombol, satu fungsi dipakai ulang
-          bukan didefinisikan dobel. */}
-      <div className="flex flex-col gap-2.5">
-        <GoogleAuthButton label="Daftar dengan Google" onBeforeRedirect={requireConsent} />
-        <AppleAuthButton label="Daftar dengan Apple" onBeforeRedirect={requireConsent} />
-      </div>
+      {/* hasOAuthProvider -- audit UI/UX 20 September 2026: GoogleAuthButton/
+          AppleAuthButton soft-fail (return null) kalau NEXT_PUBLIC_*_CLIENT_ID
+          belum diisi (dev/staging tanpa kredensial OAuth) -- divider "atau"
+          SEBELUMNYA tetap dirender apa pun kondisinya, menggantung sendiri
+          tanpa tombol apa pun di bawahnya. NEXT_PUBLIC_* aman dibaca di sini
+          juga (di-inline Next.js di build client mana pun, bukan cuma di
+          komponen tombolnya sendiri). */}
+      {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_APPLE_CLIENT_ID) && (
+        <>
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-app-border" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
+            <div className="h-px flex-1 bg-app-border" />
+          </div>
+          {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
+              "tambahkan juga login via apple". onBeforeRedirect sama persis
+              dengan Google -- checkbox persetujuan data pribadi wajib
+              tercentang dulu untuk KEDUA tombol, satu fungsi dipakai ulang
+              bukan didefinisikan dobel. */}
+          <div className="flex flex-col gap-2.5">
+            <GoogleAuthButton label="Daftar dengan Google" onBeforeRedirect={requireConsent} />
+            <AppleAuthButton label="Daftar dengan Apple" onBeforeRedirect={requireConsent} />
+          </div>
+        </>
+      )}
 
       {/* text-app-ink underline (BUKAN text-jeon-purple) -- kontras teks
           kecil, lihat catatan lengkap di app/login/page.tsx. */}
