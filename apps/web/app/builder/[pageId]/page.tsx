@@ -1764,6 +1764,7 @@ export default function BuilderPage() {
           onSelectNode={handleSelectNode}
           editableStickers={designSection === "stiker"}
           onStickersChange={handleStickersChange}
+          onReorderRoot={handleReorderRoot}
         />
         </div>
       </div>

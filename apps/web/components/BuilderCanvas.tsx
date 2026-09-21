@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { GripVertical } from "lucide-react";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { toPreviewData } from "@/lib/page-preview-data";
 
@@ -49,6 +50,7 @@ export default function BuilderCanvas({
   onSelectNode,
   editableStickers,
   onStickersChange,
+  onReorderRoot,
 }: {
   page: MyPage | null;
   links: LinkItem[];
@@ -79,9 +81,28 @@ export default function BuilderCanvas({
   // sub-tab desain "Stiker" dipilih di induk.
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
+  // onReorderRoot -- uxd-1 (audit UI/UX 21 September 2026, "drag-reorder
+  // di kanvas"): SEBELUMNYA satu-satunya cara mengurutkan ulang blok
+  // ROOT adalah drag di tree kiri (BuilderLeftPanel, dnd-kit) -- kanvas
+  // ini 100% baca-saja soal urutan. Handle "⠿" di sini dipasang lewat
+  // OVERLAY terpisah (lihat rootRects/RootDragOverlay di bawah), BUKAN
+  // dengan menambah useSortable() di dalam PagePreview: PagePreview
+  // dipakai apa adanya oleh banyak pemanggil lain & merender subtree
+  // blok secara OPAK dari sudut pandang komponen ini (tidak ada titik
+  // pas utk memasang hook dnd-kit per baris tanpa membedah render root-
+  // levelnya) -- overlay yang mengukur posisi lewat getBoundingClientRect
+  // jauh lebih aman drpd membedah PagePreview yang dipakai banyak
+  // halaman lain. Direct-DOM (bukan dnd-kit) supaya tidak perlu
+  // mendaftarkan setiap baris ke SortableContext, cukup baca
+  // data-builder-node-id yang SUDAH ada. Reorder BERSARANG (di dalam
+  // Section/Column) tetap hanya lewat tree kiri -- sama seperti tree
+  // sendiri yang belum dukung drag lintas kontainer (Fase 1).
+  onReorderRoot?: (orderedIds: string[]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
+  const rootIds = links.map((l) => l.id);
+  const rootIdsKey = rootIds.join(",");
 
   useEffect(() => {
     const el = containerRef.current;
@@ -147,9 +168,180 @@ export default function BuilderCanvas({
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedNodeId]);
 
+  // rootRects -- posisi tiap blok ROOT (relatif thd `containerRef`, sudah
+  // termasuk faktor zoom karena dihitung dari getBoundingClientRect,
+  // bukan offsetTop/Left mentah) dipakai utk menaruh handle "⠿" & garis
+  // indikator drop TEPAT di atas tiap blok tanpa harus tahu struktur
+  // DOM internal PagePreview -- lihat catatan lengkap di prop
+  // onReorderRoot soal kenapa pendekatan overlay dipilih.
+  const [rootRects, setRootRects] = useState<{ id: string; top: number; left: number; width: number; height: number }[]>([]);
+  const dragStateRef = useRef<{ draggedId: string; rects: typeof rootRects } | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // rootIdsRef/onReorderRootRef/reorderEnabled -- bug ditemukan lewat
+  // Playwright live (BUKAN tsc/lint, keduanya bersih): "Maximum update
+  // depth exceeded". `rootIds` adalah array BARU tiap render (`.map()`
+  // di atas) & `onReorderRoot` juga referensi BARU tiap render (fungsi
+  // polos di app/builder/[pageId]/page.tsx, bukan useCallback) -- keduanya
+  // dipakai sbg dependency useCallback, jadi `recomputeRootRects` juga
+  // ganti identitas tiap render, memicu useLayoutEffect di bawah lagi,
+  // yang manggil setRootRects lagi, memicu render lagi... loop tanpa
+  // akhir. Pola "latest ref" (diisi ULANG tiap render, BUKAN di useEffect,
+  // supaya sudah pasti terbaru sebelum efek apa pun jalan) memutus
+  // rantai ini -- recomputeRootRects sekarang identitasnya STABIL
+  // selamanya ([] deps), baca nilai terbaru lewat ref.
+  const rootIdsRef = useRef(rootIds);
+  const onReorderRootRef = useRef(onReorderRoot);
+  // react-hooks/refs (ESLint v7) melarang menulis ref LANGSUNG di badan
+  // render -- diisi ulang di useLayoutEffect TANPA dependency array
+  // (jalan tiap commit, urutan SEBELUM useLayoutEffect recompute di
+  // bawah karena dideklarasikan lebih dulu) supaya tetap "selalu
+  // terbaru" tanpa melanggar aturan itu.
+  useLayoutEffect(() => {
+    rootIdsRef.current = rootIds;
+    onReorderRootRef.current = onReorderRoot;
+  });
+  const reorderEnabled = !!onReorderRoot;
+  const lastRectsKeyRef = useRef("");
+
+  const recomputeRootRects = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || !onReorderRootRef.current) return;
+    const containerRect = container.getBoundingClientRect();
+    // Root = elemen data-builder-node-id yang TIDAK punya ancestor
+    // data-builder-node-id lain -- blok bersarang (di dalam Section/
+    // Column) otomatis tersaring keluar tanpa perlu tahu bentuk tree-nya.
+    const allNodeEls = Array.from(container.querySelectorAll<HTMLElement>("[data-builder-node-id]"));
+    const byId = new Map<string, HTMLElement>();
+    for (const el of allNodeEls) {
+      if (el.parentElement?.closest("[data-builder-node-id]")) continue;
+      const id = el.getAttribute("data-builder-node-id");
+      if (id) byId.set(id, el);
+    }
+    const next = rootIdsRef.current.flatMap((id) => {
+      const el = byId.get(id);
+      if (!el) return [];
+      const r = el.getBoundingClientRect();
+      return [
+        {
+          id,
+          // Math.round -- getBoundingClientRect bisa berbeda sub-piksel
+          // antar panggilan meski TIDAK ADA perubahan visual sungguhan
+          // (akumulasi floating point) -- tanpa pembulatan, perbandingan
+          // `key` di bawah (utk mencegah setState percuma) tidak pernah
+          // sama persis, bikin MutationObserver terus memicu render baru.
+          top: Math.round(r.top - containerRect.top - container.clientTop + container.scrollTop),
+          left: Math.round(r.left - containerRect.left - container.clientLeft + container.scrollLeft),
+          width: Math.round(r.width),
+          height: Math.round(r.height),
+        },
+      ];
+    });
+    const key = JSON.stringify(next);
+    if (key === lastRectsKeyRef.current) return;
+    lastRectsKeyRef.current = key;
+    setRootRects(next);
+  }, []);
+
+  useLayoutEffect(() => {
+    recomputeRootRects();
+  }, [recomputeRootRects, page, device, zoom, rootIdsKey]);
+
+  useEffect(() => {
+    if (!reorderEnabled) return;
+    const container = containerRef.current;
+    if (!container) return;
+    let raf = 0;
+    const scheduleRecompute = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(recomputeRootRects);
+    };
+    const observer = new MutationObserver(scheduleRecompute);
+    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [recomputeRootRects, reorderEnabled]);
+
+  function handleDragHandlePointerDown(e: React.PointerEvent<HTMLButtonElement>, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragStateRef.current = { draggedId: id, rects: rootRects };
+    setDraggingId(id);
+    setDragOverIndex(rootIds.indexOf(id));
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleDragHandlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const state = dragStateRef.current;
+    const container = containerRef.current;
+    if (!state || !container) return;
+    const containerRect = container.getBoundingClientRect();
+    const pointerY = e.clientY - containerRect.top - container.clientTop + container.scrollTop;
+    const others = state.rects.filter((r) => r.id !== state.draggedId);
+    let idx = others.length;
+    for (let i = 0; i < others.length; i++) {
+      if (pointerY < others[i].top + others[i].height / 2) {
+        idx = i;
+        break;
+      }
+    }
+    setDragOverIndex(idx);
+  }
+
+  function finishDrag() {
+    const state = dragStateRef.current;
+    if (state && dragOverIndex !== null && onReorderRoot) {
+      const without = rootIds.filter((id) => id !== state.draggedId);
+      without.splice(dragOverIndex, 0, state.draggedId);
+      if (without.join(",") !== rootIdsKey) onReorderRoot(without);
+    }
+    dragStateRef.current = null;
+    setDraggingId(null);
+    setDragOverIndex(null);
+  }
+
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
+      <div ref={containerRef} className="relative min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
+        {onReorderRoot && rootRects.length > 1 && (
+          <div className="pointer-events-none absolute inset-0 z-10">
+            {rootRects.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                title="Geser untuk urutkan ulang"
+                aria-label="Geser untuk urutkan ulang blok"
+                className={`pointer-events-auto absolute flex h-6 w-6 cursor-grab items-center justify-center rounded-md border bg-app-surface text-app-muted shadow-sm transition-colors hover:border-jeon-purple hover:text-jeon-purple active:cursor-grabbing ${
+                  draggingId === r.id ? "z-20 border-jeon-purple text-jeon-purple opacity-100" : "border-app-border opacity-70"
+                }`}
+                style={{ top: r.top + 6, left: r.left + 6 }}
+                onPointerDown={(e) => handleDragHandlePointerDown(e, r.id)}
+                onPointerMove={handleDragHandlePointerMove}
+                onPointerUp={finishDrag}
+                onPointerCancel={finishDrag}
+              >
+                <GripVertical className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            ))}
+            {draggingId &&
+              dragOverIndex !== null &&
+              (() => {
+                const others = rootRects.filter((r) => r.id !== draggingId);
+                const width = rootRects[0]?.width ?? 0;
+                const left = rootRects[0]?.left ?? 0;
+                const top =
+                  others.length === 0
+                    ? (rootRects.find((r) => r.id === draggingId)?.top ?? 0)
+                    : dragOverIndex >= others.length
+                      ? others[others.length - 1].top + others[others.length - 1].height + 4
+                      : others[dragOverIndex].top - 4;
+                return <div className="absolute h-1 rounded-full bg-jeon-purple" style={{ top, left, width }} />;
+              })()}
+          </div>
+        )}
         {page && (
           <div className="mx-auto [-ms-overflow-style:none] [scrollbar-width:none]" style={{ width: BUILDER_DEVICE_WIDTHS[device], zoom }}>
             {/* Scrollbar bingkai SENGAJA terlihat lagi (18 September 2026):
