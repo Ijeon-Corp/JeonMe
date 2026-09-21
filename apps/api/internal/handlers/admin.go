@@ -46,10 +46,16 @@ type AdminHandler struct {
 	// seperti AuthHandler.Queue di routes.go) -- boleh nil, soft-fail sama
 	// seperti operasi sampingan lain (lihat CLAUDE.md).
 	Queue *asynq.Client
+	// PublicWebURL -- bug UI/UX ditemukan 21 September 2026 (audit
+	// menyeluruh): ListReports sebelumnya cuma mengembalikan target_id
+	// mentah (UUID), admin diminta Takedown tanpa cara melihat konten yang
+	// dimaksud dari dalam panel sama sekali. Dipakai ListReports untuk
+	// membangun tautan "Lihat konten" langsung ke halaman/produk publiknya.
+	PublicWebURL string
 }
 
-func NewAdminHandler(db *pgxpool.Pool, rdb *redis.Client) *AdminHandler {
-	return &AdminHandler{DB: db, RDB: rdb}
+func NewAdminHandler(db *pgxpool.Pool, rdb *redis.Client, publicWebURL string) *AdminHandler {
+	return &AdminHandler{DB: db, RDB: rdb, PublicWebURL: publicWebURL}
 }
 
 // paginatedResponse -- audit fitur admin (5 September 2026): SEMUA daftar
@@ -298,6 +304,16 @@ type reportItem struct {
 	ReporterEmail string    `json:"reporter_email"`
 	Status        string    `json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
+	// TargetUsername/TargetLabel/TargetURL -- bug UI/UX ditemukan 21
+	// September 2026 (audit menyeluruh): SEBELUMNYA frontend cuma
+	// menampilkan target_id (UUID) mentah, admin diminta Takedown tanpa
+	// cara melihat konten yang dimaksud dari dalam panel sama sekali.
+	// omitempty -- baris "hantu" (target sudah dihapus permanen sebelum
+	// laporan diproses) akan membuat ketiganya kosong, frontend tampilkan
+	// fallback "(konten sudah dihapus)".
+	TargetUsername string `json:"target_username,omitempty"`
+	TargetLabel    string `json:"target_label,omitempty"`
+	TargetURL      string `json:"target_url,omitempty"`
 }
 
 // ListReports — REQ-F-702 (bagian admin). status default "pending"; pakai
@@ -337,10 +353,95 @@ func (h *AdminHandler) ListReports(c *gin.Context) {
 	defer rows.Close()
 
 	items := []reportItem{}
+	var pageIDs, productIDs []string
 	for rows.Next() {
 		var it reportItem
 		if err := rows.Scan(&it.ID, &it.TargetType, &it.TargetID, &it.Reason, &it.ReporterEmail, &it.Status, &it.CreatedAt); err == nil {
 			items = append(items, it)
+			if it.TargetType == "page" {
+				pageIDs = append(pageIDs, it.TargetID)
+			} else if it.TargetType == "product" {
+				productIDs = append(productIDs, it.TargetID)
+			}
+		}
+	}
+	rows.Close()
+
+	// Enrichment 2 query batch (bukan N+1 per baris) -- lihat catatan
+	// panjang di reportItem. "page": link ke halaman utama (/{username})
+	// kalau is_primary, ke halaman tambahan (/{username}/{slug}) kalau
+	// tidak -- pola URL SAMA PERSIS app/[username]/[slug]/page.tsx.
+	// "product": TIDAK ADA halaman permalink per-produk sendiri di app ini
+	// (produk selalu tertanam di blok "produk" milik suatu halaman), jadi
+	// link mengarah ke Toko kanonik kreator (selalu slug=username, lihat
+	// ensureProdukPage) -- cukup utk admin menemukan & meninjau produknya.
+	if len(pageIDs) > 0 {
+		if prows, err := h.DB.Query(ctx, `
+			SELECT p.id, COALESCE(NULLIF(p.name, ''), u.username), p.is_primary, p.slug, u.username
+			FROM pages p JOIN users u ON u.id = p.user_id WHERE p.id = ANY($1)
+		`, pageIDs); err == nil {
+			defer prows.Close()
+			labels := map[string]reportItem{}
+			for prows.Next() {
+				var id, label, username string
+				var isPrimary bool
+				var slug *string
+				if err := prows.Scan(&id, &label, &isPrimary, &slug, &username); err != nil {
+					continue
+				}
+				url := h.PublicWebURL + "/" + username
+				if !isPrimary && slug != nil {
+					url = h.PublicWebURL + "/" + username + "/" + *slug
+				}
+				labels[id] = reportItem{TargetLabel: label, TargetURL: url, TargetUsername: username}
+			}
+			for i, it := range items {
+				if enriched, ok := labels[it.TargetID]; ok {
+					items[i].TargetLabel = enriched.TargetLabel
+					items[i].TargetURL = enriched.TargetURL
+					items[i].TargetUsername = enriched.TargetUsername
+				}
+			}
+		}
+	}
+	if len(productIDs) > 0 {
+		// Produk tidak py permalink sendiri (dibagi lintas SEMUA halaman
+		// user_id, bukan page_id -- lihat CLAUDE.md) -- LATERAL JOIN ambil
+		// Toko TERTUA milik kreator itu (page_type='produk', dibuat otomatis
+		// oleh ensureProdukPage begitu produk pertama ada, jadi dijamin ada
+		// kalau produk ini ada). Slug Toko TIDAK selalu sama dengan
+		// username (dikonfirmasi live sesi ini) -- diambil apa adanya dari
+		// DB, bukan ditebak.
+		if prows, err := h.DB.Query(ctx, `
+			SELECT pr.id, pr.name, u.username, pg.slug
+			FROM products pr
+			JOIN users u ON u.id = pr.user_id
+			LEFT JOIN LATERAL (
+				SELECT slug FROM pages WHERE user_id = pr.user_id AND page_type = 'produk' ORDER BY created_at ASC LIMIT 1
+			) pg ON true
+			WHERE pr.id = ANY($1)
+		`, productIDs); err == nil {
+			defer prows.Close()
+			labels := map[string]reportItem{}
+			for prows.Next() {
+				var id, name, username string
+				var slug *string
+				if err := prows.Scan(&id, &name, &username, &slug); err != nil {
+					continue
+				}
+				url := h.PublicWebURL + "/" + username
+				if slug != nil {
+					url = h.PublicWebURL + "/" + username + "/" + *slug
+				}
+				labels[id] = reportItem{TargetLabel: name, TargetURL: url, TargetUsername: username}
+			}
+			for i, it := range items {
+				if enriched, ok := labels[it.TargetID]; ok {
+					items[i].TargetLabel = enriched.TargetLabel
+					items[i].TargetURL = enriched.TargetURL
+					items[i].TargetUsername = enriched.TargetUsername
+				}
+			}
 		}
 	}
 

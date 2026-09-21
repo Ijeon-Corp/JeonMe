@@ -96,7 +96,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	analytics := handlers.NewAnalyticsHandler(db, encryptionKey, cfg.PublicWebURL)
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
 	account := handlers.NewAccountHandler(db, rdb, s3)
-	admin := handlers.NewAdminHandler(db, rdb)
+	admin := handlers.NewAdminHandler(db, rdb, cfg.PublicWebURL)
 	admin.Queue = queueClient
 	kyc := handlers.NewKycHandler(db, s3)
 	supportChat := handlers.NewSupportChatHandler(db)

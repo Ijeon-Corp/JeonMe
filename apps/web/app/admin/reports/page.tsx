@@ -138,12 +138,31 @@ export default function AdminReportsPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-app-muted">
                     <IconFlag className="h-3.5 w-3.5 text-red-500" />
-                    {r.target_type} · {r.target_id}
+                    {r.target_type === "page" ? "Halaman" : "Produk"}
                   </div>
                   {r.status !== "pending" && (
                     <span className="rounded-full border-2 border-[#111111] bg-app-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-app-ink">
                       {STATUS_LABELS[r.status] ?? r.status}
                     </span>
+                  )}
+                </div>
+                {/* Konten yang dilaporkan -- bug UI/UX ditemukan 21
+                    September 2026 (audit menyeluruh): sebelumnya cuma UUID
+                    mentah tampil di sini, admin diminta Takedown tanpa cara
+                    melihat konten yang dimaksud dari dalam panel. */}
+                <div className="mt-1.5 flex items-center gap-2 text-sm">
+                  {r.target_label ? (
+                    <>
+                      <span className="font-semibold text-app-ink">{r.target_label}</span>
+                      {r.target_username && <span className="text-app-muted">@{r.target_username}</span>}
+                      {r.target_url && (
+                        <a href={r.target_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-jeon-purple hover:underline">
+                          Lihat konten ↗
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <span className="italic text-app-muted">(konten sudah dihapus)</span>
                   )}
                 </div>
                 <p className="mt-1.5 text-sm text-app-ink">{r.reason}</p>

@@ -4133,6 +4133,15 @@ export interface AdminReport {
   reporter_email: string;
   status: string;
   created_at: string;
+  // target_username/target_label/target_url -- bug UI/UX ditemukan 21
+  // September 2026 (audit menyeluruh): sebelumnya frontend cuma tahu
+  // target_id (UUID) mentah, admin diminta Takedown tanpa cara melihat
+  // konten yang dimaksud. Kosong (bukan hilang, backend selalu kirim field
+  // ini tapi bisa string kosong) berarti konten sudah dihapus sebelum
+  // laporan diproses.
+  target_username?: string;
+  target_label?: string;
+  target_url?: string;
 }
 
 export function listAdminReports(params?: { status?: string; limit?: number; offset?: number }) {
