@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AnalyticsSummary,
@@ -10,9 +10,9 @@ import {
   RecentOrder,
   exportAnalyticsCSV,
   getAnalyticsSummary,
-  getMyPage,
   listRecentOrders,
 } from "@/lib/api-client";
+import { useDashboardMyPage } from "@/lib/dashboard-page-context";
 import { SITE_URL } from "@/lib/site";
 import {
   IconBox,
@@ -119,18 +119,26 @@ export default function DashboardHomePage() {
   const [customTo, setCustomTo] = useState("");
   const [useCustomRange, setUseCustomRange] = useState(false);
 
-  const [creator, setCreator] = useState<{ name: string; username: string; published: boolean; avatarUrl: string } | null>(null);
+  // creator -- perbaikan performa (audit menyeluruh 21 September 2026):
+  // SEBELUMNYA fetch getMyPage() sendiri di sini, padahal dashboard/layout.tsx
+  // (ancestor langsung halaman ini) SUDAH memanggilnya lebih dulu untuk
+  // kebutuhannya sendiri (chip username/avatar top bar) -- diukur langsung,
+  // satu hard-reload /dashboard memanggil endpoint ini 2x lipat dari yang
+  // perlu karena dua sumber independen. Sekarang murni NILAI TURUNAN dari
+  // context yang dibagikan layout (lib/dashboard-page-context.tsx), bukan
+  // state/effect terpisah -- otomatis selalu sinkron begitu layout selesai
+  // memuat, tanpa fetch kedua.
+  const myPage = useDashboardMyPage();
+  const creator = useMemo(
+    () => (myPage ? { name: myPage.display_name || myPage.username, username: myPage.username, published: myPage.is_published, avatarUrl: myPage.avatar_url } : null),
+    [myPage]
+  );
   const [greetingKey, setGreetingKey] = useState("greetingFallback");
   const [shareCopied, setShareCopied] = useState(false);
   const [recoDismissed, setRecoDismissed] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
-    getMyPage()
-      .then((p) =>
-        setCreator({ name: p.display_name || p.username, username: p.username, published: p.is_published, avatarUrl: p.avatar_url })
-      )
-      .catch(() => {});
     // Aktivitas terbaru: soft-fail -- gagal muat = section disembunyikan,
     // bukan merusak seluruh Beranda (§9.4 "panel error lokal").
     listRecentOrders()

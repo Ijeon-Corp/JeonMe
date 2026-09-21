@@ -1,0 +1,11 @@
+-- Perbaikan performa (audit menyeluruh 21 September 2026): migrasi 000029
+-- (multi-halaman) men-drop UNIQUE(user_id) LAMA dan hanya menyisakan index
+-- PARTIAL idx_pages_one_primary_per_user (WHERE is_primary=true). Setiap
+-- query yang butuh baris is_primary=false ATAU page_type='produk' tanpa
+-- filter is_primary (mis. ensureProdukPage di page.go, invalidateUserPageCache
+-- di cache.go -- dipanggil dari 18 titik lintas produk/donasi/kursus/
+-- loyalty/dll) sejak itu tidak lagi punya index sama sekali -- dibuktikan
+-- EXPLAIN ANALYZE: Seq Scan penuh tabel pages untuk pola query ini, biaya
+-- sebanding jumlah TOTAL baris pages di SELURUH platform (bukan cuma milik
+-- user yang sedang request), memburuk seiring pertumbuhan kreator.
+CREATE INDEX idx_pages_user_id ON pages(user_id);

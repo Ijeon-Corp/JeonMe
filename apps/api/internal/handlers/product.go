@@ -931,21 +931,38 @@ func (h *ProductHandler) AddCodes(c *gin.Context) {
 		return
 	}
 
-	added := 0
+	// Batch insert lewat unnest() (perbaikan performa, audit menyeluruh 21
+	// September 2026): SEBELUMNYA satu INSERT terpisah per baris kode --
+	// upload ratusan/ribuan kode lisensi sekaligus jadi ratusan/ribuan
+	// round-trip DB sekuensial. `dive,required,max=200` di atas cuma
+	// membatasi panjang STRING tiap kode, bukan jumlah elemen larik, jadi
+	// batch besar memang mungkin terjadi. unnest() mengekspansi dua larik
+	// sejajar (ids & codes) jadi banyak baris dalam SATU statement --
+	// ON CONFLICT DO NOTHING & RowsAffected() tetap berfungsi sama seperti
+	// sebelumnya.
+	ids := make([]string, 0, len(req.Codes))
+	codes := make([]string, 0, len(req.Codes))
 	for _, code := range req.Codes {
 		code = strings.TrimSpace(code)
 		if code == "" {
 			continue
 		}
+		ids = append(ids, uuid.NewString())
+		codes = append(codes, code)
+	}
+
+	added := 0
+	if len(codes) > 0 {
 		tag, err := h.DB.Exec(ctx, `
-			INSERT INTO product_codes (id, product_id, code) VALUES ($1, $2, $3)
+			INSERT INTO product_codes (id, product_id, code)
+			SELECT unnest($1::uuid[]), $2, unnest($3::text[])
 			ON CONFLICT (product_id, code) DO NOTHING
-		`, uuid.NewString(), productID, code)
+		`, ids, productID, codes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan kode"})
 			return
 		}
-		added += int(tag.RowsAffected())
+		added = int(tag.RowsAffected())
 	}
 
 	c.JSON(http.StatusOK, gin.H{"added": added, "message": fmt.Sprintf("%d kode baru ditambahkan", added)})

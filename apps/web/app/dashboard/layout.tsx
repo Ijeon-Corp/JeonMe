@@ -28,7 +28,9 @@ import {
   listWorkspaces,
   logout as apiLogout,
   setActiveWorkspaceOwnerId,
+  type MyPage,
 } from "@/lib/api-client";
+import { DashboardMyPageContext } from "@/lib/dashboard-page-context";
 import {
   IconBell,
   IconBook,
@@ -269,6 +271,11 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
+  // myPage -- lihat catatan lengkap di lib/dashboard-page-context.tsx
+  // (perbaikan performa 21 September 2026): hasil getMyPage() di bawah ini
+  // dibagikan apa adanya lewat context supaya app/dashboard/page.tsx tidak
+  // perlu fetch ulang endpoint yang sama.
+  const [myPage, setMyPage] = useState<MyPage | null>(null);
   // profileMenuOpen -- permintaan langsung pengguna, 30 Agustus 2026: "saat
   // klik profile di dashboard navbar muncul langsung pilihan profile atau
   // logout". Dropdown ini HANYA relevan di top bar desktop (avatar tidak
@@ -412,6 +419,7 @@ export default function DashboardLayout({
         setAvatarUrl(p.avatar_url);
         setIsPremium(p.is_premium);
         setIsPublished(p.is_published);
+        setMyPage(p);
       })
       .catch(() => {
         // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
@@ -976,7 +984,9 @@ export default function DashboardLayout({
             {/* pb-24 s/d md -- ruang supaya konten tidak tertutup bottom nav
                 mobile (fixed) di bawah; md ke atas bottom nav hilang & padding
                 kembali normal. */}
-            <main id="dashboard-main" tabIndex={-1} className="flex-1 p-4 pb-24 outline-none sm:p-6 sm:pb-24 md:pb-6">{children}</main>
+            <main id="dashboard-main" tabIndex={-1} className="flex-1 p-4 pb-24 outline-none sm:p-6 sm:pb-24 md:pb-6">
+              <DashboardMyPageContext.Provider value={myPage}>{children}</DashboardMyPageContext.Provider>
+            </main>
           </div>
 
           {/* Bottom navigation mobile (§21) -- fixed di bawah, < md saja.
