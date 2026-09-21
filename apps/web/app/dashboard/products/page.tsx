@@ -214,9 +214,18 @@ function DashboardProductsPageInner() {
   // usePathname and useSearchParams") -- searchParams tetap ikut sinkron
   // (urlTab di atas tetap benar), tapi TANPA round-trip navigasi apa pun,
   // jadi address bar berubah SAAT ITU JUGA, bukan menyusul belakangan.
+  // updateUrlParams -- gabung ke query string yang ADA (bukan timpa total)
+  // supaya tab utama & sub-tab Toko (lihat setTokoSectionAndUrl di bawah)
+  // bisa hidup berdampingan di URL yang sama tanpa saling menghapus.
+  function updateUrlParams(patch: Record<string, string>) {
+    const params = new URLSearchParams(window.location.search);
+    for (const [k, v] of Object.entries(patch)) params.set(k, v);
+    window.history.replaceState(null, "", `/dashboard/products?${params.toString()}`);
+  }
+
   function setTabAndUrl(next: ProductsTab) {
     setTab(next);
-    window.history.replaceState(null, "", `/dashboard/products?tab=${TAB_TO_URL[next]}`);
+    updateUrlParams({ tab: TAB_TO_URL[next] });
   }
 
   const [page, setPage] = useState<MyPage | null>(null);
@@ -327,7 +336,25 @@ function DashboardProductsPageInner() {
   // Tombol/Font/Stiker), diangkat ke sini (permintaan langsung pengguna:
   // "langsung edit di bagian pratinjau nya") supaya <LivePreviewPanel> di
   // bawah tahu kapan harus menyalakan editableStickers (tab Stiker aktif).
-  const [tokoSection, setTokoSection] = useState<DesignSection>("blok");
+  //
+  // Sinkron ke URL (?section=...) -- bug UI/UX ditemukan 21 September 2026
+  // (audit menyeluruh): SEBELUMNYA murni state lokal, reload membuang
+  // posisi edit -- tidak konsisten dengan `tab` di atas yang sudah
+  // reload-safe lewat URL. Pola APA ADANYA dari urlTab/setTabAndUrl.
+  const DESIGN_SECTIONS: DesignSection[] = ["blok", "tema", "header", "tombol", "font", "stiker"];
+  const urlSection = (DESIGN_SECTIONS as string[]).includes(searchParams.get("section") ?? "")
+    ? (searchParams.get("section") as DesignSection)
+    : "blok";
+  const [tokoSection, setTokoSection] = useState<DesignSection>(urlSection);
+  const [prevUrlSection, setPrevUrlSection] = useState(urlSection);
+  if (urlSection !== prevUrlSection) {
+    setPrevUrlSection(urlSection);
+    setTokoSection(urlSection);
+  }
+  function setTokoSectionAndUrl(next: DesignSection) {
+    setTokoSection(next);
+    updateUrlParams({ section: next });
+  }
 
   // Modul multi-Toko Fase 2 (permintaan langsung pengguna, 28 Agustus 2026:
   // "Tetap di menu Toko (Produk & Monetisasi)" -- jawaban AskUserQuestion
@@ -1122,7 +1149,7 @@ function DashboardProductsPageInner() {
               onCreateNow={handleCreateTokoNow}
               onStickersChange={handleTokoStickersChange}
               section={tokoSection}
-              setSection={setTokoSection}
+              setSection={setTokoSectionAndUrl}
               products={products}
               onProductCreated={handleProductCreated}
             />
