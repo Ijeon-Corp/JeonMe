@@ -26,13 +26,24 @@ async function resolveInitialToken(): Promise<string> {
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [token, setToken] = useState("");
+  // tokenChecked -- bug UI/UX ditemukan 21 September 2026 (audit menyeluruh):
+  // SEBELUMNYA tanpa ini, halaman tanpa ?token= (atau salah format) tetap
+  // menampilkan form penuh yang terlihat berfungsi normal -- pengunjung baru
+  // tahu tautannya tidak valid SETELAH mengisi password baru & klik submit
+  // (tombol memang sudah disabled tanpa token, tapi tanpa pesan APA PUN
+  // kenapa, terlihat seperti bug bukan tautan salah). false = masih menunggu
+  // resolveInitialToken selesai (jangan tampilkan pesan sebelum pasti).
+  const [tokenChecked, setTokenChecked] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    resolveInitialToken().then(setToken);
+    resolveInitialToken().then((t) => {
+      setToken(t);
+      setTokenChecked(true);
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,6 +86,30 @@ export default function ResetPasswordPage() {
           >
             Ke Halaman Masuk
           </button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (tokenChecked && !token) {
+    return (
+      <AuthShell>
+        <div className="flex flex-col items-center py-6 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-coral text-[#111111]">
+            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
+              <path d="M12 8v5m0 3.5h.01M12 3 2 20h20L12 3Z" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <h1 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-app-ink sm:text-3xl">Tautan Tidak Valid</h1>
+          <p className="mt-2 text-sm text-app-muted">
+            Tautan reset password ini tidak lengkap atau sudah kedaluwarsa. Minta tautan baru lewat halaman lupa password.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="mt-7 block w-full rounded-jmd btn-primary px-5 py-3.5 text-center text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
+          >
+            Minta Tautan Baru
+          </Link>
         </div>
       </AuthShell>
     );
