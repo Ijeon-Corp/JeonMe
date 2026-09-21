@@ -4253,6 +4253,95 @@ func (h *LinksHandler) Duplicate(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": newID, "message": "blok berhasil diduplikasi"})
 }
 
+// collectStorageKeysFromValue -- jalan REKURSIF lewat JSON generik apa pun
+// (map/slice/string/dst) mencari string berupa URL publik storage (diawali
+// `publicURLPrefix`, dari Storage.PublicURL("")) YANG KEY OBJECT-nya cocok
+// salah satu `allowedKeyPrefixes` -- lihat catatan lengkap di
+// linkOwnedStorageKeyPrefixes soal kenapa allowlist ini WAJIB ada (bukan
+// terima sembarang URL yang kebetulan berpola storage kita).
+func collectStorageKeysFromValue(v any, publicURLPrefix string, allowedKeyPrefixes []string, out *[]string) {
+	switch val := v.(type) {
+	case string:
+		if !strings.HasPrefix(val, publicURLPrefix) {
+			return
+		}
+		key := strings.TrimPrefix(val, publicURLPrefix)
+		if idx := strings.IndexByte(key, '?'); idx >= 0 {
+			key = key[:idx]
+		}
+		if key == "" {
+			return
+		}
+		for _, allowed := range allowedKeyPrefixes {
+			if strings.HasPrefix(key, allowed) {
+				*out = append(*out, key)
+				return
+			}
+		}
+	case map[string]any:
+		for _, child := range val {
+			collectStorageKeysFromValue(child, publicURLPrefix, allowedKeyPrefixes, out)
+		}
+	case []any:
+		for _, child := range val {
+			collectStorageKeysFromValue(child, publicURLPrefix, allowedKeyPrefixes, out)
+		}
+	}
+}
+
+// linkOwnedStorageKeyPrefixes -- daftar SATU-SATUNYA bentuk key storage yang
+// sah dimiliki `linkID` ini, dari SEMUA titik `.Upload(...)` di file ini
+// (UploadIcon/UploadThumbnail/UploadShowcaseImage/UploadGalleryImage+nested/
+// UploadMediaImage/UploadAudio/UploadFile/UploadCatalogItemImage -- grep
+// `key := fmt.Sprintf("` di links.go kalau ada upload baru, tambahkan di
+// sini juga). WAJIB dipakai sbg allowlist sebelum collectStorageKeysFromValue
+// menghapus APA PUN -- celah IDOR NYATA yang SAMA PERSIS sudah pernah
+// ditemukan di DeleteGalleryImage/DeleteCatalogItemImage/DeleteMediaImage
+// (audit keamanan 15 September 2026, lihat deleteOwnedStorageObject):
+// block_data JSONB bebas-bentuk BISA diisi klien lewat PATCH biasa, jadi
+// tanpa allowlist ini, pengguna A bisa menaruh URL foto pengguna B (didapat
+// dari melihat halaman publik B, semua URL storage ini memang publik-baca)
+// di block_data blok A sendiri, lalu hapus blok A -- kalau cleanup di Delete
+// (audit UI/UX 21 September 2026, uxd-2 "cleanup file yatim") menghapus
+// SEMBARANG URL storage yang ketemu tanpa verifikasi kepemilikan, foto B
+// ikut terhapus. Audio/file blok BERSARANG (di dalam Section/Column) SENGAJA
+// tidak masuk sini -- key-nya pakai id blok bersarang itu sendiri, BUKAN
+// linkID (lihat UploadAudio/UploadFile), jadi tidak bisa diverifikasi tanpa
+// menelusuri tree block_data lebih dalam -- gap ini AMAN (cuma berarti
+// beberapa objek audio/file bersarang tetap yatim), bukan celah keamanan,
+// karena sifatnya cuma "kurang bersih", bukan "menghapus milik orang lain".
+func linkOwnedStorageKeyPrefixes(linkID string) []string {
+	return []string{
+		fmt.Sprintf("link-icons/%s.webp", linkID),
+		fmt.Sprintf("link-thumbnails/%s.webp", linkID),
+		fmt.Sprintf("link-showcase/%s.webp", linkID),
+		fmt.Sprintf("gallery-images/%s/", linkID),
+		fmt.Sprintf("link-media/%s/", linkID),
+		fmt.Sprintf("catalog-images/%s/", linkID),
+		fmt.Sprintf("audio-blocks/%s.", linkID),
+		fmt.Sprintf("file-blocks/%s.", linkID),
+	}
+}
+
+// collectStorageKeysFromBlockData -- lihat catatan lengkap di
+// collectStorageKeysFromValue/linkOwnedStorageKeyPrefixes. `extra` menampung
+// kolom di LUAR block_data yang juga bisa berisi URL storage
+// (custom_icon_url/thumbnail_url -- keduanya kolom links.* tersendiri,
+// bukan bagian JSONB, lihat query Duplicate di atas).
+func collectStorageKeysFromBlockData(blockDataRaw []byte, publicURLPrefix string, allowedKeyPrefixes []string, extra ...string) []string {
+	var keys []string
+	if len(blockDataRaw) > 0 {
+		var parsed any
+		if err := json.Unmarshal(blockDataRaw, &parsed); err == nil {
+			collectStorageKeysFromValue(parsed, publicURLPrefix, allowedKeyPrefixes, &keys)
+		}
+	}
+	for _, s := range extra {
+		collectStorageKeysFromValue(s, publicURLPrefix, allowedKeyPrefixes, &keys)
+	}
+	return keys
+}
+
 // Delete — REQ-F-202 (hapus permanen; untuk sementara pakai Update is_active=false).
 func (h *LinksHandler) Delete(c *gin.Context) {
 	linkID := c.Param("id")
@@ -4266,11 +4355,15 @@ func (h *LinksHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Ambil page_id SEBELUM menghapus -- setelah DELETE baris ini sudah
-	// tidak ada lagi, jadi invalidateLinkCache (yang query lewat linkID)
-	// tidak akan menemukan apa-apa kalau dipanggil sesudahnya.
+	// Ambil page_id + block_data/custom_icon_url/thumbnail_url SEBELUM
+	// menghapus -- dipakai jamak: page_id utk invalidateLinkCache
+	// (baris sudah tidak ada lagi setelah DELETE), sisanya utk cleanup
+	// storage soft-fail (lihat collectStorageKeysFromBlockData di atas).
 	var pageID string
-	_ = h.DB.QueryRow(ctx, `SELECT page_id FROM links WHERE id = $1`, linkID).Scan(&pageID)
+	var blockDataRaw []byte
+	var customIconURL, thumbnailURL *string
+	_ = h.DB.QueryRow(ctx, `SELECT page_id, block_data, custom_icon_url, thumbnail_url FROM links WHERE id = $1`, linkID).
+		Scan(&pageID, &blockDataRaw, &customIconURL, &thumbnailURL)
 
 	if _, err := h.DB.Exec(ctx, `DELETE FROM links WHERE id = $1`, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus tautan"})
@@ -4279,6 +4372,22 @@ func (h *LinksHandler) Delete(c *gin.Context) {
 
 	if pageID != "" {
 		h.invalidatePageCacheByID(ctx, pageID)
+	}
+	// Cleanup storage SOFT-FAIL, SETELAH baris berhasil dihapus -- pola
+	// sama "operasi sampingan" lain di repo ini (SMTP/S3/WhatsApp/
+	// ensureProdukPage, lihat CLAUDE.md): gagal diam-diam tidak boleh
+	// menggagalkan penghapusan blok yang sudah pengguna minta.
+	if h.Storage != nil {
+		extra := make([]string, 0, 2)
+		if customIconURL != nil {
+			extra = append(extra, *customIconURL)
+		}
+		if thumbnailURL != nil {
+			extra = append(extra, *thumbnailURL)
+		}
+		for _, key := range collectStorageKeysFromBlockData(blockDataRaw, h.Storage.PublicURL(""), linkOwnedStorageKeyPrefixes(linkID), extra...) {
+			_ = h.Storage.Delete(ctx, key)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "tautan dihapus"})
 }
