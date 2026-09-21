@@ -15,9 +15,10 @@ import {
   listDomainVerdicts,
   upsertDomainVerdict,
 } from "@/lib/api-client";
-import { IconInbox } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { confirmDelete } from "@/lib/confirm";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const CATEGORY_LABELS: Record<ModerationCategory, string> = {
   judi_online: "Judi online",
@@ -56,6 +57,7 @@ export default function AdminModerationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  const { showToast } = useToast();
 
   const [newKeyword, setNewKeyword] = useState("");
   const [newKeywordCategory, setNewKeywordCategory] = useState<ModerationCategory>("judi_online");
@@ -97,6 +99,7 @@ export default function AdminModerationPage() {
       await createBlockedKeyword(keyword, newKeywordCategory, newKeywordMatchType);
       setNewKeyword("");
       await reloadKeywords();
+      showToast(`Kata kunci "${keyword}" ditambahkan.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menambah kata kunci.");
     } finally {
@@ -115,6 +118,7 @@ export default function AdminModerationPage() {
     try {
       await deleteBlockedKeyword(id);
       await reloadKeywords();
+      showToast(`Kata kunci "${keyword}" dihapus.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menghapus kata kunci.");
     }
@@ -129,6 +133,7 @@ export default function AdminModerationPage() {
       await upsertDomainVerdict(domain, "blocked", newDomainCategory);
       setNewDomain("");
       await reloadDomains(domainFilter);
+      showToast(`Domain "${domain}" diblokir.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memblokir domain.");
     } finally {
@@ -145,6 +150,7 @@ export default function AdminModerationPage() {
     try {
       await deleteDomainVerdict(id);
       await reloadDomains(domainFilter);
+      showToast(`Entri domain "${domain}" dihapus.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menghapus entri domain.");
     }
@@ -253,12 +259,7 @@ export default function AdminModerationPage() {
               ))}
             </tbody>
           </table>
-          {keywords.length === 0 && (
-            <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada kata kunci.
-            </div>
-          )}
+          {keywords.length === 0 && <AdminEmptyState text="Belum ada kata kunci." />}
         </div>
       </section>
 
@@ -354,12 +355,7 @@ export default function AdminModerationPage() {
               ))}
             </tbody>
           </table>
-          {domains.length === 0 && (
-            <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada entri.
-            </div>
-          )}
+          {domains.length === 0 && <AdminEmptyState text="Belum ada entri." />}
         </div>
       </section>
     </div>

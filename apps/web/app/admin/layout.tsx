@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
+import { ToastProvider } from "@/components/Toast";
 import { Me, clearToken, getMe, logout as apiLogout } from "@/lib/api-client";
 import { MessageCircle, ShieldAlert } from "lucide-react";
 import {
@@ -165,6 +166,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
+      {/* ToastProvider -- bug UI/UX ditemukan 21 September 2026 (audit
+          menyeluruh): nol toast sukses di seluruh panel admin sebelumnya --
+          untuk Laporan khususnya, baris yang ditindak langsung lenyap dari
+          list tanpa penanda sukses, staf baru bisa mengira aksinya gagal.
+          Pola sama persis dashboard/layout.tsx. */}
+      <ToastProvider>
       {/* bg-mesh + sidebar "glass" -- sama seperti dashboard/layout.tsx,
           lihat catatan panjang di sana soal overflow-hidden terpisah
           supaya tidak mematikan sticky. */}
@@ -274,6 +281,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>
       </div>
+      </ToastProvider>
     </AdminGuard>
   );
 }

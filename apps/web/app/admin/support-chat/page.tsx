@@ -9,9 +9,10 @@ import {
   listAdminSupportChats,
   replyAdminSupportChat,
 } from "@/lib/api-client";
-import { IconInbox } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { MessageCircle, Send } from "lucide-react";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const PAGE_SIZE = 50;
 
@@ -30,6 +31,7 @@ export default function AdminSupportChatPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  const { showToast } = useToast();
 
   const [detail, setDetail] = useState<AdminSupportThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -105,6 +107,7 @@ export default function AdminSupportChatPage() {
       setDetail((prev) => (prev ? { ...prev, messages: [...prev.messages, msg] } : prev));
       setReply("");
       await reload(filter, 0);
+      showToast("Balasan terkirim.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengirim balasan.");
     } finally {
@@ -198,10 +201,7 @@ export default function AdminSupportChatPage() {
             ))}
 
             {items.length === 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
-                <IconInbox className="h-4 w-4 flex-shrink-0" />
-                {filter === "needs_reply" ? "Tidak ada thread yang perlu dibalas." : "Belum ada percakapan sama sekali."}
-              </div>
+              <AdminEmptyState text={filter === "needs_reply" ? "Tidak ada thread yang perlu dibalas." : "Belum ada percakapan sama sekali."} />
             )}
           </div>
 

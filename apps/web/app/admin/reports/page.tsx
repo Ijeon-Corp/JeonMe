@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { AdminReport, ApiError, listAdminReports, resolveReport, restoreReport } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
-import { IconFlag, IconInbox } from "@/components/icons";
+import { IconFlag } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const PAGE_SIZE = 50;
 
@@ -26,6 +28,10 @@ export default function AdminReportsPage() {
   const [status, setStatus] = useState("pending");
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): nol toast
+  // sukses di seluruh panel admin -- baris yang ditindak langsung lenyap
+  // dari list tanpa penanda sukses, staf baru bisa mengira aksinya gagal.
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -83,6 +89,7 @@ export default function AdminReportsPage() {
     try {
       await resolveReport(r.id, action);
       await reload(0);
+      showToast(action === "takedown" ? "Konten berhasil di-takedown." : "Laporan diabaikan.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memproses laporan.");
     }
@@ -99,6 +106,7 @@ export default function AdminReportsPage() {
     try {
       await restoreReport(r.id);
       await reload(0);
+      showToast("Konten berhasil dipulihkan.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memulihkan konten.");
     }
@@ -198,12 +206,7 @@ export default function AdminReportsPage() {
                 )}
               </div>
             ))}
-            {reports.length === 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
-                <IconInbox className="h-4 w-4 flex-shrink-0" />
-                Tidak ada laporan.
-              </div>
-            )}
+            {reports.length === 0 && <AdminEmptyState text="Tidak ada laporan." />}
           </div>
 
           {reports.length < total && (

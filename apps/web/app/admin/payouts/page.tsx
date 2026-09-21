@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { AdminPayout, ApiError, listAdminPayouts, updatePayoutStatus } from "@/lib/api-client";
-import { IconInbox, IconWallet } from "@/components/icons";
+import { IconWallet } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { confirmAction } from "@/lib/confirm";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const STATUS_LABEL: Record<AdminPayout["status"], string> = {
   requested: "Diajukan",
@@ -30,6 +32,7 @@ export default function AdminPayoutsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  const { showToast } = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   function reload(f: "needs_action" | "all", offset = 0) {
@@ -94,6 +97,9 @@ export default function AdminPayoutsPage() {
     try {
       await updatePayoutStatus(payout.id, status);
       await reload(filter, 0);
+      showToast(
+        status === "completed" ? "Penarikan ditandai selesai." : status === "processing" ? "Penarikan mulai diproses." : "Penarikan ditandai gagal, saldo dikembalikan."
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status penarikan.");
     } finally {
@@ -219,10 +225,7 @@ export default function AdminPayoutsPage() {
         ))}
 
         {payouts.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            {filter === "needs_action" ? "Tidak ada penarikan yang perlu diproses." : "Belum ada riwayat penarikan."}
-          </div>
+          <AdminEmptyState text={filter === "needs_action" ? "Tidak ada penarikan yang perlu diproses." : "Belum ada riwayat penarikan."} />
         )}
       </div>
 

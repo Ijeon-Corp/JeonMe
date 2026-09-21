@@ -11,8 +11,10 @@ import {
   reviewKyc,
 } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
-import { IconInbox, IconShield } from "@/components/icons";
+import { IconShield } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
   unverified: "Belum diajukan",
@@ -39,6 +41,7 @@ export default function AdminKycPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  const { showToast } = useToast();
 
   const [detail, setDetail] = useState<AdminKycDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -133,6 +136,7 @@ export default function AdminKycPage() {
       await reviewKyc(detail.user_id, { status, rejection_reason: rejectReason.trim() || undefined });
       setDetail(null);
       await reload(filter, 0);
+      showToast(status === "verified" ? "KYC disetujui." : "KYC ditolak.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status KYC.");
     } finally {
@@ -160,6 +164,7 @@ export default function AdminKycPage() {
       await revokeKyc(detail.user_id, revokeReason.trim());
       setDetail(null);
       await reload(filter, 0);
+      showToast("Verifikasi KYC dicabut.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mencabut verifikasi KYC.");
     } finally {
@@ -248,10 +253,7 @@ export default function AdminKycPage() {
             ))}
 
             {items.length === 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
-                <IconInbox className="h-4 w-4 flex-shrink-0" />
-                {filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."}
-              </div>
+              <AdminEmptyState text={filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."} />
             )}
           </div>
 

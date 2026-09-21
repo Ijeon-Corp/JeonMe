@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { AdminUser, ApiError, activateUser, listAdminUsers, suspendUser } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
-import { IconInbox, IconUsers } from "@/components/icons";
+import { IconUsers } from "@/components/icons";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useToast } from "@/components/Toast";
 
 const PAGE_SIZE = 50;
 
@@ -38,6 +40,7 @@ export default function AdminUsersPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -106,6 +109,7 @@ export default function AdminUsersPage() {
         await activateUser(u.id);
       }
       await reload(0);
+      showToast(isSuspending ? `@${u.username} ditangguhkan.` : `@${u.username} diaktifkan kembali.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status pengguna.");
     }
@@ -206,12 +210,7 @@ export default function AdminUsersPage() {
             ))}
           </tbody>
         </table>
-        {users.length === 0 && (
-          <div className="flex items-center gap-2 px-4 py-6 text-sm text-app-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Tidak ada pengguna ditemukan.
-          </div>
-        )}
+        {users.length === 0 && <AdminEmptyState text="Tidak ada pengguna ditemukan." />}
       </div>
 
       {users.length < total && (

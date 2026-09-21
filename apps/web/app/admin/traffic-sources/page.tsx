@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, TrafficSourcesResponse, getAdminTrafficSources } from "@/lib/api-client";
 import { useErrorToast } from "@/lib/use-error-toast";
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
 
 // buildAreaPath -- salinan dari dashboard/page.tsx (kanonis) &
 // dashboard/statistik/page.tsx: grafik di repo ini SVG hand-drawn tanpa
@@ -213,13 +214,7 @@ export default function AdminTrafficSourcesPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.sources.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-sm text-app-muted">
-                      Belum ada trafik bertag UTM di rentang ini.
-                    </td>
-                  </tr>
-                )}
+                {data.sources.length === 0 && <AdminEmptyState text="Belum ada trafik bertag UTM di rentang ini." colSpan={5} />}
                 {data.sources.map((row, i) => (
                   <tr key={`${row.utm_source}-${row.utm_medium}-${row.utm_campaign}-${i}`} className="border-b border-app-border last:border-0">
                     <td className="px-4 py-3 font-semibold text-app-ink">{row.utm_source}</td>
