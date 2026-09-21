@@ -351,10 +351,18 @@ export default function GalleryBlock({
         // right-1, sisi terbuka 14 poin persen) supaya sisi yang terbuka
         // jadi potongan tipis yang jelas "mengintip", bukan potongan besar
         // yang terasa seperti 3 kartu terpisah cuma bersinggungan dikit.
+        // Inset atas foto belakang disamakan dgn bawah (dulu top-3%/
+        // bottom-7% -- audit UI/UX 21 September 2026: intipan di ATAS jadi
+        // lebih menonjol drpd di kanan-kiri, berlawanan dgn intent aslinya
+        // "biarkan sisa foto kanan-kiri...yg tidak tertutup terlihat").
+        // top-7%/bottom-7% simetris & sama2 LEBIH KECIL drpd intip
+        // kanan-kiri (7% dari lebar wadah kipas yg landscape, jadi secara
+        // piksel absolut tetap lebih lebar drpd 7% tinggi) -- kanan-kiri
+        // kembali jadi sisi yg paling terlihat mengintip.
         [
           "left-[10%] right-[10%] top-[10%] bottom-[10%] rotate-0 z-30",
-          "left-[3%] right-[26%] top-[3%] bottom-[7%] -rotate-6 z-20",
-          "left-[26%] right-[3%] top-[3%] bottom-[7%] rotate-6 z-10",
+          "left-[3%] right-[26%] top-[7%] bottom-[7%] -rotate-6 z-20",
+          "left-[26%] right-[3%] top-[7%] bottom-[7%] rotate-6 z-10",
         ]
       : ["inset-x-[6%] inset-y-[8%] rotate-0 z-30", "inset-x-[6%] inset-y-[8%] -rotate-6 z-20 scale-95", "inset-x-[6%] inset-y-[8%] rotate-6 z-10 scale-95"];
     return (
