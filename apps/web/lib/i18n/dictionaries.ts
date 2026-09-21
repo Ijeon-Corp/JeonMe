@@ -1062,6 +1062,17 @@ export const dictionaries = {
             blockNoun: "blok",
             title: "Hapus {noun} ini?",
             body: "\u201c{title}\u201d akan hilang dari halaman publikmu. Tindakan ini tidak bisa dibatalkan.",
+            // bodyContainer -- bug UI/UX ditemukan 21 September 2026 (audit
+            // menyeluruh): blok "section"/"column" dibuat lewat Canvas
+            // Builder tampil di Simple Mode sebagai baris kosong/generik
+            // tanpa isi yang bisa dilihat dari panelnya -- teks konfirmasi
+            // hapus GENERIK sebelumnya tidak menyebut "beserta isinya" sama
+            // sekali (beda dari dialog Builder sendiri yang sudah benar),
+            // kreator bisa "membersihkan" blok yang terlihat kosong padahal
+            // menghapus seluruh sub-struktur (Kolom+blok di dalamnya) tanpa
+            // sadar.
+            bodyContainer:
+              "\u201c{title}\u201d BESERTA SEMUA ISI DI DALAMNYA (kolom, blok, dst.) akan hilang dari halaman publikmu. Tindakan ini tidak bisa dibatalkan.",
             untitled: "(tanpa judul)",
             confirmButton: "Ya, Hapus",
           },
@@ -4379,6 +4390,8 @@ export const dictionaries = {
             blockNoun: "block",
             title: "Delete this {noun}?",
             body: "\u201c{title}\u201d will disappear from your public page. This action cannot be undone.",
+            bodyContainer:
+              "\u201c{title}\u201d AND EVERYTHING INSIDE IT (columns, blocks, etc.) will disappear from your public page. This action cannot be undone.",
             untitled: "(untitled)",
             confirmButton: "Yes, Delete",
           },

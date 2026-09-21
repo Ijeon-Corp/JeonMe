@@ -4353,6 +4353,12 @@ export default function DashboardLinksPage() {
           const target = links.find((l) => l.id === confirmDeleteId);
           if (!target) return null;
           const noun = target.block_type === "link" ? t("dashboard.pages.links.deleteConfirm.linkNoun") : blockTypeLabel[target.block_type]?.toLowerCase() ?? t("dashboard.pages.links.deleteConfirm.blockNoun");
+          // isContainer -- lihat catatan panjang di i18n key bodyContainer:
+          // "section"/"column" (dibuat lewat Canvas Builder) punya blok
+          // ANAK di dalamnya yang tidak terlihat sama sekali dari panel
+          // Simple Mode -- teks konfirmasi hapus WAJIB menyebutnya eksplisit.
+          const isContainer = target.block_type === "section" || target.block_type === "column";
+          const bodyKey = isContainer ? "dashboard.pages.links.deleteConfirm.bodyContainer" : "dashboard.pages.links.deleteConfirm.body";
           return (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -4369,8 +4375,7 @@ export default function DashboardLinksPage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.deleteConfirm.title").replace("{noun}", noun)}</h2>
                     <p className="mt-1 text-xs text-app-muted">
-                      {t("dashboard.pages.links.deleteConfirm.body")
-                        .replace("{title}", target.title || t("dashboard.pages.links.deleteConfirm.untitled"))}
+                      {t(bodyKey).replace("{title}", target.title || t("dashboard.pages.links.deleteConfirm.untitled"))}
                     </p>
                   </div>
                 </div>
