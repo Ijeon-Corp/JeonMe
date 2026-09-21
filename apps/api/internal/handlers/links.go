@@ -1716,8 +1716,18 @@ func resolveNestedMapsEmbedCoords(ctx context.Context, data, prev map[string]any
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed produk"`
-	Title     string         `json:"title" binding:"required,max=100"`
+	BlockType string `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed produk"`
+	// Title -- bug fungsional ditemukan 21 September 2026 (audit menyeluruh):
+	// binding SEBELUMNYA "required" untuk SEMUA tipe, bertentangan dengan
+	// commit e0009c5 ("judul blok jadi opsional untuk semua tipe") yang
+	// SUDAH membuat form frontend mulai kosong untuk 17+ tipe blok -- cuma
+	// lupa melonggarkan validasi ini (DAN pengecekan JS-nya sendiri, lihat
+	// handleCreateBlock di links/page.tsx) sehingga submit tanpa judul
+	// selalu ditolak diam-diam. "catalog" TETAP wajib (dicek manual di
+	// bawah, bukan lewat binding) -- baris blok katalog baru butuh
+	// identitas awal yang jelas di daftar, beda dari tipe lain yang boleh
+	// mulai tanpa judul.
+	Title     string         `json:"title" binding:"omitempty,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
 	// Description -- lihat catatan lengkap di linkItem.Description. Dipakai
@@ -1750,6 +1760,13 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	}
 	if req.BlockType == "project_showcase" && req.URL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url tujuan (CTA) wajib diisi untuk kartu project unggulan"})
+		return
+	}
+	// Bug fungsional ditemukan 21 September 2026 -- lihat catatan panjang di
+	// field Title createBlockRequest: "catalog" TETAP wajib judul, tipe lain
+	// SEMUA boleh kosong (commit e0009c5).
+	if req.BlockType == "catalog" && strings.TrimSpace(req.Title) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "judul blok wajib diisi untuk katalog"})
 		return
 	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
@@ -4496,6 +4513,13 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 	}
 	if req.BlockType == "project_showcase" && req.URL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url tujuan (CTA) wajib diisi untuk kartu project unggulan"})
+		return
+	}
+	// Bug fungsional ditemukan 21 September 2026 -- lihat catatan panjang di
+	// field Title createBlockRequest: "catalog" TETAP wajib judul, tipe lain
+	// SEMUA boleh kosong (commit e0009c5).
+	if req.BlockType == "catalog" && strings.TrimSpace(req.Title) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "judul blok wajib diisi untuk katalog"})
 		return
 	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {

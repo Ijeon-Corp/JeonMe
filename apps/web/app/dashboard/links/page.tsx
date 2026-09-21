@@ -1710,7 +1710,14 @@ export default function DashboardLinksPage() {
 
   async function handleCreateBlock(e: React.FormEvent) {
     e.preventDefault();
-    if (!blockTitle.trim()) {
+    // Bug fungsional ditemukan 21 September 2026 (audit menyeluruh):
+    // pengecekan ini SEBELUMNYA tanpa syarat untuk SEMUA tipe blok,
+    // bertentangan dengan commit e0009c5 ("judul blok jadi opsional untuk
+    // semua tipe") yang sudah membuat form mulai kosong utk 17+ tipe --
+    // cuma lupa melonggarkan gerbang submit ini juga. "catalog" TETAP wajib
+    // (baris blok katalog baru butuh identitas awal yang jelas di daftar),
+    // tipe lain semuanya boleh disimpan tanpa judul.
+    if (blockType === "catalog" && !blockTitle.trim()) {
       setError(t("dashboard.pages.links.errors.blockTitleRequired"));
       return;
     }
@@ -2534,7 +2541,10 @@ export default function DashboardLinksPage() {
             >
               <input
                 type="text"
-                required
+                // required -- HANYA "catalog" (lihat catatan panjang di
+                // handleCreateBlock, bug fungsional 21 September 2026),
+                // bukan lagi tanpa syarat utk semua tipe.
+                required={blockType === "catalog"}
                 placeholder={
                   blockType === "text"
                     ? t("dashboard.pages.links.blockForm.titlePlaceholder.text")
