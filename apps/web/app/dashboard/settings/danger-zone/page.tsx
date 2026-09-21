@@ -14,6 +14,7 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight } from "@/components/icons";
+import { confirmAction } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 
 // Modul Settings §6. Perbaikan kunci dari kelemahan Lynk.id (dilaporkan
@@ -49,6 +50,15 @@ export default function DangerZonePage() {
 
   async function handleDeactivate(e: React.FormEvent) {
     e.preventDefault();
+    // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): aksi ini
+    // SEBELUMNYA langsung eksekusi dari form (password+klik) tanpa
+    // confirmAction, tidak konsisten dengan pola konfirmasi app-wide --
+    // meski reversibel & sudah ada teks peringatan inline di halaman.
+    const ok = await confirmAction(t("dashboard.pages.settingsDangerZone.deactivateDescription"), {
+      title: t("dashboard.pages.settingsDangerZone.deactivateTitle"),
+      confirmButtonText: t("dashboard.pages.settingsDangerZone.deactivateButton"),
+    });
+    if (!ok) return;
     setDeactivating(true);
     try {
       await deactivateAccount(deactivatePassword);

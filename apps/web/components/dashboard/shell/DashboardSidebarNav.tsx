@@ -134,7 +134,7 @@ export function buildNavItemsV2(t: (key: string) => string): NavEntryV2[] {
       icon: IconGlobe,
       landing: "/dashboard/analytics",
       items: [
-        { href: "/dashboard/analytics", label: t("dashboard.nav.analyticsPixels"), icon: IconChart },
+        { href: "/dashboard/analytics", label: t("dashboard.nav.analyticsPixels"), icon: IconTag },
         { href: "/dashboard/social-connect", label: t("dashboard.nav.socialConnect"), icon: IconExternal },
       ],
     },

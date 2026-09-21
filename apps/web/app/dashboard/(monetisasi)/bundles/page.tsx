@@ -230,7 +230,9 @@ export default function DashboardBundlesPage() {
           </div>
         ))}
 
-        {bundles.length === 0 && (
+        {/* !adding -- lihat catatan lengkap di courses/page.tsx (bug UI/UX
+            ditemukan 21 September 2026, audit menyeluruh). */}
+        {bundles.length === 0 && !adding && (
           <EmptyState
             icon={IconGift}
             accent="lavender"

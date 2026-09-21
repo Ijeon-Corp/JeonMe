@@ -443,7 +443,12 @@
   :root:not([data-theme="light"]) .app-shell .text-amber-600 { color: #fbbf24; }
 
   :root:not([data-theme="light"]) .app-shell .bg-blue-50 { background-color: rgba(30, 58, 138, 0.22); }
-  :root:not([data-theme="light"]) .app-shell .text-blue-600 { color: #60a5fa; }
+  /* text-blue-700 -- bug UI/UX ditemukan 21 September 2026 (audit
+     menyeluruh): sapuan dark-mode ini sebelumnya cuma meng-override
+     text-blue-600, badge role "support" (admin/users/page.tsx) pakai
+     text-blue-700 -- kontras berkurang di dark mode. */
+  :root:not([data-theme="light"]) .app-shell .text-blue-600,
+  :root:not([data-theme="light"]) .app-shell .text-blue-700 { color: #60a5fa; }
 }
 [data-theme="dark"] .app-shell .bg-red-50,
 [data-theme="dark"] .app-shell .bg-red-100 { background-color: rgba(153, 27, 27, 0.22); }
@@ -470,7 +475,8 @@
 [data-theme="dark"] .app-shell .text-amber-600 { color: #fbbf24; }
 
 [data-theme="dark"] .app-shell .bg-blue-50 { background-color: rgba(30, 58, 138, 0.22); }
-[data-theme="dark"] .app-shell .text-blue-600 { color: #60a5fa; }
+[data-theme="dark"] .app-shell .text-blue-600,
+[data-theme="dark"] .app-shell .text-blue-700 { color: #60a5fa; }
 
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;

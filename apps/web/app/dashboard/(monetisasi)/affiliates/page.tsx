@@ -240,6 +240,11 @@ export default function DashboardAffiliatesPage() {
                   </option>
                 ))}
               </select>
+              {/* Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh):
+                  dropdown kosong SEBELUMNYA tanpa keterangan sama sekali --
+                  halaman Bundel dengan constraint sama sudah punya teks
+                  bantu eksplisit, disamakan di sini. */}
+              {products.length === 0 && <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.affiliates.noProductsHint")}</p>}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.affiliates.commissionLabel")}</label>

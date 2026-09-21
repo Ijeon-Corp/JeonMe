@@ -446,7 +446,11 @@ export default function DashboardCoursesPage() {
           </div>
         ))}
 
-        {courses.length === 0 && (
+        {/* !adding -- bug UI/UX ditemukan 21 September 2026 (audit
+            menyeluruh): CTA EmptyState sebelumnya tetap tampil bersamaan
+            form create yang sudah terbuka, dua tombol nama sama sekaligus
+            di layar. */}
+        {courses.length === 0 && !adding && (
           <EmptyState
             icon={IconBook}
             accent="lavender"

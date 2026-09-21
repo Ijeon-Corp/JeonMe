@@ -2,10 +2,12 @@ import {
   IconBell,
   IconBook,
   IconBox,
+  IconBriefcase,
   IconCalendar,
   IconCamera,
   IconChart,
   IconGift,
+  IconGlobe,
   IconHeart,
   IconInbox,
   IconLink,
@@ -48,6 +50,30 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { label: "Ringkasan", href: "/dashboard", description: "Statistik kunjungan, klik, pesanan, dan penjualan.", icon: IconChart, keywords: ["dashboard", "statistik", "analitik"] },
   { label: "Tutorial", href: "/dashboard/tutorial", description: "Panduan membuat link bio dan produk pertamamu.", icon: IconPlayCircle, keywords: ["tutorial", "panduan", "bantuan", "onboarding", "cara"] },
   { label: "Statistik", href: "/dashboard/statistik", description: "Jumlah klik tautan dan performa penjualan produk.", icon: IconChart, keywords: ["statistik", "klik", "analitik", "penjualan", "transaksi"] },
+  {
+    // 3 entri di bawah ini -- bug UI/UX ditemukan 21 September 2026 (audit
+    // menyeluruh): tidak ter-index sama sekali sebelumnya, tidak bisa
+    // ditemukan lewat Ctrl+K.
+    label: "Analitik & Pixel",
+    href: "/dashboard/analytics",
+    description: "Pasang Facebook Pixel, Google Analytics, dan lacak UTM campaign.",
+    icon: IconTag,
+    keywords: ["analytics", "pixel", "utm", "ga4", "facebook", "conversions api", "tracking"],
+  },
+  {
+    label: "Koneksi Sosial",
+    href: "/dashboard/social-connect",
+    description: "Hubungkan akun Instagram/TikTok untuk ditampilkan di halaman publik.",
+    icon: IconGlobe,
+    keywords: ["sosial", "instagram", "tiktok", "koneksi", "connect", "sinkronisasi"],
+  },
+  {
+    label: "Brand & Sponsor",
+    href: "/dashboard/brand",
+    description: "Terima campaign berbayar dari brand, kelola lamaran kolaborasi.",
+    icon: IconBriefcase,
+    keywords: ["brand", "sponsor", "campaign", "kolaborasi", "endorsement"],
+  },
   { label: "Link Bio", href: "/dashboard/links", description: "Kelola tautan & blok konten halaman utamamu.", icon: IconLink, keywords: ["tautan", "link", "bio", "halaman tambahan", "landing", "page"] },
   { label: "Toko", href: "/dashboard/products", description: "Kelola produk digital yang kamu jual.", icon: IconBox, keywords: ["produk", "toko", "jual"] },
   { label: "Desain", href: "/dashboard/design", description: "Foto profil, bio, tema, dan status terbit halaman publikmu.", icon: IconSparkle, keywords: ["desain", "tampilan"] },

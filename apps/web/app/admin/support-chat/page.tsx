@@ -174,7 +174,13 @@ export default function AdminSupportChatPage() {
                     <MessageCircle className="h-[18px] w-[18px]" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-app-ink">@{it.username} <span className="font-normal text-app-muted">({it.email})</span></p>
+                    {/* truncate -- bug UI/UX ditemukan 21 September 2026
+                        (audit menyeluruh): overflow horizontal terkonfirmasi
+                        di mobile 390px untuk email panjang, baris ini
+                        sebelumnya tanpa truncate sama sekali. */}
+                    <p className="truncate text-sm font-semibold text-app-ink">
+                      @{it.username} <span className="font-normal text-app-muted">({it.email})</span>
+                    </p>
                     <p className="truncate text-xs text-app-muted">{it.last_message}</p>
                   </div>
                 </div>

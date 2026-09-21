@@ -669,7 +669,16 @@ function DashboardAudiencePageInner() {
           </tbody>
         </table>
         {contacts.length === 0 && (
-          <EmptyState bordered={false} text={t("dashboard.pages.audience.emptyContacts")} />
+          // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): empty
+          // state ini SEBELUMNYA tanpa CTA, beda dari pola EmptyState di 6
+          // halaman monetisasi lain -- kontak baru terisi lewat blok
+          // Formulir Kontak di bio, jadi CTA-nya mengarahkan ke situ.
+          <EmptyState
+            bordered={false}
+            text={t("dashboard.pages.audience.emptyContacts")}
+            ctaLabel={t("dashboard.pages.audience.emptyContactsCta")}
+            onCtaClick={() => router.push("/dashboard/links")}
+          />
         )}
         {contacts.length > 0 && visibleContacts.length === 0 && (
           <p className="px-4 py-6 text-center text-xs text-app-muted">{t("dashboard.pages.audience.filterEmpty")}</p>

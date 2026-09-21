@@ -94,9 +94,13 @@ export default function AdminTrafficSourcesPage() {
           <option value={90}>90 hari terakhir</option>
         </select>
       </div>
-      <p className="mt-1 text-xs text-app-muted">
+      {/* break-words -- bug UI/UX ditemukan 21 September 2026 (audit
+          menyeluruh): overflow horizontal terkonfirmasi di mobile 390px,
+          contoh query string di <code> kedua tidak punya titik potong
+          alami & sebelumnya tanpa wrapping sama sekali. */}
+      <p className="mt-1 break-words text-xs text-app-muted">
         Breakdown platform-wide dari parameter <code>utm_source</code>/<code>utm_medium</code>/<code>utm_campaign</code> di URL
-        pengunjung (mis. <code>?utm_source=facebook&amp;utm_medium=social&amp;utm_campaign=promo_course</code>) -- lintas semua
+        pengunjung (mis. <code className="break-all">?utm_source=facebook&amp;utm_medium=social&amp;utm_campaign=promo_course</code>) -- lintas semua
         halaman kreator, bukan cuma satu akun.
       </p>
 

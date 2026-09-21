@@ -429,7 +429,9 @@ export default function DashboardVouchersPage() {
           );
         })}
 
-        {vouchers.length === 0 && (
+        {/* !adding -- lihat catatan lengkap di courses/page.tsx (bug UI/UX
+            ditemukan 21 September 2026, audit menyeluruh). */}
+        {vouchers.length === 0 && !adding && (
           <EmptyState
             icon={IconTag}
             accent="lime"

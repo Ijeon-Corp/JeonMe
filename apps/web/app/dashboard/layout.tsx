@@ -191,7 +191,6 @@ function buildNavItems(t: (key: string) => string): NavEntry[] {
 function buildExtraPageLabels(t: (key: string) => string): Record<string, string> {
   return {
     "/dashboard/tutorial": t("dashboard.extraPages.tutorial"),
-    "/dashboard/monetisasi": t("dashboard.nav.productsMonetization"),
     "/dashboard/design/theme": t("dashboard.nav.design"),
     "/dashboard/design/header": t("dashboard.nav.design"),
     "/dashboard/design/tombol": t("dashboard.nav.design"),
