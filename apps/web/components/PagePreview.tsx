@@ -2027,6 +2027,7 @@ export function renderLinkOrBlock(
         images={(link.blockData?.images as string[]) ?? []}
         display={normalizeGalleryDisplay(link.blockData?.display)}
         captions={(link.blockData?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
+        nestedImages={(link.blockData?.nestedImages as Record<string, string[]> | undefined) ?? {}}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}
         icon={resolveBlockIcon(link, GalleryIcon, "h-4 w-4")}

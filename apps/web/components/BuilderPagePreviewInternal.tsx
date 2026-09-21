@@ -350,6 +350,7 @@ function renderBuilderNode(
             images={(node.blockData.images as string[]) ?? []}
             display={normalizeGalleryDisplay(node.blockData.display)}
             captions={(node.blockData.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
+            nestedImages={(node.blockData.nestedImages as Record<string, string[]> | undefined) ?? {}}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
           />

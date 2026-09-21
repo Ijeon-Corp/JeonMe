@@ -366,6 +366,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// block_data-nya beda (array multi-foto vs satu file audio).
 				linksGroup.POST("/links/:id/gallery-images", links.UploadGalleryImage)
 				linksGroup.DELETE("/links/:id/gallery-images/:index", links.DeleteGalleryImage)
+				// "Foto di dalam foto" (permintaan langsung pengguna, 21 September
+				// 2026) -- path TERPISAH ("gallery-nested-images", bukan
+				// "gallery-images/nested") SENGAJA, supaya tidak menaruh segmen
+				// statis "nested" pada kedalaman yang sama dgn parameter ":index"
+				// di atas (berpotensi ambigu/konflik di router radix-tree Gin).
+				linksGroup.POST("/links/:id/gallery-nested-images", links.UploadGalleryNestedImage)
+				linksGroup.DELETE("/links/:id/gallery-nested-images", links.DeleteGalleryNestedImage)
 				// Canvas Page Builder Fase 2 (permintaan langsung pengguna, 8
 				// September 2026): blok foto-tunggal "image"/"video_image"/
 				// "embed_link" berbagi SATU endpoint (lihat mediaImageBlockTypes,

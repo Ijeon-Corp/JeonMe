@@ -36,6 +36,13 @@ export interface GalleryCaption {
   description?: string;
 }
 
+// nestedViewer -- lapisan viewer FOTO ANAK di atas foto utama yang sedang
+// terbuka (lihat catatan panjang "Foto di dalam foto" di bawah).
+interface NestedViewerState {
+  parentSrc: string;
+  index: number;
+}
+
 export default function GalleryBlock({
   title,
   images,
@@ -44,6 +51,7 @@ export default function GalleryBlock({
   icon,
   display = "grid",
   captions = {},
+  nestedImages = {},
 }: {
   title: string;
   images: string[];
@@ -61,26 +69,70 @@ export default function GalleryBlock({
   // Semua selain "stack" berbagi lightbox yang sama (openIndex).
   display?: GalleryDisplay;
   captions?: Record<string, GalleryCaption>;
+  // nestedImages -- "foto di dalam foto" (permintaan langsung pengguna, 21
+  // September 2026: "ketika salah 1 ketiga image itu di klik maka akan
+  // muncul beberapa gambar lagi seperti ada image di dalam image"). PETA
+  // keyed by URL foto UTAMA (sama pola dengan `captions`) -> daftar URL foto
+  // ANAK-nya. Foto utama yang punya anak dapat lencana kecil (ikon tumpuk +
+  // jumlah) di mana pun ia tampil (lembar "stack"/"kipas" ATAU lightbox
+  // biasa) -- ketuk foto itu menyingkap galeri mini anaknya, ketuk salah
+  // satu anaknya membuka nestedViewer (lapisan layar penuh TERPISAH,
+  // z-index lebih tinggi dari lightbox/lembar induk) dgn navigasi prev/next
+  // sendiri di dalam set anak itu.
+  nestedImages?: Record<string, string[]>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
+  // expandedNestedFor -- URL foto utama yang strip thumbnail anaknya sedang
+  // disingkap (di lembar ATAU di lightbox, sama variabel karena cuma satu
+  // yang mungkin terbuka pada satu waktu). nestedViewer -- foto ANAK mana
+  // yang sedang dibuka penuh layar, di atas expandedNestedFor.
+  const [expandedNestedFor, setExpandedNestedFor] = useState<string | null>(null);
+  const [nestedViewer, setNestedViewer] = useState<NestedViewerState | null>(null);
   const touchStartX = useRef<number | null>(null);
+
+  const nestedFor = useCallback((src: string): string[] => nestedImages[src] ?? [], [nestedImages]);
 
   const close = useCallback(() => setOpenIndex(null), []);
   const prev = useCallback(() => setOpenIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length)), [images.length]);
   const next = useCallback(() => setOpenIndex((i) => (i === null ? null : (i + 1) % images.length)), [images.length]);
 
+  const closeNested = useCallback(() => setNestedViewer(null), []);
+  const prevNested = useCallback(() => {
+    setNestedViewer((v) => {
+      if (!v) return v;
+      const arr = nestedImages[v.parentSrc] ?? [];
+      if (arr.length === 0) return null;
+      return { ...v, index: (v.index - 1 + arr.length) % arr.length };
+    });
+  }, [nestedImages]);
+  const nextNested = useCallback(() => {
+    setNestedViewer((v) => {
+      if (!v) return v;
+      const arr = nestedImages[v.parentSrc] ?? [];
+      if (arr.length === 0) return null;
+      return { ...v, index: (v.index + 1) % arr.length };
+    });
+  }, [nestedImages]);
+
   useEffect(() => {
     if (openIndex === null) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-      else if (e.key === "ArrowLeft") prev();
-      else if (e.key === "ArrowRight") next();
+      if (e.key === "Escape") {
+        if (nestedViewer) closeNested();
+        else close();
+      } else if (e.key === "ArrowLeft") {
+        if (nestedViewer) prevNested();
+        else prev();
+      } else if (e.key === "ArrowRight") {
+        if (nestedViewer) nextNested();
+        else next();
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openIndex, close, prev, next]);
+  }, [openIndex, close, prev, next, nestedViewer, closeNested, prevNested, nextNested]);
 
   // Lembar "stack": Escape menutup, scroll body dikunci selama terbuka
   // (lembar punya scroll sendiri, jangan sampai halaman di belakangnya
@@ -88,7 +140,11 @@ export default function GalleryBlock({
   useEffect(() => {
     if (!sheetOpen) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setSheetOpen(false);
+      if (e.key === "Escape") {
+        if (nestedViewer) closeNested();
+        else setSheetOpen(false);
+      } else if (nestedViewer && e.key === "ArrowLeft") prevNested();
+      else if (nestedViewer && e.key === "ArrowRight") nextNested();
     }
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -97,7 +153,28 @@ export default function GalleryBlock({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [sheetOpen]);
+  }, [sheetOpen, nestedViewer, closeNested, prevNested, nextNested]);
+
+  // Reset lapisan anak setiap kali lembar/lightbox ditutup atau foto utama
+  // yang aktif berganti -- cegah nestedViewer "bocor" nyangkut terbuka dgn
+  // parentSrc yang sudah tidak relevan. Pola "adjust state during render"
+  // (react-hooks/set-state-in-effect melarang setState sinkron di dalam
+  // useEffect, lihat CLAUDE.md) -- bandingkan ke nilai sebelumnya yang
+  // dilacak state, setState kondisional LANGSUNG di badan komponen.
+  const [prevSheetOpen, setPrevSheetOpen] = useState(sheetOpen);
+  if (sheetOpen !== prevSheetOpen) {
+    setPrevSheetOpen(sheetOpen);
+    if (!sheetOpen) {
+      setExpandedNestedFor(null);
+      setNestedViewer(null);
+    }
+  }
+  const [prevOpenIndex, setPrevOpenIndex] = useState(openIndex);
+  if (openIndex !== prevOpenIndex) {
+    setPrevOpenIndex(openIndex);
+    setExpandedNestedFor(null);
+    setNestedViewer(null);
+  }
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0]?.clientX ?? null;
@@ -133,6 +210,118 @@ export default function GalleryBlock({
   }
 
   const captionFor = (src: string): GalleryCaption => captions[src] ?? {};
+
+  // renderNestedStrip -- baris thumbnail foto ANAK milik `parentSrc`,
+  // disingkap saat foto utamanya diketuk (lihat expandedNestedFor). Dipakai
+  // di DUA tempat: lembar "stack"/"kipas" (variant "sheet", latar terang)
+  // & lightbox biasa (variant "lightbox", latar gelap) -- makanya warna ring
+  // & bar-nya diparameterkan lewat variant, bukan dua salinan kode terpisah.
+  function renderNestedStrip(parentSrc: string, variant: "sheet" | "lightbox") {
+    if (expandedNestedFor !== parentSrc) return null;
+    const nested = nestedFor(parentSrc);
+    if (nested.length === 0) return null;
+    return (
+      <div
+        className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {nested.map((nestedSrc, i) => (
+          <button
+            key={nestedSrc}
+            type="button"
+            onClick={() => setNestedViewer({ parentSrc, index: i })}
+            aria-label={`Buka foto terkait ${i + 1}`}
+            className={`relative h-16 w-16 flex-shrink-0 cursor-zoom-in overflow-hidden rounded-lg ring-1 ${
+              variant === "sheet" ? "ring-black/10" : "ring-white/20"
+            }`}
+          >
+            <Image src={nestedSrc} alt="" fill sizes="64px" className="object-cover" />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // renderNestedViewer -- layar penuh utk SATU foto anak, z-index LEBIH
+  // TINGGI dari lembar (z-[999]) & lightbox biasa (z-[999]) supaya selalu di
+  // atas apa pun yang membukanya. Dipakai di lembar "stack"/"kipas" MAUPUN
+  // lightbox grid/carousel/dll -- satu fungsi, dipanggil di kedua tempat,
+  // karena `nestedViewer` cuma satu variabel & bentuknya identik di mana pun
+  // dibuka. stopPropagation di backdrop-nya WAJIB: createPortal tetap
+  // membubble event lewat pohon React (bukan pohon DOM), jadi tanpa itu klik
+  // di sini akan ikut menutup lembar/lightbox induk yang memanggilnya.
+  function renderNestedViewer() {
+    if (!nestedViewer) return null;
+    const arr = nestedImages[nestedViewer.parentSrc] ?? [];
+    const src = arr[nestedViewer.index];
+    if (!src) return null;
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-4"
+        onClick={(e) => {
+          e.stopPropagation();
+          closeNested();
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Foto terkait"
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            closeNested();
+          }}
+          aria-label="Kembali"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        >
+          <IconClose className="h-5 w-5" />
+        </button>
+
+        {arr.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                prevNested();
+              }}
+              aria-label="Foto terkait sebelumnya"
+              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-4"
+            >
+              <IconChevronRight className="h-5 w-5 rotate-180" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                nextNested();
+              }}
+              aria-label="Foto terkait berikutnya"
+              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-4"
+            >
+              <IconChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={`Foto terkait ${nestedViewer.index + 1}`}
+          className="max-h-[80vh] max-w-full object-contain"
+          onClick={(e) => e.stopPropagation()}
+        />
+
+        {arr.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white">
+            {nestedViewer.index + 1} / {arr.length}
+          </div>
+        )}
+      </div>,
+      document.body
+    );
+  }
 
   if ((display === "stack" || display === "fan") && images.length > 0) {
     // Tiga foto teratas dikipas: yang paling atas (index 0) tegak & penuh,
@@ -215,6 +404,8 @@ export default function GalleryBlock({
                   <div className="flex flex-col gap-8">
                     {images.map((src, i) => {
                       const cap = captionFor(src);
+                      const nested = nestedFor(src);
+                      const hasNested = nested.length > 0;
                       return (
                         <figure key={src} className="flex flex-col gap-3">
                           {/* next/image (bukan <img> mentah seperti lightbox grid di
@@ -225,15 +416,30 @@ export default function GalleryBlock({
                               lewat /_next/image (same-origin), tidak bergantung
                               host storage diizinkan img-src CSP seperti <img>
                               langsung. */}
-                          <Image
-                            src={src}
-                            alt={cap.title || (title ? `${title} ${i + 1}` : `Foto ${i + 1}`)}
-                            width={1200}
-                            height={900}
-                            sizes="(max-width: 640px) 100vw, 512px"
-                            priority={i === 0}
-                            className="h-auto w-full rounded-2xl object-cover"
-                          />
+                          <button
+                            type="button"
+                            disabled={!hasNested}
+                            onClick={() => setExpandedNestedFor((cur) => (cur === src ? null : src))}
+                            aria-label={hasNested ? `Lihat ${nested.length} foto terkait` : undefined}
+                            className={`relative block w-full ${hasNested ? "cursor-pointer" : "cursor-default"}`}
+                          >
+                            <Image
+                              src={src}
+                              alt={cap.title || (title ? `${title} ${i + 1}` : `Foto ${i + 1}`)}
+                              width={1200}
+                              height={900}
+                              sizes="(max-width: 640px) 100vw, 512px"
+                              priority={i === 0}
+                              className="h-auto w-full rounded-2xl object-cover"
+                            />
+                            {hasNested && (
+                              <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
+                                <Images className="h-3 w-3" aria-hidden />
+                                {nested.length}
+                              </span>
+                            )}
+                          </button>
+                          {renderNestedStrip(src, "sheet")}
                           {(cap.title || cap.description) && (
                             <figcaption>
                               {cap.title && <p className="text-xl font-bold leading-tight">{cap.title}</p>}
@@ -268,6 +474,7 @@ export default function GalleryBlock({
             </div>,
             document.body
           )}
+        {renderNestedViewer()}
       </div>
     );
   }
@@ -484,12 +691,25 @@ export default function GalleryBlock({
               memang ingin dilihat pada resolusi penuh, jadi keuntungan srcset-nya
               paling kecil di seluruh komponen ini. */}
           <div className="flex max-h-full max-w-full flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={images[openIndex]}
-              alt={captionFor(images[openIndex]).title || (title ? `${title} ${openIndex + 1}` : `Foto galeri ${openIndex + 1}`)}
-              className="max-h-[80vh] max-w-full object-contain"
-            />
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images[openIndex]}
+                alt={captionFor(images[openIndex]).title || (title ? `${title} ${openIndex + 1}` : `Foto galeri ${openIndex + 1}`)}
+                onClick={() => {
+                  if (nestedFor(images[openIndex]).length === 0) return;
+                  setExpandedNestedFor((cur) => (cur === images[openIndex] ? null : images[openIndex]));
+                }}
+                className={`max-h-[80vh] max-w-full object-contain ${nestedFor(images[openIndex]).length > 0 ? "cursor-pointer" : ""}`}
+              />
+              {nestedFor(images[openIndex]).length > 0 && (
+                <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
+                  <Images className="h-3 w-3" aria-hidden />
+                  {nestedFor(images[openIndex]).length}
+                </span>
+              )}
+            </div>
+            {renderNestedStrip(images[openIndex], "lightbox")}
             {(captionFor(images[openIndex]).title || captionFor(images[openIndex]).description) && (
               <div className="max-w-md text-center text-white">
                 {captionFor(images[openIndex]).title && <p className="text-sm font-bold">{captionFor(images[openIndex]).title}</p>}
@@ -503,6 +723,7 @@ export default function GalleryBlock({
               {openIndex + 1} / {images.length}
             </div>
           )}
+          {renderNestedViewer()}
         </div>,
         document.body
       )}

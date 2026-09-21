@@ -1407,6 +1407,52 @@ export function deleteGalleryImage(id: string, index: number, path?: BuilderSeg[
   );
 }
 
+// uploadGalleryNestedImage/deleteGalleryNestedImage -- "foto di dalam foto"
+// (permintaan langsung pengguna, 21 September 2026: "misal 3 foto gallery
+// ... salah 1 ketiga image itu di klik maka akan muncul beberapa gambar
+// lagi seperti ada image di dalam image"). Pola APA ADANYA dari
+// uploadGalleryImage/deleteGalleryImage -- bedanya cuma `parentUrl` (foto
+// UTAMA yang akan diberi foto tambahan, wajib salah satu dari `images[]`
+// yang sudah ada) & respons berisi PETA `nested_images` penuh (bukan satu
+// array), karena satu blok bisa punya banyak foto utama sekaligus, masing2
+// dgn sub-galerinya sendiri.
+export async function uploadGalleryNestedImage(
+  id: string,
+  parentUrl: string,
+  file: File,
+  path?: BuilderSeg[]
+): Promise<{ nested_images: Record<string, string[]>; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+  form.append("parent_url", parentUrl);
+  if (path && path.length > 0) {
+    form.append("path", JSON.stringify(path));
+  }
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/gallery-nested-images`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteGalleryNestedImage(id: string, parentUrl: string, index: number, path?: BuilderSeg[]) {
+  const params = new URLSearchParams({ parent_url: parentUrl, index: String(index) });
+  if (path && path.length > 0) params.set("path", JSON.stringify(path));
+  return apiFetch<{ nested_images: Record<string, string[]>; message: string }>(
+    `/dashboard/links/${id}/gallery-nested-images?${params.toString()}`,
+    { method: "DELETE" },
+    { auth: true }
+  );
+}
+
 // uploadBuilderMediaImage/deleteBuilderMediaImage -- Canvas Page Builder
 // Fase 2: SATU endpoint dipakai bersama utk 3 tipe blok foto-tunggal
 // (image/video_image/embed_link, lihat mediaImageBlockTypes di links.go),

@@ -979,6 +979,15 @@ export const dictionaries = {
             displayCirclesHint: "Lingkaran: deretan foto bundar ala sorotan Instagram, judul foto tampil di bawahnya -- cocok untuk kategori atau menu.",
             captionTitlePlaceholder: "Judul foto (opsional)",
             captionDescPlaceholder: "Keterangan foto (opsional)",
+            // nestedPhotos -- "foto di dalam foto" (permintaan langsung
+            // pengguna, 21 September 2026): tiap foto utama galeri bisa punya
+            // sub-galerinya sendiri, dibuka pengunjung dengan mengetuk foto
+            // utamanya di halaman publik.
+            addRelatedPhoto: "+ Tambah foto terkait",
+            relatedPhotosCount: "{count} foto terkait",
+            relatedPhotosHint: "Foto tambahan ini muncul saat pengunjung mengetuk foto utama ini.",
+            relatedPhotosLimitReached: "Maksimal {max} foto terkait per foto utama.",
+            deleteRelatedPhoto: "Hapus foto terkait",
           },
           showcasePanel: {
             imageHint: "Gambar kartu Project Unggulan.",
@@ -1089,6 +1098,8 @@ export const dictionaries = {
             resetIconColorFailed: "Gagal mengatur ulang warna ikon.",
             uploadGalleryPhotoFailed: "Gagal mengunggah foto galeri.",
             deleteGalleryPhotoFailed: "Gagal menghapus foto galeri.",
+            uploadNestedPhotoFailed: "Gagal mengunggah foto terkait.",
+            deleteNestedPhotoFailed: "Gagal menghapus foto terkait.",
             uploadImageFailed: "Gagal mengunggah gambar.",
             deleteImageFailed: "Gagal menghapus gambar.",
             saveCatalogItemFailed: "Gagal menyimpan item katalog.",
@@ -4285,6 +4296,11 @@ export const dictionaries = {
             displayCirclesHint: "Circles: a row of round photos like Instagram highlights, photo title underneath -- great for categories or menus.",
             captionTitlePlaceholder: "Photo title (optional)",
             captionDescPlaceholder: "Photo caption (optional)",
+            addRelatedPhoto: "+ Add related photo",
+            relatedPhotosCount: "{count} related photos",
+            relatedPhotosHint: "These extra photos show up when a visitor taps this main photo.",
+            relatedPhotosLimitReached: "Maximum {max} related photos per main photo.",
+            deleteRelatedPhoto: "Delete related photo",
           },
           showcasePanel: {
             imageHint: "Featured Project card image.",
@@ -4391,6 +4407,8 @@ export const dictionaries = {
             resetIconColorFailed: "Failed to reset icon color.",
             uploadGalleryPhotoFailed: "Failed to upload gallery photo.",
             deleteGalleryPhotoFailed: "Failed to delete gallery photo.",
+            uploadNestedPhotoFailed: "Failed to upload related photo.",
+            deleteNestedPhotoFailed: "Failed to delete related photo.",
             uploadImageFailed: "Failed to upload image.",
             deleteImageFailed: "Failed to delete image.",
             saveCatalogItemFailed: "Failed to save catalog item.",

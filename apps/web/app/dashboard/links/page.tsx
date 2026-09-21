@@ -25,6 +25,7 @@ import {
   deleteBuilderMediaImage,
   deleteFileBlock,
   deleteGalleryImage,
+  deleteGalleryNestedImage,
   deleteLink,
   deleteLinkIcon,
   deleteLinkThumbnail,
@@ -46,6 +47,7 @@ import {
   uploadExtraPageAvatar,
   uploadFileBlock,
   uploadGalleryImage,
+  uploadGalleryNestedImage,
   uploadLinkIcon,
   uploadLinkThumbnail,
   uploadShowcaseImage,
@@ -79,7 +81,7 @@ import { getLibraryIcon } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
-import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
@@ -452,6 +454,14 @@ export default function DashboardLinksPage() {
   // form pembuatan blok, lihat catatan CONTENT_TILES) -- id blok yang
   // sedang mengunggah, null berarti tidak ada unggahan berjalan.
   const [galleryUploadingId, setGalleryUploadingId] = useState<string | null>(null);
+  // "Foto di dalam foto" (permintaan langsung pengguna, 21 September 2026) --
+  // `nestedPanelOpenFor` menyimpan URL foto UTAMA yang panel "kelola foto
+  // terkait"-nya sedang terbuka (null = tertutup semua), `nestedUploadingFor`
+  // menyimpan URL foto utama yang sedang proses unggah anaknya. Dua-duanya
+  // keyed by URL foto (bukan id link) karena satu blok gallery bisa punya
+  // banyak foto utama, masing-masing dengan sub-galerinya sendiri.
+  const [nestedPanelOpenFor, setNestedPanelOpenFor] = useState<string | null>(null);
+  const [nestedUploadingFor, setNestedUploadingFor] = useState<string | null>(null);
   const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
   // Blok "file" (permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
   // file pdf download") -- pola sama seperti galleryUploadingId/
@@ -1185,6 +1195,38 @@ export default function DashboardLinksPage() {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteGalleryPhotoFailed"));
+    }
+  }
+
+  // handleNestedImageUpload/Delete -- "foto di dalam foto" (permintaan
+  // langsung pengguna, 21 September 2026), pola APA ADANYA dari
+  // handleGalleryImageUpload/Delete di atas -- backend mengembalikan PETA
+  // `nested_images` TERBARU (bukan cuma array satu parent) supaya cukup
+  // ditimpa langsung, sama filosofinya dgn `images`.
+  async function handleNestedImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, parentUrl: string) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setNestedUploadingFor(parentUrl);
+    setError(null);
+    try {
+      const { nested_images } = await uploadGalleryNestedImage(link.id, parentUrl, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadNestedPhotoFailed"));
+    } finally {
+      setNestedUploadingFor(null);
+    }
+  }
+
+  async function handleNestedImageDelete(link: LinkItem, parentUrl: string, index: number) {
+    setError(null);
+    try {
+      const { nested_images } = await deleteGalleryNestedImage(link.id, parentUrl, index);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteNestedPhotoFailed"));
     }
   }
 
@@ -3343,36 +3385,103 @@ export default function DashboardLinksPage() {
                           if ((cap[field] ?? "") === value.trim()) return;
                           handleBlockDataPatch(link, { captions: next });
                         };
+                        // "Foto di dalam foto" -- foto ANAK milik foto utama
+                        // ini (keyed by URL, lihat block_data.nestedImages di
+                        // links.go). Panel kelolanya baru muncul kalau
+                        // nestedPanelOpenFor === src (satu panel terbuka per
+                        // waktu, hindari daftar jadi terlalu panjang kalau
+                        // foto banyak).
+                        const nestedImages = (link.block_data?.nestedImages as Record<string, string[]> | undefined) ?? {};
+                        const nested = nestedImages[src] ?? [];
+                        const nestedPanelOpen = nestedPanelOpenFor === src;
                         return (
-                          <div key={src} className="flex items-start gap-2 rounded-md border border-app-border bg-app-surface p-1.5">
-                            {/* Ukuran TETAP 48px -- thumbnail baris caption h-12 w-12. */}
-                            <Image src={src} alt="" width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
-                            <div className="flex min-w-0 flex-1 flex-col gap-1">
-                              <input
-                                type="text"
-                                maxLength={120}
-                                defaultValue={cap.title ?? ""}
-                                onBlur={(e) => saveCaption("title", e.target.value)}
-                                placeholder={t("dashboard.pages.links.galleryPanel.captionTitlePlaceholder")}
-                                className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-                              />
-                              <input
-                                type="text"
-                                maxLength={500}
-                                defaultValue={cap.description ?? ""}
-                                onBlur={(e) => saveCaption("description", e.target.value)}
-                                placeholder={t("dashboard.pages.links.galleryPanel.captionDescPlaceholder")}
-                                className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-                              />
+                          <div key={src} className="flex flex-col gap-1.5 rounded-md border border-app-border bg-app-surface p-1.5">
+                            <div className="flex items-start gap-2">
+                              {/* Ukuran TETAP 48px -- thumbnail baris caption h-12 w-12. */}
+                              <Image src={src} alt="" width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                <input
+                                  type="text"
+                                  maxLength={120}
+                                  defaultValue={cap.title ?? ""}
+                                  onBlur={(e) => saveCaption("title", e.target.value)}
+                                  placeholder={t("dashboard.pages.links.galleryPanel.captionTitlePlaceholder")}
+                                  className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                                />
+                                <input
+                                  type="text"
+                                  maxLength={500}
+                                  defaultValue={cap.description ?? ""}
+                                  onBlur={(e) => saveCaption("description", e.target.value)}
+                                  placeholder={t("dashboard.pages.links.galleryPanel.captionDescPlaceholder")}
+                                  className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleGalleryImageDelete(link, i)}
+                                title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
+                                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-app-muted hover:bg-red-50 hover:text-red-600"
+                              >
+                                <IconX className="h-3.5 w-3.5" />
+                              </button>
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleGalleryImageDelete(link, i)}
-                              title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
-                              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-app-muted hover:bg-red-50 hover:text-red-600"
+                              onClick={() => setNestedPanelOpenFor(nestedPanelOpen ? null : src)}
+                              className={`ml-[56px] flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                nested.length > 0 ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-jeon-purple"
+                              }`}
                             >
-                              <IconX className="h-3.5 w-3.5" />
+                              <LucideImages className="h-3 w-3" />
+                              {nested.length > 0
+                                ? t("dashboard.pages.links.galleryPanel.relatedPhotosCount").replace("{count}", String(nested.length))
+                                : t("dashboard.pages.links.galleryPanel.addRelatedPhoto")}
                             </button>
+                            {nestedPanelOpen && (
+                              <div className="ml-[56px] flex flex-col gap-1.5 rounded-md bg-jeon-purple/5 p-2">
+                                <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.galleryPanel.relatedPhotosHint")}</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {nested.map((nestedSrc, nestedIndex) => (
+                                    <div key={nestedSrc} className="group relative h-12 w-12 flex-shrink-0">
+                                      <Image src={nestedSrc} alt="" width={48} height={48} className="h-12 w-12 rounded-md object-cover ring-1 ring-black/5" />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleNestedImageDelete(link, src, nestedIndex)}
+                                        title={t("dashboard.pages.links.galleryPanel.deleteRelatedPhoto")}
+                                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100"
+                                      >
+                                        <IconX className="h-2.5 w-2.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  {nested.length < maxNestedGalleryImages ? (
+                                    <label
+                                      className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+                                        nestedUploadingFor === src ? "opacity-60" : ""
+                                      }`}
+                                    >
+                                      {nestedUploadingFor === src ? (
+                                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                                      ) : (
+                                        <IconPlus className="h-4 w-4" />
+                                      )}
+                                      <input
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        onChange={(e) => handleNestedImageUpload(e, link, src)}
+                                        disabled={nestedUploadingFor === src}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  ) : (
+                                    <p className="flex items-center text-[11px] text-app-muted">
+                                      {t("dashboard.pages.links.galleryPanel.relatedPhotosLimitReached").replace("{max}", String(maxNestedGalleryImages))}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

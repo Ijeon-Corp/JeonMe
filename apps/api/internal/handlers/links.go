@@ -988,6 +988,34 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				}
 			}
 		}
+		// nestedImages -- "foto di dalam foto" (permintaan langsung pengguna,
+		// 21 September 2026), lihat catatan lengkap di maxNestedGalleryImages.
+		// Map keyed by URL foto UTAMA (pola SAMA PERSIS `captions` di atas,
+		// DeleteGalleryImage ikut membersihkan entrinya begitu foto utamanya
+		// dihapus) -- tapi value-nya array URL, bukan objek title/description.
+		// Batas jumlah per-parent divalidasi di UploadGalleryNestedImage
+		// (endpoint upload), BUKAN di sini -- validasi ini murni bentuk data
+		// (array of valid http(s) URL), sama filosofinya dengan `images` di
+		// atas (endpoint upload/PATCH keduanya bisa jadi sumber data ini).
+		if raw, ok := data["nestedImages"]; ok {
+			nested, isMap := raw.(map[string]any)
+			if !isMap {
+				return "nestedImages galeri wajib berupa objek per URL foto", false
+			}
+			for _, entry := range nested {
+				urls, isSlice := entry.([]any)
+				if !isSlice {
+					return "foto tambahan wajib berupa daftar URL", false
+				}
+				for _, img := range urls {
+					urlStr, isStr := img.(string)
+					u, err := url.Parse(urlStr)
+					if !isStr || err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+						return "setiap foto tambahan wajib URL yang valid", false
+					}
+				}
+			}
+		}
 	case "video_image":
 		// "video_image" -- Canvas Page Builder Fase 2 (permintaan langsung
 		// pengguna 8 September 2026, kategori MEDIA "Video+Image"): dua
@@ -2429,6 +2457,19 @@ const maxGalleryImageSize = 5 * 1024 * 1024
 // muat halaman publik.
 const maxGalleryImages = 9
 
+// maxNestedGalleryImages -- "foto di dalam foto" (permintaan langsung
+// pengguna, 21 September 2026: "ketika salah 1 ketiga image itu di klik
+// maka akan muncul beberapa gambar lagi seperti ada image di dalam image
+// setelah di klik") -- tiap foto UTAMA (`images[]`) boleh py foto TAMBAHAN
+// sendiri (`nestedImages[fotoUtamaURL][]`), diklik dari halaman publik utk
+// diungkap. LEBIH KECIL dari maxGalleryImages (9) -- pola sama persis
+// maxCatalogImagesPerItem (6, lebih kecil dari 9 karena "banyak item x 6
+// foto tetap wajar, 9 foto/item berlebihan") -- di sini SETIAP dari sampai
+// 9 foto utama bisa py sub-galerinya sendiri, jadi batas per-foto dibikin
+// lebih ketat lagi supaya total foto per blok tetap wajar dimuat halaman
+// publik (9 utama x 4 tambahan = maksimal 45 foto per blok, masih realistis).
+const maxNestedGalleryImages = 4
+
 // UploadGalleryImage -- blok "gallery" (hasil analisa galeri tema kompetitor,
 // 17 Agustus 2026): SATU foto per panggilan, DITAMBAHKAN ke array block_data.
 // images (append, bukan timpa seperti UploadIcon/UploadThumbnail) -- kreator
@@ -2621,6 +2662,23 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 	if captions, ok := blockData["captions"].(map[string]any); ok {
 		delete(captions, removedURL)
 	}
+	// nestedImages (foto di dalam foto, 21 September 2026) SAMA PERSIS
+	// dikunci per URL foto utama -- foto utama dihapus, seluruh sub-galeri
+	// di dalamnya ikut dihapus (bukan cuma entri JSONB-nya, tapi juga
+	// objek storage tiap foto tambahan di dalamnya -- kalau tidak, foto2
+	// itu jadi sampah storage yang tidak pernah bisa dijangkau UI lagi
+	// sama sekali begitu induknya lenyap).
+	var orphanedNestedURLs []string
+	if nested, ok := blockData["nestedImages"].(map[string]any); ok {
+		if nestedURLs, ok := nested[removedURL].([]any); ok {
+			for _, u := range nestedURLs {
+				if s, ok := u.(string); ok {
+					orphanedNestedURLs = append(orphanedNestedURLs, s)
+				}
+			}
+		}
+		delete(nested, removedURL)
+	}
 	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
@@ -2635,9 +2693,238 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 	// mencegah pengguna menghapus objek storage milik pengguna LAIN dengan
 	// menaruh URL foto orang lain ke block_data blok miliknya sendiri.
 	deleteOwnedStorageObject(ctx, h.Storage, removedURL, fmt.Sprintf("gallery-images/%s/", linkID))
+	// Foto tambahan (nestedImages) yang barusan jadi yatim ikut dihapus dari
+	// storage juga -- disimpan di prefix "nested/" (lihat UploadGalleryNestedImage).
+	for _, orphanURL := range orphanedNestedURLs {
+		deleteOwnedStorageObject(ctx, h.Storage, orphanURL, fmt.Sprintf("gallery-images/%s/nested/", linkID))
+	}
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari galeri"})
+}
+
+// UploadGalleryNestedImage -- "foto di dalam foto" (permintaan langsung
+// pengguna, 21 September 2026: "misal 3 foto gallery ... salah 1 ketiga
+// image itu di klik maka akan muncul beberapa gambar lagi seperti ada
+// image di dalam image"): tiap foto UTAMA (images[]) boleh py foto
+// TAMBAHAN sendiri, disimpan di block_data.nestedImages[parentURL][]
+// (map keyed by URL foto utama, pola SAMA PERSIS `captions`). Pola
+// fungsi APA ADANYA dari UploadGalleryImage (baca-ubah-tulis block_data
+// dalam SATU request, key storage acak) -- bedanya cuma target array-nya
+// (nested di dalam map, bukan array langsung) & wajib `parent_url` valid.
+func (h *LinksHandler) UploadGalleryNestedImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+	parentURL := c.PostForm("parent_url")
+	if parentURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "parent_url wajib diisi"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if blockType != "gallery" && blockType != "image_slider" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
+		return
+	}
+
+	// parent_url wajib salah satu foto UTAMA yang benar-benar ada di blok
+	// ini -- mencegah menambah foto tambahan ke URL sembarangan (mis. URL
+	// foto blok/pengguna lain) yang tidak akan pernah bisa dijangkau UI.
+	images, _ := blockData["images"].([]any)
+	parentExists := false
+	for _, img := range images {
+		if s, _ := img.(string); s == parentURL {
+			parentExists = true
+			break
+		}
+	}
+	if !parentExists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "parent_url harus salah satu foto utama di galeri ini"})
+		return
+	}
+
+	nested, _ := blockData["nestedImages"].(map[string]any)
+	if nested == nil {
+		nested = map[string]any{}
+	}
+	existing, _ := nested[parentURL].([]any)
+	if len(existing) >= maxNestedGalleryImages {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("maksimal %d foto tambahan per foto", maxNestedGalleryImages)})
+		return
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxGalleryImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	// Prefix "nested/" (beda dari foto utama langsung di "gallery-images/<id>/")
+	// supaya DeleteGalleryImage bisa membersihkan SELURUH sub-galeri sekaligus
+	// tanpa risiko menyentuh foto utama lain lewat prefix yang sama.
+	key := fmt.Sprintf("gallery-images/%s/nested/%s.webp", linkID, uuid.NewString())
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah foto"})
+		return
+	}
+
+	imageURL := h.Storage.PublicURL(key)
+	nested[parentURL] = append(existing, imageURL)
+	blockData["nestedImages"] = nested
+	encoded, err := json.Marshal(rootData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"nested_images": nested, "message": "foto tambahan berhasil ditambahkan"})
+}
+
+// DeleteGalleryNestedImage -- kebalikan UploadGalleryNestedImage, pola sama
+// persis DeleteGalleryImage (hapus by index, dari SUB-array parent_url,
+// bukan array images langsung).
+func (h *LinksHandler) DeleteGalleryNestedImage(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+	parentURL := c.Query("parent_url")
+	index, err := strconv.Atoi(c.Query("index"))
+	if parentURL == "" || err != nil || index < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "parent_url/index tidak valid"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if blockType != "gallery" && blockType != "image_slider" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
+		return
+	}
+
+	nested, _ := blockData["nestedImages"].(map[string]any)
+	urls, _ := nested[parentURL].([]any)
+	if index >= len(urls) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "foto tidak ditemukan"})
+		return
+	}
+
+	removedURL, _ := urls[index].(string)
+	urls = append(urls[:index], urls[index+1:]...)
+	if len(urls) == 0 {
+		delete(nested, parentURL)
+	} else {
+		nested[parentURL] = urls
+	}
+	blockData["nestedImages"] = nested
+	encoded, err := json.Marshal(rootData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
+		return
+	}
+
+	deleteOwnedStorageObject(ctx, h.Storage, removedURL, fmt.Sprintf("gallery-images/%s/nested/", linkID))
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"nested_images": nested, "message": "foto tambahan dihapus"})
 }
 
 // mediaImageBlockTypes -- tiga tipe blok foto-tunggal Fase 2 (Canvas Page

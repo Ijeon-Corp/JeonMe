@@ -14,6 +14,11 @@ import { GALLERY_DISPLAY_OPTIONS, normalizeGalleryDisplay } from "@/lib/gallery-
 // sumber kebenaran validasinya.
 export const maxGalleryImages = 9;
 
+// maxNestedGalleryImages -- SAMA PERSIS batas backend (links.go), murni utk
+// UI (sembunyikan tombol "Tambah" begitu penuh) -- lihat catatan lengkap di
+// maxNestedGalleryImages, links.go.
+export const maxNestedGalleryImages = 4;
+
 // buildBlockTypeLabel -- dipindah dari app/dashboard/links/page.tsx (19
 // September 2026) supaya dipakai bersama ProdukPageEditor.tsx (Toko) juga
 // -- dibutuhkan sbg fallback label baris daftar DASHBOARD begitu judul
