@@ -75,6 +75,7 @@ import {
   deleteCatalogItemImage,
   deleteFileBlock,
   deleteGalleryImage,
+  deleteGalleryNestedImage,
   deleteLinkIcon,
   deleteLinkThumbnail,
   uploadAudioBlock,
@@ -82,6 +83,7 @@ import {
   uploadCatalogItemImage,
   uploadFileBlock,
   uploadGalleryImage,
+  uploadGalleryNestedImage,
   uploadLinkIcon,
   uploadLinkThumbnail,
   type CatalogItem,
@@ -91,6 +93,7 @@ import {
   type PageStickerData,
 } from "@/lib/api-client";
 import { getLibraryIcon } from "@/lib/icon-library";
+import { maxNestedGalleryImages } from "@/lib/block-preview";
 import {
   buildTree,
   findNodeByPath,
@@ -695,6 +698,7 @@ function GalleryGridEditor({
   blockType,
   display,
   captions,
+  nestedImages,
   onPatchBlockData,
   onEnsureRootPersisted,
   onChanged,
@@ -708,6 +712,16 @@ function GalleryGridEditor({
   // ditulis ke draft lokal lewat onUpdateNode (pemanggil), pola field lain.
   display: GalleryDisplay;
   captions: Record<string, { title?: string; description?: string }>;
+  // nestedImages -- uxd-6 (audit UI/UX 21 September 2026): "foto di dalam
+  // foto" sudah shipped di Mode Simple/Toko (block_data.nestedImages) &
+  // Builder SUDAH BISA menampilkannya di kanvas (prop diteruskan sampai
+  // BuilderPagePreviewInternal sejak sesi sebelumnya), tapi editor blok
+  // Builder ini nol UI utk menambah/menghapusnya -- satu-satunya jalan
+  // sebelumnya adalah buka Mode Simple utk blok yang sama. Porting APA
+  // ADANYA dari GalleryGridEditor Mode Simple (links/page.tsx), endpoint
+  // backend (uploadGalleryNestedImage/deleteGalleryNestedImage) SUDAH
+  // mendukung parameter `path` sejak awal jadi tidak perlu perubahan API.
+  nestedImages: Record<string, string[]>;
   onPatchBlockData: (patch: Record<string, unknown>) => void;
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onChanged: (images: string[], resolvedRootId: string) => void;
@@ -715,6 +729,8 @@ function GalleryGridEditor({
   const { t } = useLocale();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nestedPanelOpenFor, setNestedPanelOpenFor] = useState<string | null>(null);
+  const [nestedUploadingFor, setNestedUploadingFor] = useState<string | null>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -757,6 +773,34 @@ function GalleryGridEditor({
     }
   }
 
+  async function handleNestedUpload(e: React.ChangeEvent<HTMLInputElement>, parentUrl: string) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setNestedUploadingFor(parentUrl);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await uploadGalleryNestedImage(realRootId, parentUrl, file, path);
+      onPatchBlockData({ nestedImages: res.nested_images });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadNestedPhotoFailed"));
+    } finally {
+      setNestedUploadingFor(null);
+    }
+  }
+
+  async function handleNestedDelete(parentUrl: string, index: number) {
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await deleteGalleryNestedImage(realRootId, parentUrl, index, path);
+      onPatchBlockData({ nestedImages: res.nested_images });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteNestedPhotoFailed"));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -773,37 +817,97 @@ function GalleryGridEditor({
               if ((cap[field] ?? "") === value.trim()) return;
               onPatchBlockData({ captions: { ...captions, [src]: { ...cap, [field]: value.trim() } } });
             };
+            const nested = nestedImages[src] ?? [];
+            const nestedPanelOpen = nestedPanelOpenFor === src;
             return (
-              <div key={src} className="flex items-start gap-2 rounded-md border border-app-border bg-app-surface p-1.5">
-                {/* Ukuran TETAP 48px -- thumbnail baris caption h-12 w-12. */}
-                <Image src={src} alt="" width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <input
-                    type="text"
-                    maxLength={120}
-                    defaultValue={cap.title ?? ""}
-                    onBlur={(e) => saveCaption("title", e.target.value)}
-                    placeholder={t("dashboard.pages.links.galleryPanel.captionTitlePlaceholder")}
-                    className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    maxLength={500}
-                    defaultValue={cap.description ?? ""}
-                    onBlur={(e) => saveCaption("description", e.target.value)}
-                    placeholder={t("dashboard.pages.links.galleryPanel.captionDescPlaceholder")}
-                    className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-                  />
+              <div key={src} className="flex flex-col gap-1.5 rounded-md border border-app-border bg-app-surface p-1.5">
+                <div className="flex items-start gap-2">
+                  {/* Ukuran TETAP 48px -- thumbnail baris caption h-12 w-12. */}
+                  <Image src={src} alt="" width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <input
+                      type="text"
+                      maxLength={120}
+                      defaultValue={cap.title ?? ""}
+                      onBlur={(e) => saveCaption("title", e.target.value)}
+                      placeholder={t("dashboard.pages.links.galleryPanel.captionTitlePlaceholder")}
+                      className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      maxLength={500}
+                      defaultValue={cap.description ?? ""}
+                      onBlur={(e) => saveCaption("description", e.target.value)}
+                      placeholder={t("dashboard.pages.links.galleryPanel.captionDescPlaceholder")}
+                      className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(i)}
+                    disabled={uploading}
+                    title={t("dashboard.pages.linksBuilder.removePhoto")}
+                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-app-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <IconX className="h-3.5 w-3.5" />
+                  </button>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleDelete(i)}
-                  disabled={uploading}
-                  title={t("dashboard.pages.linksBuilder.removePhoto")}
-                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-app-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  onClick={() => setNestedPanelOpenFor(nestedPanelOpen ? null : src)}
+                  className={`ml-[56px] flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    nested.length > 0 ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-jeon-purple"
+                  }`}
                 >
-                  <IconX className="h-3.5 w-3.5" />
+                  <LucideImages className="h-3 w-3" />
+                  {nested.length > 0
+                    ? t("dashboard.pages.links.galleryPanel.relatedPhotosCount").replace("{count}", String(nested.length))
+                    : t("dashboard.pages.links.galleryPanel.addRelatedPhoto")}
                 </button>
+                {nestedPanelOpen && (
+                  <div className="ml-[56px] flex flex-col gap-1.5 rounded-md bg-jeon-purple/5 p-2">
+                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.galleryPanel.relatedPhotosHint")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {nested.map((nestedSrc, nestedIndex) => (
+                        <div key={nestedSrc} className="group relative h-12 w-12 flex-shrink-0">
+                          <Image src={nestedSrc} alt="" width={48} height={48} className="h-12 w-12 rounded-md object-cover ring-1 ring-black/5" />
+                          <button
+                            type="button"
+                            onClick={() => handleNestedDelete(src, nestedIndex)}
+                            title={t("dashboard.pages.links.galleryPanel.deleteRelatedPhoto")}
+                            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100"
+                          >
+                            <IconX className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {nested.length < maxNestedGalleryImages ? (
+                        <label
+                          className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+                            nestedUploadingFor === src ? "opacity-60" : ""
+                          }`}
+                        >
+                          {nestedUploadingFor === src ? (
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                          ) : (
+                            <IconPlus className="h-4 w-4" />
+                          )}
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            onChange={(e) => handleNestedUpload(e, src)}
+                            disabled={nestedUploadingFor === src}
+                            className="hidden"
+                          />
+                        </label>
+                      ) : (
+                        <p className="flex items-center text-[11px] text-app-muted">
+                          {t("dashboard.pages.links.galleryPanel.relatedPhotosLimitReached").replace("{max}", String(maxNestedGalleryImages))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1262,6 +1366,7 @@ function NodeFieldEditor({
           blockType={node.blockType ?? "gallery"}
           display={normalizeGalleryDisplay(node.blockData?.display)}
           captions={(node.blockData?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
+          nestedImages={(node.blockData?.nestedImages as Record<string, string[]> | undefined) ?? {}}
           onPatchBlockData={(patch) => onUpdateNode(sel, { blockData: patch })}
           onEnsureRootPersisted={onEnsureRootPersisted}
           onChanged={(images, resolvedRootId) => onGalleryImagesChanged(resolvedRootId, node.path, images)}
