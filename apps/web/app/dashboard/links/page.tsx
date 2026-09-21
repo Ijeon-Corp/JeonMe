@@ -1191,8 +1191,16 @@ export default function DashboardLinksPage() {
   async function handleGalleryImageDelete(link: LinkItem, index: number) {
     setError(null);
     try {
-      const { images } = await deleteGalleryImage(link.id, index);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+      // captions/nestedImages ikut ditimpa dari respons server (bug
+      // fungsional ditemukan 21 September 2026) -- SEBELUMNYA cuma `images`
+      // yang disinkronkan, sisa captions/nestedImages basi milik foto yang
+      // baru dihapus tetap nyangkut di state lokal dan bisa "hidup lagi" di
+      // database lewat handleBlockDataPatch berikutnya (PATCH field lain
+      // mengirim ulang SELURUH block_data lokal, termasuk sisa basi itu).
+      const { images, captions, nested_images } = await deleteGalleryImage(link.id, index);
+      setLinks((prev) =>
+        prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images, captions, nestedImages: nested_images } } : l))
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteGalleryPhotoFailed"));
     }

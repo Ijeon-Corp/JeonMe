@@ -2618,9 +2618,25 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 		return
 	}
 
+	// tx + "FOR UPDATE" (audit keamanan 21 September 2026, race condition
+	// TOCTOU dibuktikan langsung): dua request DELETE (index berbeda) yang
+	// tembak bersamaan ke link yang sama SEBELUMNYA saling menimpa lewat
+	// h.DB polos tanpa locking -- request kedua commit berdasar snapshot
+	// SEBELUM request pertama selesai, membuat foto yang objek storage-nya
+	// SUDAH terhapus tetap "hidup" (tercantum) lagi di block_data. Endpoint
+	// ini cepat (tidak ada I/O storage lambat sebelum commit -- penghapusan
+	// objek storage terjadi SESUDAH commit, soft-fail), jadi aman mengunci
+	// baris ini selama transaksi tanpa risiko menahan lock lama.
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	var rootBlockType string
 	var rootDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1 FOR UPDATE`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
 		return
 	}
@@ -2684,7 +2700,11 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
 	}
-	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
 		return
 	}
@@ -2700,7 +2720,24 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 	}
 
 	h.invalidateLinkCache(ctx, linkID)
-	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari galeri"})
+	// captions/nestedImages TERBARU ikut dikembalikan (bug fungsional
+	// ditemukan 21 September 2026: state lokal frontend sebelumnya cuma
+	// menimpa `images`, meninggalkan captions/nestedImages basi yang bisa
+	// "hidup lagi" lewat PATCH block_data berikutnya yang tidak terkait --
+	// lihat handleGalleryImageDelete di links/page.tsx) -- frontend
+	// sekarang menyinkronkan KETIGANYA dari response ini, bukan cuma images.
+	resp := gin.H{"images": images, "message": "foto dihapus dari galeri"}
+	if captions, ok := blockData["captions"].(map[string]any); ok {
+		resp["captions"] = captions
+	} else {
+		resp["captions"] = map[string]any{}
+	}
+	if nested, ok := blockData["nestedImages"].(map[string]any); ok {
+		resp["nested_images"] = nested
+	} else {
+		resp["nested_images"] = map[string]any{}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // UploadGalleryNestedImage -- "foto di dalam foto" (permintaan langsung
@@ -2872,9 +2909,21 @@ func (h *LinksHandler) DeleteGalleryNestedImage(c *gin.Context) {
 		return
 	}
 
+	// tx + "FOR UPDATE" -- lihat catatan panjang di DeleteGalleryImage (audit
+	// keamanan 21 September 2026): ini PERSIS endpoint yang dibuktikan
+	// langsung rawan race condition TOCTOU (2 request DELETE index berbeda
+	// bersamaan -> saling menimpa, foto "hantu" yang objek storage-nya
+	// sudah tiada tapi URL-nya tercantum lagi di block_data).
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	var rootBlockType string
 	var rootDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1 FOR UPDATE`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
 		return
 	}
@@ -2916,7 +2965,11 @@ func (h *LinksHandler) DeleteGalleryNestedImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
 	}
-	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
 		return
 	}

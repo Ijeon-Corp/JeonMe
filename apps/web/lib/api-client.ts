@@ -1400,7 +1400,13 @@ export async function uploadGalleryImage(
 
 export function deleteGalleryImage(id: string, index: number, path?: BuilderSeg[]) {
   const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
-  return apiFetch<{ images: string[]; message: string }>(
+  // captions/nested_images -- bug fungsional ditemukan 21 September 2026:
+  // state lokal sebelumnya cuma menimpa `images`, meninggalkan
+  // captions/nestedImages basi yang bisa "hidup lagi" lewat PATCH block_data
+  // TIDAK TERKAIT berikutnya (mis. ganti tampilan galeri). Backend sekarang
+  // mengembalikan KETIGA peta terbaru sekaligus supaya caller menimpa
+  // semuanya, bukan cuma images.
+  return apiFetch<{ images: string[]; captions: Record<string, { title?: string; description?: string }>; nested_images: Record<string, string[]>; message: string }>(
     `/dashboard/links/${id}/gallery-images/${index}${query}`,
     { method: "DELETE" },
     { auth: true }

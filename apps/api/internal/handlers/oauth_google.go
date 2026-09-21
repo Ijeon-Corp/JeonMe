@@ -99,8 +99,27 @@ func (h *AuthHandler) findOrCreateGoogleUser(ctx context.Context, profile *googl
 		return "", false, err
 	}
 
-	err = h.DB.QueryRow(ctx, `SELECT id, suspended_at FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`, profile.Email).Scan(&id, &suspendedAt)
+	var emailVerifiedAt *time.Time
+	err = h.DB.QueryRow(ctx, `SELECT id, suspended_at, email_verified_at FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`, profile.Email).Scan(&id, &suspendedAt, &emailVerifiedAt)
 	if err == nil {
+		if emailVerifiedAt == nil {
+			// Audit keamanan 21 September 2026 -- "pre-hijacking akun": baris
+			// ini BELUM PERNAH terbukti milik siapa pun (email tidak pernah
+			// diverifikasi), jadi bisa saja sengaja didaftarkan lebih dulu
+			// oleh pihak lain (dengan password yang mereka tahu) memakai
+			// variasi huruf besar/kecil dari email ini, menunggu pemilik asli
+			// login lewat Google supaya tertaut ke akun tsb. Google SUDAH
+			// memverifikasi kepemilikan email ini (dicek EmailVerified di
+			// GoogleLogin) -- jadi baris lama diambil-alih (klaim password
+			// lama DIBATALKAN) alih-alih ditautkan apa adanya.
+			if _, uErr := h.DB.Exec(ctx,
+				`UPDATE users SET password_hash = NULL, google_id = $1, email_verified_at = now(), consent_accepted_at = now() WHERE id = $2`,
+				profile.Sub, id,
+			); uErr != nil {
+				return "", false, uErr
+			}
+			return id, suspendedAt != nil, nil
+		}
 		if _, uErr := h.DB.Exec(ctx, `UPDATE users SET google_id = $1 WHERE id = $2`, profile.Sub, id); uErr != nil {
 			return "", false, uErr
 		}
@@ -129,6 +148,11 @@ func (h *AuthHandler) findOrCreateGoogleUser(ctx context.Context, profile *googl
 // GoogleLogin sebelum sampai sini), tidak perlu alur verifikasi email
 // terpisah lagi.
 func (h *AuthHandler) createGoogleUser(ctx context.Context, profile *googleoauth.Profile) (string, error) {
+	// Normalisasi email -- lihat catatan panjang di AuthHandler.Register
+	// (audit keamanan 21 September 2026) -- Google SEHARUSNYA sudah
+	// mengembalikan huruf kecil, tapi jangan menyandarkan invariant
+	// idx_users_email_lower ke asumsi itu.
+	profile.Email = strings.ToLower(strings.TrimSpace(profile.Email))
 	username, err := h.generateUsernameFromEmail(ctx, profile.Email)
 	if err != nil {
 		return "", err

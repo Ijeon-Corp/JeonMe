@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -89,8 +90,22 @@ func (h *AuthHandler) findOrCreateAppleUser(ctx context.Context, profile *appleo
 		return "", false, err
 	}
 
-	err = h.DB.QueryRow(ctx, `SELECT id, suspended_at FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`, profile.Email).Scan(&id, &suspendedAt)
+	var emailVerifiedAt *time.Time
+	err = h.DB.QueryRow(ctx, `SELECT id, suspended_at, email_verified_at FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`, profile.Email).Scan(&id, &suspendedAt, &emailVerifiedAt)
 	if err == nil {
+		if emailVerifiedAt == nil {
+			// Audit keamanan 21 September 2026 -- pola identik
+			// findOrCreateGoogleUser, lihat catatan panjang di sana: baris
+			// tak-terverifikasi diambil-alih (klaim password lama
+			// DIBATALKAN) alih-alih ditautkan apa adanya.
+			if _, uErr := h.DB.Exec(ctx,
+				`UPDATE users SET password_hash = NULL, apple_id = $1, email_verified_at = now(), consent_accepted_at = now() WHERE id = $2`,
+				profile.Sub, id,
+			); uErr != nil {
+				return "", false, uErr
+			}
+			return id, suspendedAt != nil, nil
+		}
 		if _, uErr := h.DB.Exec(ctx, `UPDATE users SET apple_id = $1 WHERE id = $2`, profile.Sub, id); uErr != nil {
 			return "", false, uErr
 		}
@@ -110,6 +125,9 @@ func (h *AuthHandler) findOrCreateAppleUser(ctx context.Context, profile *appleo
 // kosong seperti akun daftar manual biasa, kreator tetap bebas mengisi
 // lewat Desain), (2) apple_id (bukan google_id) yang diisi.
 func (h *AuthHandler) createAppleUser(ctx context.Context, profile *appleoauth.Profile) (string, error) {
+	// Normalisasi email -- lihat catatan panjang di AuthHandler.Register
+	// (audit keamanan 21 September 2026).
+	profile.Email = strings.ToLower(strings.TrimSpace(profile.Email))
 	username, err := h.generateUsernameFromEmail(ctx, profile.Email)
 	if err != nil {
 		return "", err

@@ -754,8 +754,14 @@ function BlockSection({
   async function handleGalleryImageDelete(link: LinkItem, index: number) {
     setError(null);
     try {
-      const { images } = await deleteGalleryImage(link.id, index);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+      // captions/nestedImages ikut ditimpa dari respons server -- lihat
+      // catatan panjang di handler kembarnya, app/dashboard/links/page.tsx
+      // (bug fungsional ditemukan 21 September 2026: data basi bisa "hidup
+      // lagi" lewat PATCH block_data lain kalau cuma `images` yang disinkron).
+      const { images, captions, nested_images } = await deleteGalleryImage(link.id, index);
+      setLinks((prev) =>
+        prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images, captions, nestedImages: nested_images } } : l))
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteGalleryImage"));
     }

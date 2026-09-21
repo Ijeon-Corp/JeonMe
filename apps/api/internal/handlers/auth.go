@@ -99,6 +99,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Audit keamanan 21 September 2026: email TIDAK PERNAH dinormalisasi di
+	// sini sebelumnya, sementara login Google/Apple mencocokkan lewat
+	// lower(email) -- kombinasi itu membuka jalur pre-hijacking akun
+	// (penyerang daftar duluan pakai variasi HURUF BESAR dari email calon
+	// korban, korban yang login pertama kali lewat Google malah tertaut ke
+	// akun penyerang). Normalisasi di titik masuk ini menutup celahnya
+	// bersama idx_users_email_lower (migrasi 000103) & fix simetris di
+	// Login/RequestPasswordReset/ConfirmSignupVerification/
+	// ResendSignupVerification/findOrCreateGoogleUser/findOrCreateAppleUser.
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	// Modul Settings §2: format sama dengan yang dipakai saat ganti username
 	// di pengaturan, + cegah orang lain langsung mendaftar pakai username
 	// yang baru saja ditinggalkan pemilik lama (masih dalam window redirect).
@@ -313,6 +324,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
+	// Normalisasi email -- lihat catatan panjang di Register (audit keamanan
+	// 21 September 2026), harus simetris supaya akun lama yang emailnya
+	// sudah dinormalisasi migrasi 000103 tetap bisa login apa pun huruf yang
+	// diketik.
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -570,6 +586,9 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
+	// Normalisasi email -- lihat catatan panjang di Register (audit keamanan
+	// 21 September 2026).
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -789,6 +808,9 @@ func (h *AuthHandler) ConfirmSignupVerification(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
+	// Normalisasi email -- lihat catatan panjang di Register (audit keamanan
+	// 21 September 2026).
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -879,6 +901,9 @@ func (h *AuthHandler) ResendSignupVerification(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
+	// Normalisasi email -- lihat catatan panjang di Register (audit keamanan
+	// 21 September 2026).
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()

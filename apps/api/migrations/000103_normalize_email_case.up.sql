@@ -1,0 +1,32 @@
+-- Perbaikan celah keamanan "pre-hijacking akun" (audit menyeluruh 21
+-- September 2026): Register() menyimpan users.email APA ADANYA
+-- (case-sensitive) sementara login Google/Apple OAuth mencari user lewat
+-- lower(email) -- kombinasi ini membiarkan penyerang mendaftar duluan
+-- dengan variasi HURUF BESAR/KECIL dari email calon korban (password yang
+-- mereka tahu sendiri), lalu ketika korban login pertama kali lewat Google,
+-- backend menautkan identitas Google korban ke akun penyerang tsb, dan
+-- korban berakhir memakai akun yang password-nya diketahui orang lain.
+-- Dibuktikan langsung lewat query SQL yang identik dengan yang dijalankan
+-- handler, memakai akun uji sungguhan.
+--
+-- Migrasi ini menormalkan SEMUA email lama ke huruf kecil, lalu menutup
+-- celahnya permanen di level DB lewat index unik case-insensitive (pola
+-- identik idx_users_username_lower di migrasi 000037, yang menutup celah
+-- serupa untuk username lebih dulu). Kode Go (auth.go: Register/Login/
+-- RequestPasswordReset/ConfirmSignupVerification/ResendSignupVerification,
+-- oauth_google.go & oauth_apple.go: createXUser + findOrCreateXUser yang
+-- sekarang menolak menautkan ke baris email_verified_at masih NULL)
+-- diperbaiki terpisah di commit yang sama supaya SEMUA titik baca/tulis
+-- email konsisten lower().
+--
+-- CATATAN OPERASIONAL: kalau di database production/staging TERNYATA sudah
+-- ada dua baris users dengan email yang sama persis setelah di-lower()
+-- (mis. "Foo@x.com" dan "foo@x.com" terdaftar terpisah), UPDATE di bawah
+-- akan membuat keduanya sama lalu CREATE UNIQUE INDEX akan GAGAL dengan
+-- error constraint jelas -- migrasi berhenti (transaksi migrasi ini
+-- rollback, deploy tidak lanjut) TANPA merusak data, tapi PERLU
+-- intervensi manual (putuskan baris mana yang jadi kanonik, apa yang
+-- terjadi ke baris satunya) sebelum migrasi ini bisa diterapkan ulang.
+UPDATE users SET email = lower(email) WHERE email <> lower(email);
+
+CREATE UNIQUE INDEX idx_users_email_lower ON users (lower(email));
