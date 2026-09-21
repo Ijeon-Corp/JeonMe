@@ -2298,7 +2298,26 @@ function TreeNodeView({
   const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
 
   return (
-    <div ref={setNodeRef} style={style} data-tree-node-id={node.id}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-tree-node-id={node.id}
+      // role="treeitem" dkk -- uxd-3 (audit UI/UX 21 September 2026):
+      // pohon blok kiri sebelumnya sama sekali tanpa semantik ARIA tree,
+      // pembaca layar mendengarnya sebagai tumpukan tombol lepas tanpa
+      // info level/posisi/status pilih-buka. Cakupan SENGAJA dibatasi ke
+      // atribut STRUKTURAL saja (level/selected/expanded/group) -- model
+      // interaksi keyboard yang sudah ada (tiap tombol dlm baris fokus
+      // independen: drag handle/chevron/pilih/menu ⋮, BUKAN roving
+      // tabindex satu-tombol-per-baris ala pola APG TreeView murni) TETAP
+      // dipertahankan apa adanya supaya tidak mengubah perilaku yang
+      // sudah stabil & dites banyak e2e -- retrofit navigasi panah penuh
+      // adalah pekerjaan aksesibilitas terpisah, bukan cakupan temuan ini.
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-selected={isThisSelected}
+      aria-expanded={canExpand ? !collapsed.has(node.id) : undefined}
+    >
       <div
         style={{ paddingLeft: `${depth * 16}px` }}
         // py-2 -- permintaan langsung pengguna, 12 September 2026
@@ -2515,7 +2534,7 @@ function TreeNodeView({
       )}
 
       {canExpand && !collapsed.has(node.id) && (
-        <div>
+        <div role="group">
           {node.children.length === 0 ? (
             <p style={{ paddingLeft: `${(depth + 1) * 16 + 20}px` }} className="py-1 text-[11px] text-app-muted">
               {t("dashboard.pages.linksBuilder.emptyContainer")}
@@ -2851,7 +2870,7 @@ export default function BuilderLeftPanel({
               <p className="mt-1.5 text-center text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.addingInto")}</p>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2" role="tree" aria-label={t("dashboard.pages.linksBuilder.treeLabel")}>
             {tree.length === 0 ? (
               <p className="p-3 text-center text-xs text-app-muted">{t("dashboard.pages.linksBuilder.emptyRoot")}</p>
             ) : (
