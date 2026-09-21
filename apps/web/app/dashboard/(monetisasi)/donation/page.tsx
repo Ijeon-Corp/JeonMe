@@ -17,6 +17,7 @@ import {
 import Toggle from "@/components/Toggle";
 import EmptyState from "@/components/EmptyState";
 import { IconGift, IconTrash } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 import { useErrorToast } from "@/lib/use-error-toast";
 
 function formatRupiah(n: number): string {
@@ -122,7 +123,12 @@ export default function DashboardDonationPage() {
     }
   }
 
-  async function handleDeleteWishlist(id: string) {
+  // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): hapus item
+  // wishlist SEBELUMNYA langsung tanpa konfirmasi, beda dari pola
+  // confirmDelete di 5 halaman monetisasi sejenis -- risiko kehilangan
+  // wishlist yang sudah terkumpul dana sebagian dgn satu klik keliru.
+  async function handleDeleteWishlist(id: string, name: string) {
+    if (!(await confirmDelete(t("dashboard.pages.donation.confirmDeleteWishlistText").replace("{name}", name)))) return;
     await deleteWishlistItem(id);
     setWishlist((prev) => prev.filter((w) => w.id !== id));
   }
@@ -253,7 +259,7 @@ export default function DashboardDonationPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleDeleteWishlist(w.id)}
+                  onClick={() => handleDeleteWishlist(w.id, w.name)}
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
                   title={t("dashboard.pages.donation.deleteWishlistItemTitle")}
                 >

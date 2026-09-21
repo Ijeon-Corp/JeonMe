@@ -75,7 +75,7 @@ import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import Toggle from "@/components/Toggle";
-import { confirmDelete } from "@/lib/confirm";
+import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
@@ -616,6 +616,18 @@ export default function DashboardLinksPage() {
   const [, setCatalogSavingId] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
+  // contentEditSnapshot -- bug UI/UX ditemukan 21 September 2026 (audit
+  // menyeluruh): tombol "Kembali"/"Batal" panel edit blok SEBELUMNYA
+  // langsung setContentEditId(null) tanpa cek sama sekali, membuang draft
+  // 10 tipe blok berbasis buffer (video/maps/text/accordion/
+  // project_showcase/button/countdown/embed/video_image/embed_link) diam-
+  // diam kalau kreator sempat mengetik lalu berubah pikiran/salah pencet.
+  // State (bukan ref) -- react-hooks/refs (React Compiler) melarang fungsi
+  // biasa membaca `.current` lalu dipanggil dari JSX (dianggap berpotensi
+  // "selama render"); state menghindarinya sepenuhnya. null = tidak ada
+  // blok berbasis-buffer yang sedang dibuka (10 tipe lain aman ditutup
+  // tanpa cek).
+  const [contentEditSnapshot, setContentEditSnapshot] = useState<string | null>(null);
   // drilldownBlockId -- id blok "catalog"/"faq" yang sedang dibuka lewat
   // BlockDrilldownEditor (redesain 6 September 2026, gaya Linktree: klik
   // blok -> masuk ke dalamnya). `drilldownBlock` LIVE (bukan snapshot) --
@@ -1700,9 +1712,16 @@ export default function DashboardLinksPage() {
   async function handleDuplicate(link: LinkItem) {
     setError(null);
     try {
-      await duplicateLink(link.id);
+      const { id: newId } = await duplicateLink(link.id);
       const refreshed = await refreshLinks();
       setLinks(refreshed);
+      // Pindahkan fokus panel ke hasil duplikatnya (bug UI/UX ditemukan 21
+      // September 2026: SEBELUMNYA pengguna harus kembali ke daftar & cari
+      // sendiri salinannya, tanpa penanda pembeda). Blok berbasis buffer
+      // (video/text/dst.) butuh openContentEdit supaya buffer-nya terisi
+      // benar; tipe lain (galeri/produk/dst.) cukup contentEditId langsung.
+      const duplicated = refreshed.find((l) => l.id === newId);
+      if (duplicated) openContentEdit(duplicated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.duplicateFailed"));
     }
@@ -1878,41 +1897,170 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // computeContentEditSnapshot -- lihat catatan panjang di
+  // contentEditSnapshot: bentuk objek PERSIS meniru cabang openContentEdit
+  // di bawah (satu per tipe blok berbasis buffer), dipakai DUA arah -- saat
+  // panel dibuka (dari nilai `link`, snapshot "bersih") dan saat
+  // Kembali/Batal diklik (dari state buffer LIVE saat itu, lihat
+  // closeContentEdit) -- null untuk tipe blok yang tidak punya buffer sama
+  // sekali (aman ditutup tanpa cek).
+  function computeContentEditSnapshot(
+    blockType: LinkItem["block_type"],
+    v: {
+      videoUrl: string;
+      mapsUrl: string;
+      mapsEmbed: boolean;
+      text: string;
+      accordionText: string;
+      showcaseUrl: string;
+      showcaseDescription: string;
+      showcaseBadge: string;
+      showcaseCta: string;
+      buttonUrl: string;
+      buttonMode: "url" | "whatsapp";
+      buttonWhatsappNumber: string;
+      buttonWhatsappMessage: string;
+      countdownTargetAt: string;
+      countdownProductId: string;
+      countdownCtaLabel: string;
+      countdownCtaUrl: string;
+      embedUrl: string;
+      videoImageVideoUrl: string;
+      embedLinkUrl: string;
+      embedLinkDescription: string;
+    }
+  ): Record<string, unknown> | null {
+    switch (blockType) {
+      case "video":
+        return { videoUrl: v.videoUrl };
+      case "maps":
+        return { mapsUrl: v.mapsUrl, mapsEmbed: v.mapsEmbed };
+      case "text":
+        return { text: v.text };
+      case "accordion":
+        return { accordionText: v.accordionText };
+      case "project_showcase":
+        return { showcaseUrl: v.showcaseUrl, showcaseDescription: v.showcaseDescription, showcaseBadge: v.showcaseBadge, showcaseCta: v.showcaseCta };
+      case "button":
+        return { buttonUrl: v.buttonUrl, buttonMode: v.buttonMode, buttonWhatsappNumber: v.buttonWhatsappNumber, buttonWhatsappMessage: v.buttonWhatsappMessage };
+      case "countdown":
+        return { countdownTargetAt: v.countdownTargetAt, countdownProductId: v.countdownProductId, countdownCtaLabel: v.countdownCtaLabel, countdownCtaUrl: v.countdownCtaUrl };
+      case "embed":
+        return { embedUrl: v.embedUrl };
+      case "video_image":
+        return { videoImageVideoUrl: v.videoImageVideoUrl };
+      case "embed_link":
+        return { embedLinkUrl: v.embedLinkUrl, embedLinkDescription: v.embedLinkDescription };
+      default:
+        return null;
+    }
+  }
+
+  // currentContentEditSnapshot -- versi "sekarang" dari fungsi di atas,
+  // membaca state buffer LIVE (bukan dari `link`) -- dipanggil saat
+  // Kembali/Batal diklik utk dibandingkan ke snapshot bersih yang disimpan
+  // openContentEdit.
+  function currentContentEditSnapshot(blockType: LinkItem["block_type"]) {
+    return computeContentEditSnapshot(blockType, {
+      videoUrl: editVideoUrl,
+      mapsUrl: editMapsUrl,
+      mapsEmbed: editMapsEmbed,
+      text: editText,
+      accordionText: editAccordionText,
+      showcaseUrl: editShowcaseUrl,
+      showcaseDescription: editShowcaseDescription,
+      showcaseBadge: editShowcaseBadge,
+      showcaseCta: editShowcaseCta,
+      buttonUrl: editButtonUrl,
+      buttonMode: editButtonMode,
+      buttonWhatsappNumber: editButtonWhatsappNumber,
+      buttonWhatsappMessage: editButtonWhatsappMessage,
+      countdownTargetAt: editCountdownTargetAt,
+      countdownProductId: editCountdownProductId,
+      countdownCtaLabel: editCountdownCtaLabel,
+      countdownCtaUrl: editCountdownCtaUrl,
+      embedUrl: editEmbedUrl,
+      videoImageVideoUrl: editVideoImageVideoUrl,
+      embedLinkUrl: editEmbedLinkUrl,
+      embedLinkDescription: editEmbedLinkDescription,
+    });
+  }
+
   function openContentEdit(link: LinkItem) {
     setContentEditId(link.id);
+    const v = {
+      videoUrl: (link.block_data?.video_url as string) ?? "",
+      mapsUrl: link.url ?? "",
+      mapsEmbed: Boolean(link.block_data?.embed),
+      text: (link.block_data?.text as string) ?? "",
+      accordionText: (link.block_data?.text as string) ?? "",
+      showcaseUrl: link.url ?? "",
+      showcaseDescription: link.description ?? "",
+      showcaseBadge: (link.block_data?.badge_text as string) ?? "",
+      showcaseCta: (link.block_data?.cta_text as string) ?? "",
+      buttonUrl: link.url ?? "",
+      buttonMode: ((link.block_data?.whatsapp_number as string) ? "whatsapp" : "url") as "url" | "whatsapp",
+      buttonWhatsappNumber: (link.block_data?.whatsapp_number as string) ?? "",
+      buttonWhatsappMessage: (link.block_data?.whatsapp_message as string) ?? "",
+      countdownTargetAt: toDatetimeLocalValue(link.block_data?.target_at as string | undefined),
+      countdownProductId: (link.block_data?.product_id as string) ?? "",
+      countdownCtaLabel: (link.block_data?.cta_label as string) ?? "",
+      countdownCtaUrl: (link.block_data?.cta_url as string) ?? "",
+      embedUrl: (link.block_data?.embed_url as string) ?? "",
+      videoImageVideoUrl: (link.block_data?.video_url as string) ?? "",
+      embedLinkUrl: link.url ?? "",
+      embedLinkDescription: link.description ?? "",
+    };
+    setContentEditSnapshot(JSON.stringify(computeContentEditSnapshot(link.block_type, v)));
     if (link.block_type === "video") {
-      setEditVideoUrl((link.block_data?.video_url as string) ?? "");
+      setEditVideoUrl(v.videoUrl);
     } else if (link.block_type === "maps") {
-      setEditMapsUrl(link.url ?? "");
-      setEditMapsEmbed(Boolean(link.block_data?.embed));
+      setEditMapsUrl(v.mapsUrl);
+      setEditMapsEmbed(v.mapsEmbed);
     } else if (link.block_type === "text") {
-      setEditText((link.block_data?.text as string) ?? "");
+      setEditText(v.text);
     } else if (link.block_type === "accordion") {
-      setEditAccordionText((link.block_data?.text as string) ?? "");
+      setEditAccordionText(v.accordionText);
     } else if (link.block_type === "project_showcase") {
-      setEditShowcaseUrl(link.url ?? "");
-      setEditShowcaseDescription(link.description ?? "");
-      setEditShowcaseBadge((link.block_data?.badge_text as string) ?? "");
-      setEditShowcaseCta((link.block_data?.cta_text as string) ?? "");
+      setEditShowcaseUrl(v.showcaseUrl);
+      setEditShowcaseDescription(v.showcaseDescription);
+      setEditShowcaseBadge(v.showcaseBadge);
+      setEditShowcaseCta(v.showcaseCta);
     } else if (link.block_type === "button") {
-      setEditButtonUrl(link.url ?? "");
-      const savedWhatsappNumber = (link.block_data?.whatsapp_number as string) ?? "";
-      setEditButtonMode(savedWhatsappNumber ? "whatsapp" : "url");
-      setEditButtonWhatsappNumber(savedWhatsappNumber);
-      setEditButtonWhatsappMessage((link.block_data?.whatsapp_message as string) ?? "");
+      setEditButtonUrl(v.buttonUrl);
+      setEditButtonMode(v.buttonMode);
+      setEditButtonWhatsappNumber(v.buttonWhatsappNumber);
+      setEditButtonWhatsappMessage(v.buttonWhatsappMessage);
     } else if (link.block_type === "countdown") {
-      setEditCountdownTargetAt(toDatetimeLocalValue(link.block_data?.target_at as string | undefined));
-      setEditCountdownProductId((link.block_data?.product_id as string) ?? "");
-      setEditCountdownCtaLabel((link.block_data?.cta_label as string) ?? "");
-      setEditCountdownCtaUrl((link.block_data?.cta_url as string) ?? "");
+      setEditCountdownTargetAt(v.countdownTargetAt);
+      setEditCountdownProductId(v.countdownProductId);
+      setEditCountdownCtaLabel(v.countdownCtaLabel);
+      setEditCountdownCtaUrl(v.countdownCtaUrl);
     } else if (link.block_type === "embed") {
-      setEditEmbedUrl((link.block_data?.embed_url as string) ?? "");
+      setEditEmbedUrl(v.embedUrl);
     } else if (link.block_type === "video_image") {
-      setEditVideoImageVideoUrl((link.block_data?.video_url as string) ?? "");
+      setEditVideoImageVideoUrl(v.videoImageVideoUrl);
     } else if (link.block_type === "embed_link") {
-      setEditEmbedLinkUrl(link.url ?? "");
-      setEditEmbedLinkDescription(link.description ?? "");
+      setEditEmbedLinkUrl(v.embedLinkUrl);
+      setEditEmbedLinkDescription(v.embedLinkDescription);
     }
+  }
+
+  // closeContentEdit -- bug UI/UX ditemukan 21 September 2026, lihat catatan
+  // panjang di contentEditSnapshot. Dipakai ganti langsung
+  // `setContentEditId(null)` oleh tombol "Kembali" (header panel) MAUPUN
+  // "Batal" (baris aksi bawah form) -- keduanya efeknya identik (tutup
+  // panel tanpa simpan), jadi keduanya butuh gerbang yang sama.
+  async function closeContentEdit(link: LinkItem) {
+    if (contentEditSnapshot !== null && JSON.stringify(currentContentEditSnapshot(link.block_type)) !== contentEditSnapshot) {
+      const ok = await confirmAction(t("dashboard.pages.links.contentEditorPage.discardDraftText"), {
+        title: t("dashboard.pages.links.contentEditorPage.discardDraftTitle"),
+        confirmButtonText: t("dashboard.pages.links.contentEditorPage.discardDraftConfirm"),
+      });
+      if (!ok) return;
+    }
+    setContentEditSnapshot(null);
+    setContentEditId(null);
   }
 
   // toggleContentEdit -- redesain "Konsisten & Ringkas" (14 September
@@ -1927,7 +2075,7 @@ export default function DashboardLinksPage() {
   // sama sekali, jadi memanggil openContentEdit utk itu aman/no-op.
   function toggleContentEdit(link: LinkItem) {
     if (contentEditId === link.id) {
-      setContentEditId(null);
+      closeContentEdit(link);
     } else {
       openContentEdit(link);
     }
@@ -2041,6 +2189,7 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
       const refreshed = await refreshLinks();
       setLinks(refreshed);
+      setContentEditSnapshot(null);
       setContentEditId(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
@@ -3206,7 +3355,7 @@ export default function DashboardLinksPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setContentEditId(null)}
+                onClick={() => closeContentEdit(link)}
                 className="flex flex-shrink-0 items-center gap-1 rounded-full border-2 border-[#111111] bg-jeon-lavender px-3 py-1.5 text-xs font-bold text-[#111111] transition-transform hover:-translate-x-0.5"
               >
                 <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
@@ -3748,7 +3897,15 @@ export default function DashboardLinksPage() {
               )}
 
               {(scheduleEditId === link.id ? (
-                  <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  // ref callback: scrollIntoView begitu panel ini MOUNT (bug
+                  // UI/UX ditemukan 21 September 2026 -- panel bisa muncul di
+                  // luar pandangan untuk blok dengan form panjang di atasnya,
+                  // mis. Produk). Callback ref (bukan useEffect) fire persis
+                  // saat elemen ini pertama ada di DOM, tepat yang dibutuhkan.
+                  <div
+                    ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+                    className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5"
+                  >
                     <div className="flex gap-1.5">
                       <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
                         <input
@@ -3802,7 +3959,10 @@ export default function DashboardLinksPage() {
 
               {(link.block_type === "link" || link.block_type === "button") &&
                 (lockEditId === link.id ? (
-                  <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  <div
+                    ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+                    className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5"
+                  >
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
@@ -4115,7 +4275,7 @@ export default function DashboardLinksPage() {
                     </div>
                   ) : null}
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                    <button type="button" onClick={() => closeContentEdit(link)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                       {t("dashboard.pages.links.common.cancel")}
                     </button>
                     <button

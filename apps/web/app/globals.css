@@ -982,6 +982,47 @@ h1, h2, h3, h4, h5 {
   color: #7657ff;
 }
 
+/* Dark mode SweetAlert2 (bug UI/UX ditemukan 21 September 2026, audit
+   menyeluruh): blok .swal2-* di atas SEBELUMNYA cuma restyle warna TERANG
+   (hardcoded #111111/#77736c/putih) -- popup tampil sbg kartu putih terang
+   mencolok di tengah UI gelap untuk SEMUA konfirmasi/error di dashboard
+   (dipakai lib/confirm.ts & lib/use-error-toast.ts di 18+ halaman/komponen).
+   Popup SweetAlert2 di-append ke <body> (di LUAR .app-shell), jadi pola 3
+   lapis di atas file ini di-ulang di sini APA ADANYA (bukan lewat token
+   var(--app-*) -- library ini tidak membacanya) supaya tetap ikut toggle
+   eksplisit MAUPUN preferensi sistem. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .swal2-popup {
+    background: #1c1a22 !important;
+  }
+  :root:not([data-theme="light"]) .swal2-title {
+    color: #f0edf5 !important;
+  }
+  :root:not([data-theme="light"]) .swal2-html-container {
+    color: #a49fae !important;
+  }
+  :root:not([data-theme="light"]) .swal-btn-cancel {
+    background: #242130;
+    color: #a49fae;
+    border-color: rgba(240, 237, 245, 0.16);
+  }
+}
+
+[data-theme="dark"] .swal2-popup {
+  background: #1c1a22 !important;
+}
+[data-theme="dark"] .swal2-title {
+  color: #f0edf5 !important;
+}
+[data-theme="dark"] .swal2-html-container {
+  color: #a49fae !important;
+}
+[data-theme="dark"] .swal-btn-cancel {
+  background: #242130;
+  color: #a49fae;
+  border-color: rgba(240, 237, 245, 0.16);
+}
+
 /* jeon-rich-text-content -- redesain total Canvas Page Builder (permintaan
    langsung pengguna 10 September 2026, blok "text" pakai RichTextEditor.tsx/
    TipTap sekarang): dipakai KEDUA sisi (editor TipTap di builder & render

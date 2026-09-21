@@ -956,6 +956,12 @@ export const dictionaries = {
           // inline di kartu, TIDAK ikut pindah ke sini).
           contentEditorPage: {
             back: "Kembali",
+            // discardDraft* -- bug UI/UX ditemukan 21 September 2026: klik
+            // "Kembali"/"Batal" sebelumnya membuang draft yang sudah diketik
+            // tanpa peringatan sama sekali untuk 10 tipe blok berbasis buffer.
+            discardDraftTitle: "Buang perubahan?",
+            discardDraftText: "Perubahan yang belum disimpan di blok ini akan hilang.",
+            discardDraftConfirm: "Ya, Buang",
           },
           galleryPanel: {
             photoCountSuffix: "foto",
@@ -1674,6 +1680,7 @@ export const dictionaries = {
           wishlistTitle: "Wishlist",
           wishlistSubtitle: "Barang yang bisa dipilih pendukung untuk \"diwujudkan\" saat mendukung.",
           deleteWishlistItemTitle: "Hapus item wishlist",
+          confirmDeleteWishlistText: "Hapus item wishlist \"{name}\"? Progres dana yang sudah terkumpul untuk item ini akan ikut hilang.",
           wishlistEmpty: "Tunjukkan barang yang kamu butuhkan supaya pendukung tahu cara membantu.",
           wishlistNamePlaceholder: "Nama barang",
           wishlistPricePlaceholder: "Harga (Rp)",
@@ -4277,6 +4284,9 @@ export const dictionaries = {
           },
           contentEditorPage: {
             back: "Back",
+            discardDraftTitle: "Discard changes?",
+            discardDraftText: "Unsaved changes to this block will be lost.",
+            discardDraftConfirm: "Yes, Discard",
           },
           galleryPanel: {
             photoCountSuffix: "photos",
@@ -4906,6 +4916,7 @@ export const dictionaries = {
           wishlistTitle: "Wishlist",
           wishlistSubtitle: "Items supporters can choose to \"fulfill\" when giving support.",
           deleteWishlistItemTitle: "Delete wishlist item",
+          confirmDeleteWishlistText: "Delete the wishlist item \"{name}\"? Funds already raised for this item will be lost too.",
           wishlistEmpty: "Show what you need so supporters know exactly how to help.",
           wishlistNamePlaceholder: "Item name",
           wishlistPricePlaceholder: "Price (Rp)",

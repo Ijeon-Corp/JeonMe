@@ -64,10 +64,28 @@ export default function AdminPayoutsPage() {
   }
 
   async function handleUpdateStatus(payout: AdminPayout, status: "processing" | "completed" | "failed") {
+    // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): SEBELUMNYA
+    // hanya "failed" (aksi paling MUDAH dipulihkan -- saldo dikembalikan
+    // otomatis) yang dikonfirmasi, sementara "processing"/"completed" --
+    // terutama "completed" yang ATESTASI dana sudah benar-benar ditransfer
+    // manual di luar sistem & TIDAK reversibel dari UI ini -- tidak punya
+    // konfirmasi sama sekali. Terbalik dari yang seharusnya.
     if (status === "failed") {
       const confirmed = await confirmAction(
         `Tandai penarikan Rp${payout.amount_idr.toLocaleString("id-ID")} milik @${payout.username} sebagai GAGAL? Saldo akan dikembalikan ke kreator.`,
         { confirmButtonText: "Ya, Tandai Gagal" }
+      );
+      if (!confirmed) return;
+    } else if (status === "completed") {
+      const confirmed = await confirmAction(
+        `Tandai penarikan Rp${payout.amount_idr.toLocaleString("id-ID")} milik @${payout.username} SELESAI? Pastikan dana SUDAH benar-benar ditransfer -- aksi ini tidak bisa dibatalkan dari sini.`,
+        { title: "Konfirmasi transfer dana", confirmButtonText: "Ya, Sudah Ditransfer" }
+      );
+      if (!confirmed) return;
+    } else if (status === "processing") {
+      const confirmed = await confirmAction(
+        `Mulai proses penarikan Rp${payout.amount_idr.toLocaleString("id-ID")} milik @${payout.username}?`,
+        { confirmButtonText: "Ya, Proses" }
       );
       if (!confirmed) return;
     }

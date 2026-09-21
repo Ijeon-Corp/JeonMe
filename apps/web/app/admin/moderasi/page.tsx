@@ -16,6 +16,7 @@ import {
   upsertDomainVerdict,
 } from "@/lib/api-client";
 import { IconInbox } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 import { useErrorToast } from "@/lib/use-error-toast";
 
 const CATEGORY_LABELS: Record<ModerationCategory, string> = {
@@ -103,7 +104,13 @@ export default function AdminModerationPage() {
     }
   }
 
-  async function handleDeleteKeyword(id: string) {
+  // Bug UI/UX ditemukan 21 September 2026 (audit menyeluruh): hapus kata
+  // kunci/domain moderasi SEBELUMNYA tanpa konfirmasi sama sekali -- risiko
+  // membuka kembali domain judi online/konten dewasa yang sengaja diblokir
+  // dengan satu klik keliru.
+  async function handleDeleteKeyword(id: string, keyword: string) {
+    const ok = await confirmDelete(`Hapus kata kunci "${keyword}" dari daftar blokir?`, { title: "Hapus kata kunci?" });
+    if (!ok) return;
     setError(null);
     try {
       await deleteBlockedKeyword(id);
@@ -129,7 +136,11 @@ export default function AdminModerationPage() {
     }
   }
 
-  async function handleDeleteDomain(id: string) {
+  async function handleDeleteDomain(id: string, domain: string) {
+    const ok = await confirmDelete(`Hapus entri domain "${domain}"? Domain ini akan dievaluasi ulang otomatis di percobaan berikutnya.`, {
+      title: "Hapus entri domain?",
+    });
+    if (!ok) return;
     setError(null);
     try {
       await deleteDomainVerdict(id);
@@ -231,7 +242,7 @@ export default function AdminModerationPage() {
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"
-                      onClick={() => handleDeleteKeyword(k.id)}
+                      onClick={() => handleDeleteKeyword(k.id, k.keyword)}
                       title="Hapus kata kunci"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                     >
@@ -332,7 +343,7 @@ export default function AdminModerationPage() {
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"
-                      onClick={() => handleDeleteDomain(d.id)}
+                      onClick={() => handleDeleteDomain(d.id, d.domain)}
                       title="Hapus entri (dievaluasi ulang di percobaan berikutnya)"
                       className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                     >
