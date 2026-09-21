@@ -6,7 +6,7 @@ import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useErrorToast } from "@/lib/use-error-toast";
 import {
   ApiError,
@@ -364,8 +364,11 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
 export default function DashboardLinksPage() {
   const router = useRouter();
   const { t } = useLocale();
-  const blockTypeLabel = buildBlockTypeLabel(t);
-  const contentTiles = buildContentTiles(t);
+  // useMemo -- audit performa 21 September 2026: kedua fungsi ini murni
+  // (hasil hanya bergantung pada `t`/bahasa aktif), tapi sebelumnya
+  // dibangun ulang dari nol di SETIAP render meski bahasa tidak berubah.
+  const blockTypeLabel = useMemo(() => buildBlockTypeLabel(t), [t]);
+  const contentTiles = useMemo(() => buildContentTiles(t), [t]);
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
   // catalogSaveQueueRef -- antrean promise PER link, dipakai saveCatalogItems
