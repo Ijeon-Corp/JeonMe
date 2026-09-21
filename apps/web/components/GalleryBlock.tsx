@@ -364,6 +364,15 @@ export default function GalleryBlock({
                 className={`absolute overflow-hidden ${isFan ? "rounded-xl" : "rounded-2xl"} shadow-[0_10px_30px_rgba(0,0,0,0.25)] ring-1 ring-black/10 transition-transform duration-300 group-hover:scale-[1.02] ${tilt[i]}`}
               >
                 <Image src={src} alt={captionFor(src).title || (title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`)} fill sizes={isFan ? "(max-width: 640px) 90vw, 448px" : "420px"} className="object-cover" />
+                {/* Lencana cuma di foto DEPAN (i===0) -- foto belakang di
+                    mode kipas cuma sisa tipis mengintip, badge di situ akan
+                    terpotong/tidak kebaca. */}
+                {i === 0 && nestedFor(src).length > 0 && (
+                  <span className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <Images className="h-3 w-3" aria-hidden />
+                    {nestedFor(src).length}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -498,6 +507,19 @@ export default function GalleryBlock({
               className="relative aspect-[4/3] w-[82%] flex-shrink-0 snap-center cursor-zoom-in overflow-hidden rounded-2xl"
             >
               <Image src={src} alt={altFor(src, i)} fill sizes="(max-width: 640px) 82vw, 380px" className="object-cover" />
+              {/* Lencana foto-di-dalam-foto (bug UI/UX ditemukan 21 September
+                  2026, audit menyeluruh): SEBELUMNYA cuma muncul setelah foto
+                  sudah dibuka membesar di lightbox -- di tampilan kompak
+                  manapun tidak ada petunjuk foto mana yang punya sub-galeri,
+                  pengunjung harus buka satu-satu semua foto untuk tahu.
+                  Ditambahkan di SETIAP mode tampilan teaser/kompak (bukan
+                  cuma di sini). */}
+              {nestedFor(src).length > 0 && (
+                <span className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                  <Images className="h-2.5 w-2.5" aria-hidden />
+                  {nestedFor(src).length}
+                </span>
+              )}
               <span className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">
                 {i + 1}/{images.length}
               </span>
@@ -516,6 +538,12 @@ export default function GalleryBlock({
       const tile = (src: string, i: number, className: string, sizes: string) => (
         <button key={src} type="button" onClick={() => setOpenIndex(i)} aria-label={`Perbesar foto ${i + 1}`} className={`relative cursor-zoom-in overflow-hidden rounded-lg ${className}`}>
           <Image src={src} alt={altFor(src, i)} fill sizes={sizes} className="object-cover transition-transform duration-200 hover:scale-105" />
+          {nestedFor(src).length > 0 && (
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+              <Images className="h-2.5 w-2.5" aria-hidden />
+              {nestedFor(src).length}
+            </span>
+          )}
         </button>
       );
       return (
@@ -555,9 +583,15 @@ export default function GalleryBlock({
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label={`Perbesar foto ${i + 1}`}
-              className="mb-1.5 block w-full cursor-zoom-in overflow-hidden rounded-lg break-inside-avoid"
+              className="relative mb-1.5 block w-full cursor-zoom-in overflow-hidden rounded-lg break-inside-avoid"
             >
               <Image src={src} alt={altFor(src, i)} width={600} height={800} sizes="(max-width: 640px) 50vw, 220px" className="h-auto w-full object-cover transition-transform duration-200 hover:scale-105" />
+              {nestedFor(src).length > 0 && (
+                <span className="pointer-events-none absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                  <Images className="h-2.5 w-2.5" aria-hidden />
+                  {nestedFor(src).length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -572,6 +606,11 @@ export default function GalleryBlock({
               <button key={src} type="button" onClick={() => setOpenIndex(i)} aria-label={`Perbesar foto ${i + 1}`} className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5">
                 <span className="relative block h-16 w-16 overflow-hidden rounded-full ring-2 ring-black/10">
                   <Image src={src} alt={altFor(src, i)} fill sizes="64px" className="object-cover" />
+                  {nestedFor(src).length > 0 && (
+                    <span className="pointer-events-none absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[8px] font-bold text-white">
+                      {nestedFor(src).length}
+                    </span>
+                  )}
                 </span>
                 {cap.title && <span className="w-full truncate text-center text-[10px] font-semibold opacity-80">{cap.title}</span>}
               </button>
@@ -597,6 +636,12 @@ export default function GalleryBlock({
                 kolom publik max-w-md -> ~130px, dibulatkan ke atas ke 150px
                 untuk layar retina. */}
             <Image src={src} alt={altFor(src, i)} fill sizes="150px" className="object-cover transition-transform duration-200 hover:scale-105" />
+            {nestedFor(src).length > 0 && (
+              <span className="pointer-events-none absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                <Images className="h-2.5 w-2.5" aria-hidden />
+                {nestedFor(src).length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -691,16 +736,27 @@ export default function GalleryBlock({
               memang ingin dilihat pada resolusi penuh, jadi keuntungan srcset-nya
               paling kecil di seluruh komponen ini. */}
           <div className="flex max-h-full max-w-full flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-            <div className="relative">
+            {/* <button> pembungkus (bukan onClick di <img> langsung) -- bug
+                aksesibilitas keyboard ditemukan 21 September 2026 (audit
+                menyeluruh): SEBELUMNYA reveal strip foto tambahan di sini
+                cuma bisa dipicu mouse, pengguna keyboard-only/pembaca layar
+                tidak bisa menjangkaunya sama sekali padahal Grid adalah mode
+                bawaan. Lembar "stack"/"kipas" (renderNestedStrip pemanggil
+                sheet) sudah benar pakai &lt;button&gt; sejak awal -- disamakan
+                di sini. disabled kalau tidak ada foto tambahan sama sekali,
+                supaya tidak jadi target tab-stop yang tidak melakukan apa-apa. */}
+            <button
+              type="button"
+              disabled={nestedFor(images[openIndex]).length === 0}
+              onClick={() => setExpandedNestedFor((cur) => (cur === images[openIndex] ? null : images[openIndex]))}
+              aria-label={nestedFor(images[openIndex]).length > 0 ? `Lihat ${nestedFor(images[openIndex]).length} foto terkait` : undefined}
+              className={`relative block ${nestedFor(images[openIndex]).length > 0 ? "cursor-pointer" : "cursor-default"}`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[openIndex]}
                 alt={captionFor(images[openIndex]).title || (title ? `${title} ${openIndex + 1}` : `Foto galeri ${openIndex + 1}`)}
-                onClick={() => {
-                  if (nestedFor(images[openIndex]).length === 0) return;
-                  setExpandedNestedFor((cur) => (cur === images[openIndex] ? null : images[openIndex]));
-                }}
-                className={`max-h-[80vh] max-w-full object-contain ${nestedFor(images[openIndex]).length > 0 ? "cursor-pointer" : ""}`}
+                className="max-h-[80vh] max-w-full object-contain"
               />
               {nestedFor(images[openIndex]).length > 0 && (
                 <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
@@ -708,7 +764,7 @@ export default function GalleryBlock({
                   {nestedFor(images[openIndex]).length}
                 </span>
               )}
-            </div>
+            </button>
             {renderNestedStrip(images[openIndex], "lightbox")}
             {(captionFor(images[openIndex]).title || captionFor(images[openIndex]).description) && (
               <div className="max-w-md text-center text-white">
