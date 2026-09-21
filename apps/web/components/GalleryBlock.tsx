@@ -305,11 +305,19 @@ export default function GalleryBlock({
           </>
         )}
 
+        {/* min-h -- bug UI/UX ditemukan 21 September 2026 (audit menyeluruh):
+            foto yang lebih kecil dari viewport SEBELUMNYA dirender pada
+            ukuran piksel ASLINYA (cuma dibatasi max-height/max-width, tidak
+            pernah diperbesar) -- tampil mini di tengah layar hitam kosong.
+            min-h memaksa kotak tampil minimal segini, object-contain lalu
+            memperbesar foto mengisinya (letterbox di sisi pendek, TIDAK
+            crop) -- sengaja cuma min-height (bukan min-width juga) supaya
+            tidak berisiko overflow horizontal di layar sempit. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt={`Foto terkait ${nestedViewer.index + 1}`}
-          className="max-h-[80vh] max-w-full object-contain"
+          className="max-h-[80vh] min-h-[40vh] max-w-full object-contain"
           onClick={(e) => e.stopPropagation()}
         />
 
@@ -752,11 +760,15 @@ export default function GalleryBlock({
               aria-label={nestedFor(images[openIndex]).length > 0 ? `Lihat ${nestedFor(images[openIndex]).length} foto terkait` : undefined}
               className={`relative block ${nestedFor(images[openIndex]).length > 0 ? "cursor-pointer" : "cursor-default"}`}
             >
+              {/* min-h -- bug UI/UX ditemukan 21 September 2026 (audit
+                  menyeluruh), lihat catatan lengkap di renderNestedViewer:
+                  foto lebih kecil dari viewport sebelumnya tampil mini di
+                  tengah layar hitam kosong. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[openIndex]}
                 alt={captionFor(images[openIndex]).title || (title ? `${title} ${openIndex + 1}` : `Foto galeri ${openIndex + 1}`)}
-                className="max-h-[80vh] max-w-full object-contain"
+                className="max-h-[80vh] min-h-[40vh] max-w-full object-contain"
               />
               {nestedFor(images[openIndex]).length > 0 && (
                 <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
