@@ -115,16 +115,20 @@ test.describe("Tautan", () => {
     // baris (yang sudah dihapus total). Panel menggantikan kolom kiri
     // (di luar <li>), jadi tombolnya dicari lewat `page`, bukan `row`.
     await row.click();
+    // Redesain 22 September 2026: kontrol ikon jadi SATU tombol "Ikon" yang
+    // membuka menu (Unggah/Galeri/Warna/Hapus) -- buka menunya dulu.
+    const iconTrigger = page.getByTitle("Ikon", { exact: true });
+    await iconTrigger.click();
     await page.getByTitle("Pilih dari galeri ikon").click();
 
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toBeVisible();
     await expect(page.getByText("Media Sosial", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Instagram", exact: true }).click();
 
-    // Modal tertutup begitu ikon dipilih, tombol galeri di panel ikut
+    // Modal tertutup begitu ikon dipilih, tombol "Ikon" di panel ikut
     // berubah warna (text-jeon-purple) menandakan ada icon_key tersimpan.
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toHaveCount(0);
-    await expect(page.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
+    await expect(iconTrigger).toHaveClass(/text-jeon-purple/);
 
     // Reload penuh -- membuktikan pilihannya benar-benar tersimpan ke
     // backend (icon_key), bukan cuma state lokal sesi ini. Panel blok
@@ -133,7 +137,8 @@ test.describe("Tautan", () => {
     // (border-jeon-purple).
     await page.reload();
     await row.click();
-    await expect(page.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
+    await expect(iconTrigger).toHaveClass(/text-jeon-purple/);
+    await iconTrigger.click();
     await page.getByTitle("Pilih dari galeri ikon").click();
     await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-jeon-purple/);
   });
