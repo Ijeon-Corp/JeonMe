@@ -60,23 +60,40 @@ const displayFont = localFont({
 // atas, variable CSS beda) supaya font kustom halaman kreator TIDAK terikat
 // ke font UI aplikasi Jeonme sendiri -- keduanya kebetulan sama font, tapi
 // harus bisa berubah independen.
+// preload: false di SEMUA font custom* di bawah -- audit performa 22
+// September 2026 (diukur di browser lewat jalur Telkomsel -> Cloudflare
+// dengan RTT ~240ms): deklarasi font di layout ROOT membuat Next.js
+// meng-<link rel="preload"> SETIAP file font di SETIAP rute, jadi beranda,
+// login, dashboard, dan halaman kreator sama-sama memuat 15 file font
+// (~427 KB = 42-57% dari SELURUH transfer halaman) di awal, berebut
+// bandwidth & koneksi dgn CSS/JS kritis. 8 font di bawah cuma dipakai
+// halaman kreator yang memilih font itu (Desain > Font) -- kalau tidak
+// dipreload, @font-face-nya TETAP terdaftar di CSS & file font hanya
+// diunduh saat ada teks yang benar-benar memakainya, jadi tampilan tidak
+// berubah; harganya cuma font pilihan kreator ditemukan ~1 RTT lebih
+// belakangan (display: swap, tanpa teks tak terlihat). Font aplikasi
+// (body/heading/displayFont) sengaja TETAP dipreload.
 const customPlayfair = localFont({
   src: [{ path: "./fonts/playfair-latin.woff2", weight: "500 700", style: "normal" }],
+  preload: false,
   display: "swap",
   variable: "--font-custom-playfair",
 });
 const customLora = localFont({
   src: [{ path: "./fonts/lora-latin.woff2", weight: "400 600", style: "normal" }],
+  preload: false,
   display: "swap",
   variable: "--font-custom-lora",
 });
 const customMontserrat = localFont({
   src: [{ path: "./fonts/montserrat-latin.woff2", weight: "400 700", style: "normal" }],
+  preload: false,
   display: "swap",
   variable: "--font-custom-montserrat",
 });
 const customRobotoMono = localFont({
   src: [{ path: "./fonts/roboto-mono-latin.woff2", weight: "400 500", style: "normal" }],
+  preload: false,
   display: "swap",
   variable: "--font-custom-roboto-mono",
 });
@@ -86,6 +103,7 @@ const customPoppins = localFont({
     { path: "./fonts/poppins-600.woff2", weight: "600", style: "normal" },
     { path: "./fonts/poppins-700.woff2", weight: "700", style: "normal" },
   ],
+  preload: false,
   display: "swap",
   variable: "--font-custom-poppins",
 });
@@ -94,11 +112,13 @@ const customQuicksand = localFont({
     { path: "./fonts/quicksand-latin.woff2", weight: "500", style: "normal" },
     { path: "./fonts/quicksand-latin.woff2", weight: "700", style: "normal" },
   ],
+  preload: false,
   display: "swap",
   variable: "--font-custom-quicksand",
 });
 const customMerriweather = localFont({
   src: [{ path: "./fonts/merriweather-latin.woff2", weight: "400 700", style: "normal" }],
+  preload: false,
   display: "swap",
   variable: "--font-custom-merriweather",
 });
@@ -107,6 +127,7 @@ const customSpaceGrotesk = localFont({
     { path: "./fonts/space-grotesk-latin.woff2", weight: "500", style: "normal" },
     { path: "./fonts/space-grotesk-latin.woff2", weight: "700", style: "normal" },
   ],
+  preload: false,
   display: "swap",
   variable: "--font-custom-space-grotesk",
 });
