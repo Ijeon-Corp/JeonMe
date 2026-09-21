@@ -108,16 +108,22 @@ export default function AdminTrafficSourcesPage() {
 
       {!loading && data && (
         <>
+          {/* border-2 border-jeon-ink -- bug UI/UX ditemukan 21 September
+              2026 (audit menyeluruh): kartu di halaman ini (KPI, chart,
+              breakdown source) belum ikut migrasi visual bold-ink-border
+              yang sudah diterapkan di 6 sub-halaman admin lain (17
+              September 2026, mis. admin/users/page.tsx) -- disamakan di
+              sini + wrapper tabel di bawah. */}
           <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-jmd border border-jeon-purple/10 bg-app-surface p-4 shadow-refined">
+            <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
               <p className="text-xs font-semibold text-app-muted">Total Kunjungan</p>
               <p className="mt-1 font-serifDisplay text-2xl font-semibold text-app-ink">{data.total_views.toLocaleString("id-ID")}</p>
             </div>
-            <div className="rounded-jmd border border-jeon-purple/10 bg-app-surface p-4 shadow-refined">
+            <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
               <p className="text-xs font-semibold text-app-muted">Bawa Tag UTM</p>
               <p className="mt-1 font-serifDisplay text-2xl font-semibold text-jeon-purple">{data.views_with_utm.toLocaleString("id-ID")}</p>
             </div>
-            <div className="rounded-jmd border border-jeon-purple/10 bg-app-surface p-4 shadow-refined">
+            <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
               <p className="text-xs font-semibold text-app-muted">Persentase Bertag</p>
               <p className="mt-1 font-serifDisplay text-2xl font-semibold text-app-ink">{withUtmPercent}%</p>
             </div>
@@ -129,7 +135,7 @@ export default function AdminTrafficSourcesPage() {
               SVG hand-drawn, konvensi sama dengan Ringkasan/Statistik
               kreator (tanpa dependency chart). */}
           <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-5">
-            <div className="rounded-jmd border border-jeon-purple/10 bg-app-surface p-4 shadow-refined lg:col-span-3">
+            <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card lg:col-span-3">
               <p className="text-xs font-semibold text-app-muted">Tren Kunjungan per Hari</p>
               {dailySeries.length > 0 ? (
                 <>
@@ -167,7 +173,7 @@ export default function AdminTrafficSourcesPage() {
               )}
             </div>
 
-            <div className="rounded-jmd border border-jeon-purple/10 bg-app-surface p-4 shadow-refined lg:col-span-2">
+            <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card lg:col-span-2">
               <p className="text-xs font-semibold text-app-muted">Kunjungan per Source</p>
               {bySource.length > 0 ? (
                 <ul className="mt-3 flex flex-col gap-2.5">
@@ -191,7 +197,11 @@ export default function AdminTrafficSourcesPage() {
             </div>
           </section>
 
-          <div className="mt-6 overflow-x-auto rounded-jmd border border-jeon-purple/10 bg-app-surface shadow-refined">
+          {/* border-2 border-jeon-ink -- bug UI/UX ditemukan 21 September
+              2026 (audit menyeluruh): halaman ini belum ikut migrasi visual
+              bold-ink-border yang sudah diterapkan di 6 sub-halaman admin
+              lain (17 September 2026), terasa seperti "produk lain". */}
+          <div className="mt-6 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-app-border text-xs font-semibold uppercase tracking-wide text-app-muted">

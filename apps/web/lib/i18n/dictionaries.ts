@@ -483,6 +483,10 @@ export const dictionaries = {
           },
         },
         quickSetup: {
+          // stepLabel -- bug UI/UX ditemukan 21 September 2026 (audit
+          // menyeluruh): wizard 3 langkah ini sebelumnya tanpa indikator
+          // progres sama sekali, kreator tidak tahu masih berapa lama lagi.
+          stepLabel: "Langkah {current} dari {total}",
           step1Intro: "Pilih kategori yang paling cocok dengan halamanmu -- template & tema di langkah berikutnya disaring sesuai kategori ini.",
           generatingTitle: "Menyiapkan halamanmu...",
           generatingDesc: "Menerapkan tema, tautan, dan blok starter.",
@@ -3858,6 +3862,7 @@ export const dictionaries = {
           },
         },
         quickSetup: {
+          stepLabel: "Step {current} of {total}",
           step1Intro: "Pick the category that best fits your page -- templates & themes in the next step are filtered to match this category.",
           generatingTitle: "Setting up your page...",
           generatingDesc: "Applying the theme, links, and starter blocks.",

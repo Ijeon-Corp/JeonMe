@@ -370,9 +370,30 @@ export default function QuickSetupPage() {
   }
 
   // ---------- Step 1: pilih kategori ----------
+  // renderStepIndicator -- bug UI/UX ditemukan 21 September 2026 (audit
+  // menyeluruh): wizard 3 langkah ini sebelumnya tanpa indikator progres
+  // sama sekali. "generating" (step 3, transisi otomatis + layar sukses)
+  // sengaja TIDAK dapat indikator ini -- sudah punya spinner/tanda sukses
+  // sendiri yang jelas, badge "3/3" di situ cuma jadi noise.
+  function renderStepIndicator(current: 1 | 2) {
+    return (
+      <div className="mb-3 flex items-center gap-2">
+        <div className="flex gap-1">
+          {[1, 2].map((n) => (
+            <span key={n} className={`h-1.5 w-6 rounded-full ${n <= current ? "bg-jeon-purple" : "bg-app-border"}`} />
+          ))}
+        </div>
+        <span className="text-[11px] font-semibold text-app-muted">
+          {t("dashboard.pages.quickSetup.stepLabel").replace("{current}", String(current)).replace("{total}", "2")}
+        </span>
+      </div>
+    );
+  }
+
   if (step === "category") {
     return (
       <div className="mx-auto max-w-4xl">
+        {renderStepIndicator(1)}
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.step1Intro")}</p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {QUICK_SETUP_CATEGORIES.map((c, i) => (
@@ -424,6 +445,7 @@ export default function QuickSetupPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      {renderStepIndicator(2)}
       <button
         type="button"
         onClick={() => setStep("category")}
