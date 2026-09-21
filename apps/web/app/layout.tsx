@@ -155,6 +155,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
+      data-theme="light"
       className={`${body.variable} ${heading.variable} ${displayFont.variable} ${customPlayfair.variable} ${customLora.variable} ${customMontserrat.variable} ${customRobotoMono.variable} ${customPoppins.variable} ${customQuicksand.variable} ${customMerriweather.variable} ${customSpaceGrotesk.variable} scroll-smooth`}
       suppressHydrationWarning
     >
