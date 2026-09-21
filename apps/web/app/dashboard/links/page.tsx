@@ -677,6 +677,100 @@ export default function DashboardLinksPage() {
   const [editEmbedLinkDescription, setEditEmbedLinkDescription] = useState("");
   const [savingContent, setSavingContent] = useState(false);
 
+  // previewLinks -- uxd-8 (audit UI/UX 21 September 2026): 10 tipe blok
+  // berbasis buffer (lihat catatan panjang di contentEditSnapshot) hanya
+  // menulis ke `links` sungguhan (yang dibaca LivePreviewPanel di bawah)
+  // saat tombol "Simpan" PER BLOK diklik (handleSaveContent) -- mengetik
+  // di panel edit blok video/teks/dll TIDAK terlihat sama sekali di
+  // Pratinjau Langsung sampai disimpan, padahal tipe blok LAIN (yang
+  // auto-commit onBlur/onChange langsung ke `links`) sudah realtime.
+  // Overlay MURNI UNTUK TAMPILAN: `links` ASLI (dipakai handleSaveContent,
+  // draft-discard, dst.) TIDAK disentuh sama sekali -- hanya salinan yang
+  // dikirim ke LivePreviewPanel diganti satu entri (blok yang sedang
+  // dibuka) dengan nilai buffer TERKINI, mirror persis pemetaan field di
+  // handleSaveContent TAPI tanpa validasi (preview boleh menampilkan
+  // field kosong/belum lengkap apa adanya).
+  const previewLinks = useMemo(() => {
+    if (!contentEditId) return links;
+    const idx = links.findIndex((l) => l.id === contentEditId);
+    if (idx === -1) return links;
+    const link = links[idx];
+    let patch: { url?: string; description?: string; block_data?: Record<string, unknown> } | null;
+    switch (link.block_type) {
+      case "video":
+        patch = { block_data: { video_url: editVideoUrl } };
+        break;
+      case "maps":
+        patch = { url: editMapsUrl, block_data: { embed: editMapsEmbed } };
+        break;
+      case "text":
+        patch = { block_data: { text: editText } };
+        break;
+      case "accordion":
+        patch = { block_data: { text: editAccordionText } };
+        break;
+      case "project_showcase":
+        patch = { url: editShowcaseUrl, description: editShowcaseDescription, block_data: { badge_text: editShowcaseBadge, cta_text: editShowcaseCta } };
+        break;
+      case "button":
+        patch =
+          editButtonMode === "whatsapp"
+            ? { url: buildWhatsappButtonUrl(editButtonWhatsappNumber, editButtonWhatsappMessage), block_data: { whatsapp_number: editButtonWhatsappNumber, whatsapp_message: editButtonWhatsappMessage } }
+            : { url: editButtonUrl, block_data: {} };
+        break;
+      case "countdown":
+        patch = {
+          block_data: {
+            target_at: editCountdownTargetAt ? new Date(editCountdownTargetAt).toISOString() : link.block_data?.target_at,
+            product_id: editCountdownProductId || undefined,
+            cta_label: editCountdownProductId ? undefined : editCountdownCtaLabel,
+            cta_url: editCountdownProductId ? undefined : editCountdownCtaUrl,
+          },
+        };
+        break;
+      case "embed":
+        patch = { block_data: { embed_url: editEmbedUrl } };
+        break;
+      case "video_image":
+        patch = { block_data: { video_url: editVideoImageVideoUrl } };
+        break;
+      case "embed_link":
+        patch = { url: editEmbedLinkUrl, description: editEmbedLinkDescription };
+        break;
+      default:
+        patch = null;
+    }
+    if (!patch) return links;
+    const merged: LinkItem = { ...link, ...patch, block_data: { ...link.block_data, ...patch.block_data } };
+    const copy = [...links];
+    copy[idx] = merged;
+    return copy;
+  }, [
+    contentEditId,
+    links,
+    editVideoUrl,
+    editMapsUrl,
+    editMapsEmbed,
+    editText,
+    editAccordionText,
+    editShowcaseUrl,
+    editShowcaseDescription,
+    editShowcaseBadge,
+    editShowcaseCta,
+    editButtonMode,
+    editButtonUrl,
+    editButtonWhatsappNumber,
+    editButtonWhatsappMessage,
+    editCountdownTargetAt,
+    editCountdownProductId,
+    editCountdownCtaLabel,
+    editCountdownCtaUrl,
+    editEmbedUrl,
+    editVideoImageVideoUrl,
+    editEmbedLinkUrl,
+    editEmbedLinkDescription,
+  ]);
+
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts(), listMyExtraPages()])
       .then(([p, l, prod, extras]) => {
@@ -4473,7 +4567,7 @@ export default function DashboardLinksPage() {
 
       <LivePreviewPanel
         page={page}
-        links={links}
+        links={previewLinks}
         products={products}
         pageType={activePage?.pageType}
         pageSlug={activePage?.slug}
