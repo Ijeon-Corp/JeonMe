@@ -95,6 +95,33 @@ func (c *Client) PublicURL(key string) string {
 	return fmt.Sprintf("%s://%s/%s/%s", scheme, c.endpoint, c.Bucket, key)
 }
 
+// privateKeyPrefixes -- prefix key yang berisi file PRIBADI/berbayar (file
+// produk digital, dokumen KYC, salinan berwatermark per order), TIDAK
+// pernah dibuat publik-baca (lihat EnsurePublicRead di main.go) dan hanya
+// dilayani lewat presigned URL. Audit optimasi Cloudflare 21 September
+// 2026: SEBELUMNYA Upload menempelkan "public, max-age=31536000, immutable"
+// ke SEMUA objek termasuk ini -- begitu Cloudflare berada di depan
+// storage.jeon.id, respons presigned GET yang membawa header itu memenuhi
+// syarat di-cache di edge (cache Cloudflare per URL lengkap termasuk
+// signature, ekstensi pdf/zip/jpg/png/mp4 di-cache secara default), jadi
+// dokumen KYC/file berbayar bisa tetap terlayani dari cache SETELAH
+// presigned URL-nya kedaluwarsa. Kalau ada prefix privat baru, tambahkan di
+// sini DAN di aturan bypass-cache Cloudflare untuk host storage.
+var privateKeyPrefixes = []string{"products/", "kyc/", "watermarked/"}
+
+// cacheControlForKey memilih header Cache-Control yang ditempel saat Upload.
+// Objek publik (avatar, sampul, galeri, dst.) aman "immutable" -- lihat
+// komentar panjang di Upload; objek privat WAJIB tidak boleh disimpan cache
+// bersama (CDN/proxy) sama sekali.
+func cacheControlForKey(key string) string {
+	for _, p := range privateKeyPrefixes {
+		if strings.HasPrefix(key, p) {
+			return "private, no-store"
+		}
+	}
+	return "public, max-age=31536000, immutable"
+}
+
 // Upload menaruh file produk di bawah key yang sudah ditentukan pemanggil
 // (biasanya "products/<product_id>/<nama_file>"). Bukan presigned PUT dari
 // browser langsung -- file mengalir lewat API (proxy upload) supaya validasi
@@ -135,10 +162,12 @@ func (c *Client) PublicURL(key string) string {
 // mengekspos key itu sebagai PublicURL tanpa query cache-buster, "immutable"
 // di sini akan salah untuknya -- jangan tambahkan pemanggil seperti itu
 // tanpa meninjau ulang komentar ini.
+//
+// KECUALI prefix privat (privateKeyPrefixes) -- lihat cacheControlForKey.
 func (c *Client) Upload(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error {
 	_, err := c.mc.PutObject(ctx, c.Bucket, key, reader, size, minio.PutObjectOptions{
 		ContentType:  contentType,
-		CacheControl: "public, max-age=31536000, immutable",
+		CacheControl: cacheControlForKey(key),
 	})
 	if err != nil {
 		return fmt.Errorf("gagal unggah file: %w", err)
