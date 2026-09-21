@@ -288,6 +288,11 @@ export interface PagePreviewData {
   // (ring + skala), blok lain diredupkan. undefined (bawaan, dipakai
   // halaman publik & pemakai LivePreviewPanel lain) = tidak ada efek sama
   // sekali, tampilan identik seperti sebelum field ini ada.
+  // Susulan 22 September 2026 (permintaan pengguna: "ada highlight di
+  // pratinjau seperti di builder"): berlaku juga utk halaman Landing &
+  // utk blok FAQ/Katalog (editor drill-down), dan LivePreviewPanel kini
+  // MENGGULIR kotak pratinjau ke blok yang disorot -- lihat
+  // applyPreviewHighlight.
   highlightLinkId?: string;
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
@@ -398,6 +403,46 @@ export function buildUtmHref(url: string, title: string, utmEnabled: boolean | u
   } catch {
     return url;
   }
+}
+
+// applyPreviewHighlight -- sorotan blok di Pratinjau Langsung Simple Mode
+// (lihat PagePreviewData.highlightLinkId), dipakai BERSAMA jalur Bio & Landing
+// supaya tampilannya identik di kedua jenis halaman. `nodes` = hasil map
+// tiap blok (urutan SAMA persis dengan `links`); yang disorot diberi ring
+// ungu, sisanya diredupkan. Balikan `nodes` APA ADANYA (tanpa pembungkus
+// sama sekali, jadi halaman publik & pratinjau lain tidak berubah) kalau
+// tidak ada blok yang disorot ATAU blok itu tidak ikut tampil di pratinjau
+// (nonaktif/terjadwal di luar jendela/render kosong) -- dulu SEMUA blok
+// lain tetap diredupkan padahal tak ada satu pun yang bersorot, tampak
+// seperti pratinjau rusak. Pembungkus yang disorot diberi
+// data-preview-highlight -- LivePreviewPanel memakainya utk menggulir
+// kotak pratinjau ke blok itu (perilaku yang sama dengan kanvas Builder).
+// layout "center" utk Landing (kolom flex items-center): anak pembungkus
+// harus tetap rata tengah persis seperti sebelum dibungkus.
+export function applyPreviewHighlight(
+  nodes: React.ReactNode[],
+  links: { id: string }[],
+  highlightId: string | undefined,
+  layout: "stack" | "center" = "stack"
+): React.ReactNode[] {
+  if (!highlightId) return nodes;
+  const target = links.findIndex((l) => l.id === highlightId);
+  if (target === -1 || !nodes[target]) return nodes;
+  return nodes.map((node, i) => {
+    if (!node) return node;
+    const isHighlighted = i === target;
+    return (
+      <div
+        key={links[i].id}
+        data-preview-highlight={isHighlighted ? "true" : undefined}
+        className={`w-full rounded-2xl transition-all duration-200 ${layout === "center" ? "flex flex-col items-center" : ""} ${
+          isHighlighted ? "opacity-100 ring-2 ring-jeon-purple" : "opacity-30"
+        }`}
+      >
+        {node}
+      </div>
+    );
+  });
 }
 
 export interface PreviewSourcePage {
@@ -3179,20 +3224,11 @@ export default function PagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => {
-              if (!data.highlightLinkId) return renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView);
-              const isHighlighted = link.id === data.highlightLinkId;
-              return (
-                <div
-                  key={link.id}
-                  className={`w-full rounded-2xl transition-all duration-200 ${
-                    isHighlighted ? "opacity-100 ring-2 ring-jeon-purple" : "opacity-30"
-                  }`}
-                >
-                  {renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView)}
-                </div>
-              );
-            })}
+            {applyPreviewHighlight(
+              data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView)),
+              data.links,
+              data.highlightLinkId
+            )}
           </div>
         )}
 

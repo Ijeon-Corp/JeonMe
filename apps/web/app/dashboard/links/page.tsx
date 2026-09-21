@@ -4572,7 +4572,10 @@ export default function DashboardLinksPage() {
         pageType={activePage?.pageType}
         pageSlug={activePage?.slug}
         openUrl={activePage ? `${SITE_URL}/${accountUsername}/${activePage.slug}` : undefined}
-        highlightLinkId={contentEditId ?? undefined}
+        // drilldownBlockId ikut disorot (22 September 2026): blok FAQ/Katalog
+        // dibuka lewat BlockDrilldownEditor yang TIDAK memakai contentEditId,
+        // jadi sebelumnya pratinjau tidak menyorot apa pun untuk kedua tipe itu.
+        highlightLinkId={contentEditId ?? drilldownBlockId ?? undefined}
       />
     </div>
     </>

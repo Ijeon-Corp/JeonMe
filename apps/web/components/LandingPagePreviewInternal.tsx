@@ -9,7 +9,7 @@ import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import { IconChevronRight } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
-import { Watermark, buildUtmHref, renderVideoBackground } from "@/components/PagePreview";
+import { Watermark, applyPreviewHighlight, buildUtmHref, renderVideoBackground } from "@/components/PagePreview";
 import type { PagePreviewData } from "@/components/PagePreview";
 
 // LandingPagePreviewInternal -- diekstrak dari PagePreview.tsx (audit
@@ -75,7 +75,11 @@ export default function LandingPagePreview({
         <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
-        {data.links.map((block) => {
+        {/* applyPreviewHighlight membungkus HASIL map di bawah (tanpa
+            menyentuh switch-nya) HANYA saat ada blok yang sedang dibuka
+            di editor Simple Mode -- halaman publik tidak pernah punya
+            highlightLinkId, jadi keluarannya identik seperti sebelumnya. */}
+        {applyPreviewHighlight(data.links.map((block) => {
           switch (block.blockType) {
             case "heading":
               return (
@@ -261,7 +265,7 @@ export default function LandingPagePreview({
               );
             }
           }
-        })}
+        }), data.links, data.highlightLinkId, "center")}
 
         {!hideFooterChrome && (
           <div className="mt-auto flex flex-col items-center gap-3 pt-6">

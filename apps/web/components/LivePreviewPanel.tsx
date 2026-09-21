@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { IconExternal } from "@/components/icons";
@@ -55,6 +56,46 @@ export default function LivePreviewPanel({
   // lihat catatan lengkap di PagePreviewData.highlightLinkId.
   highlightLinkId?: string;
 }) {
+  // scrollBoxRef + efek di bawah -- permintaan langsung pengguna, 22
+  // September 2026 ("ketika lagi buka detail blok itu ada highlight di
+  // bagian pratinjau nya seperti di builder"): sorotan ring sudah ada sejak
+  // 19 September, tapi kotak pratinjau (tinggi tetap 580px, overflow-y-auto)
+  // TIDAK PERNAH ikut menggulir -- blok yang dibuka di bawah lipatan
+  // (scrollTop tetap 0) sorotannya tak terlihat sama sekali, sementara
+  // blok yang terlihat justru semuanya diredupkan. Builder sudah punya
+  // perilaku ini (BuilderCanvas.tsx, scrollIntoView pada selectedNodeId).
+  // SENGAJA menggulir kotak ini SAJA lewat scrollTo -- BUKAN
+  // scrollIntoView -- karena scrollIntoView ikut menggulir halaman
+  // dashboard ke kotak pratinjau, mengeluarkan pengguna dari form yang
+  // sedang ia isi (di layar sempit pratinjau berada DI BAWAH editor).
+  // Koordinat dihitung dari getBoundingClientRect kedua elemen (bukan
+  // offsetTop) supaya benar walau isi kotak di-`zoom` (lihat bawah).
+  // Diulang beberapa frame karena PagePreview di-lazy-load: pembungkus
+  // bersorotnya baru ada begitu chunk-nya selesai dimuat.
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!highlightLinkId) return;
+    let frame = 0;
+    let tries = 0;
+    const attempt = () => {
+      const box = scrollBoxRef.current;
+      const el = box?.querySelector<HTMLElement>("[data-preview-highlight]");
+      if (!box || !el) {
+        if (++tries < 30) frame = requestAnimationFrame(attempt);
+        return;
+      }
+      const boxRect = box.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const margin = 16;
+      if (elRect.top >= boxRect.top + margin && elRect.bottom <= boxRect.bottom - margin) return;
+      const top = box.scrollTop + (elRect.top - boxRect.top) - (boxRect.height - elRect.height) / 2;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      box.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
+    };
+    frame = requestAnimationFrame(attempt);
+    return () => cancelAnimationFrame(frame);
+  }, [highlightLinkId]);
+
   return (
     // min-w-0 (bug overflow horizontal, 18 Agustus 2026): panel ini SELALU
     // diletakkan sebagai kolom kedua grid "[1fr_360px]" di ketiga halaman
@@ -101,7 +142,7 @@ export default function LivePreviewPanel({
           tetap dipertahankan supaya di layar SANGAT sempit (<280px, mis.
           landscape ponsel kecil) kotak ikut menyusut, bukan meluber. */}
       {page && (
-        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border-2 border-jeon-ink shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={scrollBoxRef} className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border-2 border-jeon-ink shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Permintaan susulan: font pratinjau masih terasa besar --
               PagePreview dipakai BERSAMA halaman publik asli, jadi ukuran
               teksnya sendiri (Tailwind class di PagePreview.tsx) TIDAK boleh
