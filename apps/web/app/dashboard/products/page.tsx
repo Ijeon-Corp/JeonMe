@@ -23,7 +23,6 @@ import {
   deleteProduct,
   getAnalyticsSummary,
   getExtraPage,
-  getMyPage,
   getProductDownloadURL,
   getSettingsProfile,
   listCollaborators,
@@ -53,6 +52,7 @@ import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import type { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
+import { useDashboardMyPage } from "@/lib/dashboard-page-context";
 import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -228,7 +228,15 @@ function DashboardProductsPageInner() {
     updateUrlParams({ tab: TAB_TO_URL[next] });
   }
 
-  const [page, setPage] = useState<MyPage | null>(null);
+  // page -- audit performa 22 September 2026: SEBELUMNYA fetch getMyPage()
+  // sendiri di sini, padahal dashboard/layout.tsx (ancestor langsung
+  // halaman ini) SUDAH memanggilnya lebih dulu untuk kebutuhannya sendiri
+  // (chip username/avatar top bar) -- pola & alasan SAMA PERSIS perbaikan
+  // app/dashboard/page.tsx 21 September (lihat catatan lengkap di
+  // lib/dashboard-page-context.tsx). Aman dijadikan murni nilai context --
+  // `page` di file ini cuma di-`setPage` SATU kali (fetch awal), tidak
+  // pernah dimutasi lokal sesudahnya di mana pun.
+  const page = useDashboardMyPage();
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -310,9 +318,8 @@ function DashboardProductsPageInner() {
   const [savingSuccessMessage, setSavingSuccessMessage] = useState(false);
 
   useEffect(() => {
-    Promise.all([getMyPage(), listProducts(), listCollaborators()])
-      .then(([p, prod, collabs]) => {
-        setPage(p);
+    Promise.all([listProducts(), listCollaborators()])
+      .then(([prod, collabs]) => {
         setProducts(prod);
         setActiveCollaborators(collabs.filter((c) => c.status === "active" && c.collaborator_user_id));
       })
@@ -405,8 +412,12 @@ function DashboardProductsPageInner() {
   // semua entri ternyata sudah diganti -- lebih baik menampilkan Toko yang
   // salah daripada tidak menampilkan sama sekali.
   async function loadTokoData(targetId?: string | null) {
-    const profile = await getSettingsProfile();
-    const pages = await listMyExtraPages();
+    // Promise.all -- audit performa 22 September 2026: getSettingsProfile()
+    // & listMyExtraPages() TIDAK saling bergantung (profile.username cuma
+    // dipakai SETELAH keduanya selesai, di percabangan multi-Toko di
+    // bawah), tapi sebelumnya dijalankan berurutan -- menambah satu
+    // round-trip jaringan yang sebenarnya bisa dihindari.
+    const [profile, pages] = await Promise.all([getSettingsProfile(), listMyExtraPages()]);
     const tokoPages = pages.filter((p) => p.page_type === "produk");
     const canonical =
       tokoPages.length <= 1
