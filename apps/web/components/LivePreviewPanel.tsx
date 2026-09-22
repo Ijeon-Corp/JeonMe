@@ -38,6 +38,7 @@ export default function LivePreviewPanel({
   editableStickers,
   onStickersChange,
   highlightLinkId,
+  onSelectLink,
 }: {
   page: MyPage | null;
   links: LinkItem[];
@@ -55,6 +56,16 @@ export default function LivePreviewPanel({
   // yang sama di pratinjau supaya jelas blok mana yang sedang diedit --
   // lihat catatan lengkap di PagePreviewData.highlightLinkId.
   highlightLinkId?: string;
+  // onSelectLink -- permintaan langsung pengguna, 22 September 2026 ("kenapa
+  // saat saya klik salah satu blok di pratinjau tidak ada highlight"): arah
+  // SEBALIKNYA dari highlightLinkId -- klik LANGSUNG di blok pratinjau ini
+  // membuka blok yang sama di editor kiri (Simple Mode), yang otomatis
+  // menyalakan highlightLinkId di atas juga. Opsional & TIDAK dipakai
+  // pemanggil lain (dashboard/products, dashboard/design) -- pratinjau
+  // mereka tetap murni tampilan (tanpa efek klik apa pun), sama seperti
+  // sebelum field ini ada. Lihat catatan lengkap di
+  // PagePreviewData.onSelectLink & applyPreviewHighlight.
+  onSelectLink?: (id: string) => void;
 }) {
   // scrollBoxRef + efek di bawah -- permintaan langsung pengguna, 22
   // September 2026 ("ketika lagi buka detail blok itu ada highlight di
@@ -164,6 +175,7 @@ export default function LivePreviewPanel({
                 pageType,
                 pageSlug,
                 highlightLinkId,
+                onSelectLink,
               }}
               editableStickers={editableStickers}
               onStickersChange={onStickersChange}

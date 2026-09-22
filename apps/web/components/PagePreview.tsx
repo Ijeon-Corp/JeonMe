@@ -294,6 +294,19 @@ export interface PagePreviewData {
   // MENGGULIR kotak pratinjau ke blok yang disorot -- lihat
   // applyPreviewHighlight.
   highlightLinkId?: string;
+  // onSelectLink -- arah SEBALIKNYA dari highlightLinkId, susulan langsung
+  // 22 September 2026 ("kenapa saat saya klik salah satu blok di pratinjau
+  // tidak ada highlight"): klik pada sebuah blok DI PRATINJAU ini
+  // memanggil callback ini dengan id blok yang diklik, dipakai
+  // dashboard/links/page.tsx untuk membuka blok yang sama di editor kiri
+  // (yang otomatis menyalakan highlightLinkId di atas). Sama seperti
+  // highlightLinkId, HANYA diisi LivePreviewPanel.tsx (Simple Mode) --
+  // undefined di mana pun lain (halaman publik, ProdukPagePreview,
+  // BuilderPagePreview, dashboard/products & dashboard/design yang belum
+  // butuh fitur ini) berarti blok pratinjau TIDAK bisa diklik sama sekali,
+  // perilaku identik seperti sebelum field ini ada. Lihat implementasi
+  // klik & preventDefault-nya di applyPreviewHighlight.
+  onSelectLink?: (id: string) => void;
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
@@ -419,25 +432,54 @@ export function buildUtmHref(url: string, title: string, utmEnabled: boolean | u
 // kotak pratinjau ke blok itu (perilaku yang sama dengan kanvas Builder).
 // layout "center" utk Landing (kolom flex items-center): anak pembungkus
 // harus tetap rata tengah persis seperti sebelum dibungkus.
+// onSelect -- susulan 22 September 2026 ("kenapa saat saya klik salah satu
+// blok di pratinjau tidak ada highlight"): arah SEBALIKNYA dari highlightId
+// -- klik LANGSUNG pada sebuah blok di pratinjau ini memanggil onSelect(id),
+// yang di LivePreviewPanel/dashboard/links dihubungkan balik ke
+// selectBlockForEdit (buka blok yang sama di editor kiri). Wrapper di sini
+// SENGAJA yang menangani klik (bukan renderLinkOrBlock/LandingPagePreview
+// sendiri) -- beberapa tipe blok masih merender <a href> ASLI walau
+// interactive=false (mis. tautan biasa tanpa tombol Beli), preventDefault
+// DI SINI (fase bubble, sebelum event selesai) tetap membatalkan navigasi
+// itu, jadi klik di pratinjau dashboard tidak lagi diam-diam membuka tab
+// baru. Wrapping SEKARANG terjadi kalau highlightId ATAU onSelect ada
+// (dulu cuma highlightId) -- publik/pratinjau lain yang tidak mengoper
+// keduanya tetap menerima `nodes` apa adanya, tidak ada bedanya sama sekali.
 export function applyPreviewHighlight(
   nodes: React.ReactNode[],
   links: { id: string }[],
   highlightId: string | undefined,
-  layout: "stack" | "center" = "stack"
+  layout: "stack" | "center" = "stack",
+  onSelect?: (id: string) => void
 ): React.ReactNode[] {
-  if (!highlightId) return nodes;
-  const target = links.findIndex((l) => l.id === highlightId);
-  if (target === -1 || !nodes[target]) return nodes;
+  if (!highlightId && !onSelect) return nodes;
+  const target = highlightId ? links.findIndex((l) => l.id === highlightId) : -1;
+  // highlightActive terpisah dari `clickable` -- blok yang sedang dibuka
+  // tapi TIDAK ikut dirender di pratinjau (nonaktif/terjadwal di luar
+  // jendela) tidak boleh meredupkan blok lain, TAPI blok lain itu harus
+  // tetap bisa diklik kalau onSelect ada.
+  const highlightActive = highlightId !== undefined && target !== -1 && Boolean(nodes[target]);
   return nodes.map((node, i) => {
     if (!node) return node;
-    const isHighlighted = i === target;
+    const isHighlighted = highlightActive && i === target;
     return (
       <div
         key={links[i].id}
         data-preview-highlight={isHighlighted ? "true" : undefined}
+        onClick={
+          onSelect
+            ? (e) => {
+                // preventDefault WAJIB -- lihat catatan panjang di atas
+                // fungsi ini soal <a href> asli yang masih dirender.
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(links[i].id);
+              }
+            : undefined
+        }
         className={`w-full rounded-2xl transition-all duration-200 ${layout === "center" ? "flex flex-col items-center" : ""} ${
-          isHighlighted ? "opacity-100 ring-2 ring-jeon-purple" : "opacity-30"
-        }`}
+          onSelect ? "cursor-pointer" : ""
+        } ${highlightActive ? (isHighlighted ? "opacity-100 ring-2 ring-jeon-purple" : "opacity-30") : onSelect ? "hover:ring-1 hover:ring-jeon-purple/40" : ""}`}
       >
         {node}
       </div>
@@ -3227,7 +3269,9 @@ export default function PagePreview({
             {applyPreviewHighlight(
               data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView)),
               data.links,
-              data.highlightLinkId
+              data.highlightLinkId,
+              "stack",
+              data.onSelectLink
             )}
           </div>
         )}

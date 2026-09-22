@@ -265,7 +265,7 @@ export default function LandingPagePreview({
               );
             }
           }
-        }), data.links, data.highlightLinkId, "center")}
+        }), data.links, data.highlightLinkId, "center", data.onSelectLink)}
 
         {!hideFooterChrome && (
           <div className="mt-auto flex flex-col items-center gap-3 pt-6">

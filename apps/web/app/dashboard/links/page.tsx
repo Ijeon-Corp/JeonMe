@@ -2178,6 +2178,30 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // selectBlockForEdit -- permintaan langsung pengguna, 22 September 2026
+  // ("kenapa saat saya klik salah satu blok di pratinjau tidak ada
+  // highlight"): sorotan pratinjau (highlightLinkId, lihat catatan di
+  // PagePreviewData) sampai sekarang hanya BEREAKSI terhadap blok yang
+  // dibuka lewat baris di daftar KIRI -- klik LANGSUNG di kotak pratinjau
+  // (kanan) tidak melakukan apa pun sama sekali (blok "link" bahkan diam-
+  // diam membuka URL aslinya di tab baru, lihat renderLinkOrBlock cabang
+  // interactive=false, sama sekali bukan yang dimaksud pengguna).
+  // onSelectLink (LivePreviewPanel -> PagePreview -> applyPreviewHighlight)
+  // sekarang memanggil fungsi INI lewat wrapper yang preventDefault klik
+  // asli, jadi tidak ada lagi navigasi tak sengaja. SENGAJA fungsi
+  // TERPISAH dari toggleContentEdit (dipakai baris daftar kiri) -- di
+  // pratinjau klik blok yang SUDAH terbuka seharusnya tetap terbuka (no-op),
+  // BUKAN menutupnya seperti perilaku toggle baris kiri (menutup tanpa
+  // sengaja gara-gara klik pratinjau akan terasa seperti bug, bukan fitur).
+  function selectBlockForEdit(link: LinkItem) {
+    if (link.block_type === "catalog" || link.block_type === "faq") {
+      setDrilldownBlockId(link.id);
+      return;
+    }
+    if (contentEditId === link.id) return;
+    openContentEdit(link);
+  }
+
   async function handleSaveContent(link: LinkItem) {
     let blockData: Record<string, unknown>;
     let blockUrl: string | undefined;
@@ -4576,6 +4600,15 @@ export default function DashboardLinksPage() {
         // dibuka lewat BlockDrilldownEditor yang TIDAK memakai contentEditId,
         // jadi sebelumnya pratinjau tidak menyorot apa pun untuk kedua tipe itu.
         highlightLinkId={contentEditId ?? drilldownBlockId ?? undefined}
+        // onSelectLink -- permintaan langsung pengguna, 22 September 2026:
+        // arah SEBALIKNYA dari highlightLinkId di atas. `links` (bukan
+        // `previewLinks`) SENGAJA -- `previewLinks` cuma overlay tampilan
+        // (lihat catatan di atasnya), butuh data ASLI (block_type dst.) utk
+        // menentukan editor mana yang harus dibuka.
+        onSelectLink={(id) => {
+          const link = links.find((l) => l.id === id);
+          if (link) selectBlockForEdit(link);
+        }}
       />
     </div>
     </>
