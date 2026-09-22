@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -290,6 +290,7 @@ export default function ProdukPageEditor({
   products,
   onProductCreated,
   externalSelectBlockId,
+  onActiveBlockChange,
 }: {
   loading: boolean;
   username: string;
@@ -319,15 +320,17 @@ export default function ProdukPageEditor({
   // Toko): id blok yang baru saja diklik di LivePreviewPanel milik INDUK
   // (dashboard/products/page.tsx, sama seperti section/setSection di
   // atas -- pratinjau Toko dirender di induk, bukan di sini). undefined
-  // (bawaan) = belum pernah ada klik pratinjau. CATATAN JUJUR: arah
-  // SEBALIKNYA (buka blok lewat baris kiri -> sorot balik di pratinjau)
-  // BELUM diimplementasikan di sini -- contentEditId/drilldownBlockId
-  // murni state internal komponen ini, TIDAK terlihat oleh induk sama
-  // sekali, mengangkatnya keduanya ke induk (spt section/setSection)
-  // adalah refactor lebih besar yang sengaja ditunda terpisah. Prop ini
-  // HANYA memperbaiki arah "klik pratinjau -> buka editor", bukan
-  // paritas highlight dua-arah penuh seperti Simple Mode.
+  // (bawaan) = belum pernah ada klik pratinjau. Arah "klik pratinjau ->
+  // buka editor" (INI).
   externalSelectBlockId?: string | null;
+  // onActiveBlockChange -- susulan 23 September 2026, arah SEBALIKNYA
+  // dari externalSelectBlockId di atas ("buka blok lewat baris kiri ->
+  // sorot balik di pratinjau"). Diteruskan apa adanya ke BlockSection
+  // (lihat catatan lengkap di sana) -- contentEditId/drilldownBlockId
+  // TETAP state internal BlockSection (tidak diangkat penuh ke induk
+  // seperti section/setSection), cukup DILAPORKAN lewat callback ini
+  // setiap kali berubah.
+  onActiveBlockChange?: (id: string | null) => void;
 }) {
   const router = useRouter();
   const { t } = useLocale();
@@ -560,6 +563,7 @@ export default function ProdukPageEditor({
             onProductCreated={onProductCreated}
             isPremium={page.is_premium ?? false}
             externalSelectBlockId={externalSelectBlockId}
+            onActiveBlockChange={onActiveBlockChange}
           />
         )}
         {section === "tema" && (
@@ -621,6 +625,7 @@ function BlockSection({
   onProductCreated,
   isPremium,
   externalSelectBlockId,
+  onActiveBlockChange,
 }: {
   pageId: string;
   links: LinkItem[];
@@ -639,6 +644,21 @@ function BlockSection({
   // links/contentEditId/drilldownBlockId semuanya state LOKAL di sini,
   // bukan di ProdukPageEditor.
   externalSelectBlockId?: string | null;
+  // onActiveBlockChange -- susulan 23 September 2026 (permintaan
+  // pengguna: "arah sebaliknya dari sorotan pratinjau ... belum ada"),
+  // arah SEBALIKNYA dari externalSelectBlockId di atas. Dipanggil lewat
+  // useEffect (BUKAN langsung di render) SETIAP KALI contentEditId ATAU
+  // drilldownBlockId berubah -- ini pola resmi React yang BERBEDA dari
+  // "adjust state during render": di sini yang di-setState adalah state
+  // milik INDUK (lewat prop callback), bukan state MILIK KOMPONEN INI
+  // sendiri, jadi TIDAK melanggar react-hooks/set-state-in-effect (aturan
+  // itu soal efek yang men-setState dirinya sendiri) -- ini justru contoh
+  // resmi "notify parent tentang perubahan state" dari dokumentasi React.
+  // Induk (dashboard/products/page.tsx) meneruskan nilai ini balik ke
+  // LivePreviewPanel.highlightLinkId, MENUTUP lingkaran yang sebelumnya
+  // cuma satu arah (pratinjau -> editor kiri, commit faf5170) -- sekarang
+  // editor kiri -> pratinjau juga tersorot.
+  onActiveBlockChange?: (id: string | null) => void;
 }) {
   const { t } = useLocale();
   const CONTENT_TILES = getContentTiles(t);
@@ -755,6 +775,16 @@ function BlockSection({
   // dashboard/links/page.tsx) -- SATU-SATUNYA cara isi katalog/pertanyaan
   // FAQ bisa disunting lagi setelah blok pertama kali dibuat.
   const [drilldownBlockId, setDrilldownBlockId] = useState<string | null>(null);
+
+  // Lapor balik blok aktif ke induk -- lihat catatan panjang di
+  // onActiveBlockChange (signature komponen ini). contentEditId dan
+  // drilldownBlockId TIDAK PERNAH aktif bersamaan (satu blok cuma bisa
+  // lewat SALAH SATU jalur, lihat selectBlockForEdit/toggleContentEdit di
+  // bawah), jadi `?? null` aman -- tidak ada kasus keduanya terisi lalu
+  // salah satu terpilih diam-diam.
+  useEffect(() => {
+    onActiveBlockChange?.(contentEditId ?? drilldownBlockId ?? null);
+  }, [contentEditId, drilldownBlockId, onActiveBlockChange]);
 
   // State strip alat kelola per blok -- paritas Toko <-> Links (permintaan
   // langsung pengguna, 18 September 2026: "buat tiap blok yang ada di page

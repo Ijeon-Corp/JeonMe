@@ -372,6 +372,17 @@ function DashboardProductsPageInner() {
   // section/setSection di atas (state yang dibutuhkan INDUK karena
   // pratinjau Toko dirender di sini, bukan di komponen terkontrol itu).
   const [tokoPreviewSelectId, setTokoPreviewSelectId] = useState<string | null>(null);
+  // tokoActiveBlockId -- susulan 23 September 2026 ("arah sebaliknya dari
+  // sorotan pratinjau ... belum ada"), arah SEBALIKNYA dari
+  // tokoPreviewSelectId di atas: id blok yang SEDANG terbuka di editor
+  // BlockSection (contentEditId/drilldownBlockId di sana), DILAPORKAN
+  // balik lewat ProdukPageEditor.onActiveBlockChange (lihat catatan
+  // panjang di ProdukPageEditor.tsx/BlockSection). Dipakai sebagai
+  // LivePreviewPanel.highlightLinkId (BUKAN tokoPreviewSelectId lagi) --
+  // dua state SENGAJA terpisah (bukan satu var dipakai dua arah) supaya
+  // tidak ada gema balik: nilai ini TIDAK PERNAH diumpankan balik ke
+  // externalSelectBlockId.
+  const [tokoActiveBlockId, setTokoActiveBlockId] = useState<string | null>(null);
 
   // Modul multi-Toko Fase 2 (permintaan langsung pengguna, 28 Agustus 2026:
   // "Tetap di menu Toko (Produk & Monetisasi)" -- jawaban AskUserQuestion
@@ -1174,6 +1185,7 @@ function DashboardProductsPageInner() {
               products={products}
               onProductCreated={handleProductCreated}
               externalSelectBlockId={tokoPreviewSelectId}
+              onActiveBlockChange={setTokoActiveBlockId}
             />
           </div>
         ) : tab === "reviews" ? (
@@ -1598,7 +1610,13 @@ function DashboardProductsPageInner() {
         openUrl={tokoPage ? `${SITE_URL}/${tokoUsername}/${tokoPage.slug}` : undefined}
         editableStickers={tab === "halaman_toko" && tokoSection === "stiker"}
         onStickersChange={handleTokoStickersChange}
-        highlightLinkId={tokoPreviewSelectId ?? undefined}
+        // highlightLinkId -- susulan 23 September 2026: dulu memakai
+        // tokoPreviewSelectId (cuma benar sesaat setelah klik pratinjau,
+        // basi begitu blok lain dibuka lewat baris kiri). Sekarang
+        // tokoActiveBlockId (dilaporkan BALIK dari BlockSection), jadi
+        // sorotan tetap benar apa pun jalur pembukaannya -- baris kiri
+        // ATAU pratinjau.
+        highlightLinkId={tokoActiveBlockId ?? undefined}
         onSelectLink={setTokoPreviewSelectId}
       />
 
