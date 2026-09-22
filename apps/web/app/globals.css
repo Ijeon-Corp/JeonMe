@@ -38,7 +38,19 @@
   --app-surface: #ffffff;
   --app-surface-2: #efe9dd;
   --app-ink: #111111;
-  --app-muted: #77736c;
+  /* --app-muted -- diperbaiki dari #77736c ke #6b6862 (audit Lighthouse
+     22 September 2026, target "nilai 100 semua"): rasio kontras teks
+     #77736c di atas --app-bg #f5f1e8 cuma 4.18:1, di bawah ambang WCAG AA
+     4.5:1 utk teks biasa -- axe/Lighthouse menandai 18 elemen (nav/footer/
+     paragraf hero) sekaligus karena semuanya berbagi PASANGAN warna yang
+     sama persis, jadi satu token ini yang diperbaiki. #6b6862 sengaja
+     HANYA sedikit lebih gelap (skala ~90%, beda nyaris tak kasat mata)
+     supaya nuansa "warm paper" tetap sama -- hasilnya 4.93:1 di atas
+     --app-bg (margin aman di atas ambang, bukan pas-pasan di 4.5), dan
+     malah lebih tinggi lagi (5.55:1/4.59:1) di atas --app-surface/
+     --app-surface-2. Dark mode (--a49fae di atas --app-bg gelap, 7.2:1)
+     SUDAH lolos, tidak disentuh. */
+  --app-muted: #6b6862;
   --app-border: rgba(17, 17, 17, 0.16);
 }
 
@@ -96,7 +108,10 @@
   --jeon-success: #168153;
   --jeon-warning: #d98600;
   --jeon-danger: #d93d36;
-  --jeon-muted: #77736c;
+  /* --jeon-muted -- perbaikan kontras SAMA PERSIS dengan --app-muted di
+     atas (lihat catatan lengkap di sana): #77736c di atas #f5f1e8 cuma
+     4.18:1, jadi 18 elemen teks marketing (nav/footer/hero) gagal WCAG AA. */
+  --jeon-muted: #6b6862;
   --jeon-border: rgba(17, 17, 17, 0.16);
   --jeon-sidebar: #17151c;
 
@@ -924,7 +939,10 @@ h1, h2, h3, h4, h5 {
 }
 
 .swal2-html-container {
-  color: #77736c !important;
+  /* #77736c -> #6b6862, ikut perbaikan kontras --app-muted/--jeon-muted
+     (lihat catatan di atas file ini) -- warna literal (bukan var()) tetap
+     dipertahankan sesuai pola yang sudah ada di blok dark mode di bawah. */
+  color: #6b6862 !important;
   font-size: 0.875rem !important;
 }
 
