@@ -78,6 +78,27 @@ function simpleIconComponent(icon: SimpleIcon): LinkIconComponent {
   };
 }
 
+// rawPathIconComponent -- susulan 22 September 2026 (permintaan pengguna:
+// "iya sekalian kerjakan" -- ikon DANA & GoPay, brand Indonesia yang tidak
+// ada di simple-icons). Beda dari simpleIconComponent: sumbernya BUKAN
+// simple-icons (viewBox 24x24 seragam), tapi logo resmi asli tiap brand
+// (diunduh dari Wikimedia Commons utk DANA, dari file media resmi GoPay
+// utk GoPay -- keduanya berlisensi bebas dipakai). `d` path DIBIARKAN
+// PERSIS seperti aslinya (TIDAK dikonversi/diskalakan manual ke sistem
+// 24x24 -- rawan salah), `viewBox` yang di-crop pas ke bounding box glyph
+// (dihitung via getBBox() browser sungguhan, BUKAN dikira-kira) supaya
+// tetap tampil benar & tidak terpotong. Hanya glyph BAGIAN DALAM logo
+// (bendera DANA/dompet GoPay) yang diambil, BUKAN lingkaran latar
+// resminya -- pola yang sama seperti semua ikon brand lain di file ini:
+// lingkaran/latar warna disediakan EKSTERNAL oleh badgeClass (baris
+// dashboard) atau iconColorClass langsung (halaman publik), bukan
+// dibakar ke dalam komponen ikonnya sendiri.
+function rawPathIconComponent(path: string, viewBox: string): LinkIconComponent {
+  return function RawPathIconGlyph({ className }: { className?: string }) {
+    return createElement("svg", { viewBox, fill: "currentColor", className, "aria-hidden": true }, createElement("path", { d: path }));
+  };
+}
+
 // detectLinkIcon -- deteksi platform dari URL tautan, MURNI kosmetik sisi
 // klien (tidak ada validasi/pembatasan seperti isValidVideoEmbedURL di
 // backend links.go, cuma menentukan ikon apa yang ditampilkan). Sengaja
@@ -220,6 +241,30 @@ const PATTERNS: { test: RegExp; Icon: LinkIconComponent; label: string; badgeCla
   { test: /apps\.apple\.com/i, Icon: simpleIconComponent(siAppstore), label: "App Store", badgeClass: "bg-[#0D96F6] text-white", iconColorClass: "text-[#0D96F6]" },
   { test: /etsy\.com/i, Icon: simpleIconComponent(siEtsy), label: "Etsy", badgeClass: "bg-[#F16521] text-white", iconColorClass: "text-[#F16521]" },
   { test: /bukalapak\.com/i, Icon: simpleIconComponent(siBukalapak), label: "Bukalapak", badgeClass: "bg-[#E31E52] text-white", iconColorClass: "text-[#E31E52]" },
+
+  // DANA & GoPay -- susulan 22 September 2026, lihat catatan panjang
+  // rawPathIconComponent di atas. Warna diambil dari style resmi tiap
+  // SVG sumber (DANA .cls-2{fill:#008ceb}, GoPay .st0{fill:#00AED6}).
+  {
+    test: /(link\.dana\.id|dana\.id)/i,
+    Icon: rawPathIconComponent(
+      "M86.43,54.84V70.21c0,1-.43,1.21-1.27.72a28.08,28.08,0,0,0-3.5-1.78,23.73,23.73,0,0,0-11.49-1.53,55.06,55.06,0,0,0-12.44,3.12c-4,1.35-7.92,2.81-12,3.94a33.41,33.41,0,0,1-10.42,1.37,22.12,22.12,0,0,1-11-3.43A2.71,2.71,0,0,1,23,70.2Q23,55.1,23,40c0-.49,0-1.07.44-1.32s.89.16,1.27.41a21,21,0,0,0,12.15,3.6A32.4,32.4,0,0,0,45.94,41c4.16-1.29,8.18-3,12.27-4.45a74.14,74.14,0,0,1,9.77-3,21.21,21.21,0,0,1,16.73,3.09,3.67,3.67,0,0,1,1.75,3.27c0,5,0,10,0,15Z",
+      "18 28 73.46 53.07"
+    ),
+    label: "DANA",
+    badgeClass: "bg-[#008ceb] text-white",
+    iconColorClass: "text-[#008ceb]",
+  },
+  {
+    test: /(gopay\.co\.id|gopay\.id)/i,
+    Icon: rawPathIconComponent(
+      "M122.9,81.4c-0.7-10.6-9.9-19.1-20.6-18.4H48.5c-2.1,0-3.5-1.4-3.5-3.5c0-2.1,1.4-3.5,3.5-3.5H103c-0.4-7.1-5.7-14.5-12.4-15.6c-15.9-2.8-32.2-2.8-47.8,0c-8.9,1.4-15.6,10.3-17,18.8c-2.5,16.7-2.5,33.6,0,50.3c1.8,9.6,9.6,17.4,19.5,18.8c19.8,2.5,39.7,2.5,59.2,0c8.9-1.1,14.5-9.2,16.3-17.7C122.5,100.6,123.2,91,122.9,81.4z M105.2,93.1v3.2c0,2.1-1.4,3.5-3.5,3.5s-3.5-1.4-3.5-3.5v-3.2c-1.1-1.1-1.8-2.5-1.8-3.9c0-2.8,2.5-5.3,5.3-5.3c2.8,0,5.3,2.5,5.3,5.3C106.9,90.6,106.2,92.1,105.2,93.1z",
+      "84.98 33.42 111.04 103.87"
+    ),
+    label: "GoPay",
+    badgeClass: "bg-[#00AED6] text-white",
+    iconColorClass: "text-[#00AED6]",
+  },
 ];
 
 const FALLBACK_BADGE_CLASS = "bg-primary-subtle text-primary";
