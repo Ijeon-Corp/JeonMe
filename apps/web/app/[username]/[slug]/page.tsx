@@ -6,6 +6,7 @@ import CookieConsent from "@/components/CookieConsent";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
+import { SITE_URL } from "@/lib/site";
 
 type PageParams = {
   params: Promise<{ username: string; slug: string }>;
@@ -27,10 +28,15 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   return {
     title,
     description,
+    // alternates.canonical -- perbaikan SEO (susulan 22 September 2026,
+    // lihat catatan lengkap di app/[username]/page.tsx), berlaku sama utk
+    // halaman tambahan (Toko/landing/bio ekstra).
+    alternates: { canonical: `${SITE_URL}/${username}/${slug}` },
     robots: page.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       title,
       description,
+      url: `${SITE_URL}/${username}/${slug}`,
       siteName: "Jeon.id",
       images: page.avatar_url ? [{ url: page.avatar_url }] : undefined,
       type: "profile",

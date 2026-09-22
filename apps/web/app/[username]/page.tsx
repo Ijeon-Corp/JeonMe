@@ -3,10 +3,13 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getPublicPage, resolveUsernameRedirect } from "@/lib/api-client";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import CookieConsent from "@/components/CookieConsent";
+import JsonLd from "@/components/JsonLd";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
 import { SITE_URL } from "@/lib/site";
+import { buildFilledSocialLinks } from "@/lib/social-links";
+import { creatorProfileSchema } from "@/lib/structured-data";
 
 type PageParams = {
   params: Promise<{ username: string }>;
@@ -36,6 +39,16 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   return {
     title,
     description,
+    // alternates.canonical -- perbaikan SEO (temuan benchmark kompetitor,
+    // 22 September 2026: Linktree menyertakannya, jeon.id belum). Penting
+    // khususnya selama masa migrasi domain jeonme.com -> jeon.id (lihat
+    // CLAUDE.md) -- kalau jeonme.com sempat diakses langsung (SEBELUM
+    // redirect 301 penuh berlaku) tanpa canonical, mesin pencari bisa
+    // menganggap dua domain sebagai konten duplikat. SITE_URL SELALU
+    // jeon.id (lib/site.ts) apa pun domain yang dipakai mengakses --
+    // canonical jadi otomatis "benar" tanpa perlu tahu domain request saat
+    // ini.
+    alternates: { canonical: `${SITE_URL}/${page.username}` },
     robots: page.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       title,
@@ -76,6 +89,24 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
     notFound();
   }
 
+  // sameAs -- perbaikan SEO (benchmark kompetitor, 22 September 2026),
+  // lihat catatan lengkap di creatorProfileSchema (lib/structured-data.ts).
+  // whatsapp/email SENGAJA tidak diikutkan -- sameAs utk MENEGASKAN
+  // identitas lewat profil publik (medsos/situs), bukan kanal kontak.
+  const sameAs = buildFilledSocialLinks({
+    instagram: page.social_instagram,
+    tiktok: page.social_tiktok,
+    facebook: page.social_facebook,
+    youtube: page.social_youtube,
+    x: page.social_x,
+    linkedin: page.social_linkedin,
+    telegram: page.social_telegram,
+    github: page.social_github,
+    website: page.social_website,
+  })
+    .map((s) => s.href)
+    .filter((href) => href.startsWith("http"));
+
   return (
     <PublicPageFrame
       theme={page.theme}
@@ -94,6 +125,15 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
         styleOverride: page.custom_style_override,
       }}
     >
+      <JsonLd
+        data={creatorProfileSchema({
+          username: page.username,
+          displayName: page.display_name || `@${page.username}`,
+          bio: page.bio,
+          avatarUrl: page.avatar_url,
+          sameAs,
+        })}
+      />
       <AnalyticsScripts analytics={page.analytics} />
       <CookieConsent hasAnalytics={!!page.analytics?.ga_measurement_id} hasMarketing={!!page.analytics?.fb_pixel_id} />
       <PageAnalytics username={page.username} />
