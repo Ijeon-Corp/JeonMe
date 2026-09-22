@@ -18,7 +18,6 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconBox,
-  IconCamera,
   IconChevronRight,
   IconClock,
   IconCopy,
@@ -27,7 +26,6 @@ import {
   IconFileText,
   IconGripVertical,
   IconLock,
-  IconPaintbrush,
   IconPlus,
   IconSettings,
   IconTrash,
@@ -49,6 +47,7 @@ import {
   Heading as LucideHeading,
   HelpCircle,
   Image as LucideImage,
+  ImagePlus,
   Images as LucideImages,
   LayoutGrid,
   TriangleAlert,
@@ -58,9 +57,11 @@ import {
   MapPin as LucideMapPin,
   MousePointerClick,
   Music as LucideMusic,
+  Palette,
   Presentation,
   Rows3,
   SeparatorHorizontal,
+  Shapes,
   ShoppingBag as LucideShoppingBag,
   Timer,
   Type as LucideType,
@@ -2050,17 +2051,170 @@ function RootToolsPanel({
     }
   }
 
+  // Menu Ikon -- redesain 23 September 2026, paritas visual PERSIS dgn
+  // BlockToolsStrip.tsx (Links/Toko, redesain 22 September: "ini sangat
+  // jelek... rubah total"). SEBELUMNYA panel ini punya baris kedua
+  // terpisah berisi 5 tombol pil ikon (Unggah/Galeri/Warna/Reset/Hapus,
+  // gaya lama "border-full px-2.5 h-7") yang PERSIS bentuk yang sudah
+  // ditolak pengguna di Links/Toko -- sekarang dilipat jadi SATU tombol
+  // "Ikon" yang membuka popover, pola & class SAMA PERSIS BlockToolsStrip
+  // (tutup lewat klik-di-luar/Escape). Data & mutasinya TIDAK berubah sama
+  // sekali (masih onEnsureRootPersisted+onIconChanged utk unggah/hapus,
+  // onUpdateNode draft utk iconKey/iconColor) -- murni reskin tampilan.
   const libraryIcon = getLibraryIcon(node.iconKey);
+  const hasCustomIcon = Boolean(node.customIconUrl || node.iconKey || node.iconColor);
+  const [iconMenuOpen, setIconMenuOpen] = useState(false);
+  const iconMenuRef = useRef<HTMLDivElement>(null);
+  const iconTriggerRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!iconMenuOpen) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (iconMenuRef.current && !iconMenuRef.current.contains(e.target as Node)) setIconMenuOpen(false);
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIconMenuOpen(false);
+        iconTriggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [iconMenuOpen]);
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-app-border bg-app-surface-2 p-2.5" onClick={(e) => e.stopPropagation()}>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <RootToolButton icon={IconClock} label={t("dashboard.pages.links.linkCard.toolLabels.schedule")} active={scheduled} onClick={openSchedule} />
-        {fullLock ? (
-          <RootToolButton icon={IconLock} label={t("dashboard.pages.links.linkCard.toolLabels.lock")} active={Boolean(node.lockType)} onClick={openLock} />
-        ) : (
-          <RootToolButton icon={TriangleAlert} label={t("dashboard.pages.links.linkCard.toolLabels.sensitive")} active={node.lockType === "sensitive"} onClick={toggleSensitive} />
-        )}
+    <div className="flex flex-col gap-2.5" onClick={(e) => e.stopPropagation()}>
+      <div role="toolbar" aria-label={t("dashboard.pages.links.linkCard.toolLabels.toolbar")} className="flex flex-wrap items-center gap-x-1 gap-y-2 border-t border-app-border pt-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          onChange={(e) => {
+            handleIconUpload(e);
+            setIconMenuOpen(false);
+          }}
+          disabled={iconUploading}
+          className="hidden"
+        />
+        <div className="relative flex w-full flex-wrap items-center gap-1 sm:static sm:w-auto">
+          <RootToolButton icon={IconClock} label={t("dashboard.pages.links.linkCard.toolLabels.schedule")} active={scheduled} onClick={openSchedule} />
+          {fullLock ? (
+            <RootToolButton icon={IconLock} label={t("dashboard.pages.links.linkCard.toolLabels.lock")} active={Boolean(node.lockType)} onClick={openLock} />
+          ) : (
+            <RootToolButton icon={TriangleAlert} label={t("dashboard.pages.links.linkCard.toolLabels.sensitive")} active={node.lockType === "sensitive"} onClick={toggleSensitive} />
+          )}
+
+          <div ref={iconMenuRef} className="sm:relative">
+            <button
+              ref={iconTriggerRef}
+              type="button"
+              onClick={() => setIconMenuOpen((open) => !open)}
+              aria-haspopup="true"
+              aria-expanded={iconMenuOpen}
+              title={t("dashboard.pages.links.linkCard.toolLabels.iconGroup")}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors ${
+                iconMenuOpen || hasCustomIcon ? "bg-jeon-lavender/60 text-jeon-purple" : "text-app-ink hover:bg-app-surface-2"
+              }`}
+            >
+              {iconUploading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+              ) : node.customIconUrl ? (
+                <Image src={node.customIconUrl} alt="" width={20} height={20} className="h-5 w-5 flex-shrink-0 rounded-md object-cover ring-1 ring-black/10" />
+              ) : (
+                <span style={node.iconColor ? { color: node.iconColor } : undefined} className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                  {libraryIcon ? <libraryIcon.Icon className="h-4 w-4" /> : <Shapes className="h-4 w-4" />}
+                </span>
+              )}
+              {t("dashboard.pages.links.linkCard.toolLabels.iconGroup")}
+              <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${iconMenuOpen ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+            {iconMenuOpen && (
+              <div className="absolute inset-x-0 top-full z-30 mt-1.5 rounded-xl border border-app-border bg-app-surface p-1.5 shadow-soft sm:inset-x-auto sm:left-0 sm:w-64">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title={node.customIconUrl ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
+                  className={`flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-medium transition-colors ${
+                    node.customIconUrl ? "text-jeon-purple hover:bg-jeon-lavender/40" : "text-app-ink hover:bg-app-surface-2"
+                  }`}
+                >
+                  <ImagePlus className="h-4 w-4 flex-shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{node.customIconUrl ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIconPickerOpen(true);
+                    setIconMenuOpen(false);
+                  }}
+                  title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
+                  className={`flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-medium transition-colors ${
+                    node.iconKey ? "text-jeon-purple hover:bg-jeon-lavender/40" : "text-app-ink hover:bg-app-surface-2"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4 flex-shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{t("dashboard.pages.links.linkCard.pickFromIconGallery")}</span>
+                </button>
+                {!node.customIconUrl && (
+                  <label
+                    title={node.iconColor ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
+                    className={`relative flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors focus-within:ring-2 focus-within:ring-jeon-purple/40 ${
+                      node.iconColor ? "text-jeon-purple hover:bg-jeon-lavender/40" : "text-app-ink hover:bg-app-surface-2"
+                    }`}
+                  >
+                    {node.iconColor ? (
+                      <span className="h-4 w-4 flex-shrink-0 rounded-full ring-1 ring-black/15" style={{ backgroundColor: node.iconColor }} aria-hidden />
+                    ) : (
+                      <Palette className="h-4 w-4 flex-shrink-0" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{node.iconColor ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}</span>
+                    <input
+                      type="color"
+                      value={node.iconColor || "#000000"}
+                      onChange={(e) => onUpdateNode(sel, { iconColor: e.target.value })}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
+                )}
+                {node.iconColor && !node.customIconUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateNode(sel, { iconColor: "" });
+                      setIconMenuOpen(false);
+                    }}
+                    title={t("dashboard.pages.links.linkCard.clearIconColor")}
+                    className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-medium text-app-ink transition-colors hover:bg-app-surface-2"
+                  >
+                    <IconX className="h-4 w-4 flex-shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{t("dashboard.pages.links.linkCard.toolLabels.clearIconColor")}</span>
+                  </button>
+                )}
+                {(node.customIconUrl || node.iconKey) && (
+                  <>
+                    <div className="my-1 h-px bg-app-border" aria-hidden />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleRemoveIcon();
+                        setIconMenuOpen(false);
+                      }}
+                      title={t("dashboard.pages.links.linkCard.removeIcon")}
+                      className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-medium text-red-600 transition-colors hover:bg-red-500/10"
+                    >
+                      <IconTrash className="h-4 w-4 flex-shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{t("dashboard.pages.links.linkCard.toolLabels.removeIcon")}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* LinkDisplayModePicker -- permintaan langsung pengguna, 19 September
@@ -2166,42 +2320,6 @@ function RootToolsPanel({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-0.5 text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.linkCard.toolLabels.iconGroup")}</span>
-        {node.customIconUrl ? (
-          <Image src={node.customIconUrl} alt="" width={24} height={24} className="h-6 w-6 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
-        ) : libraryIcon ? (
-          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender text-[#111111]">
-            <libraryIcon.Icon className="h-3.5 w-3.5" />
-          </span>
-        ) : null}
-        <label
-          title={node.customIconUrl ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
-          className={`inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold ${
-            node.customIconUrl ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-          } ${iconUploading ? "opacity-60" : ""}`}
-        >
-          {iconUploading ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden /> : <IconCamera className="h-3.5 w-3.5 flex-shrink-0" />}
-          {t("dashboard.pages.links.linkCard.toolLabels.uploadIcon")}
-          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleIconUpload} disabled={iconUploading} className="hidden" />
-        </label>
-        <RootToolButton icon={LayoutGrid} label={t("dashboard.pages.links.linkCard.toolLabels.iconGallery")} active={Boolean(node.iconKey)} onClick={() => setIconPickerOpen(true)} />
-        {!node.customIconUrl && (
-          <label
-            title={node.iconColor ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
-            className={`relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold ${
-              node.iconColor ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-            }`}
-          >
-            {node.iconColor ? <span className="h-3.5 w-3.5 flex-shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: node.iconColor }} aria-hidden /> : <IconPaintbrush className="h-3.5 w-3.5 flex-shrink-0" />}
-            {t("dashboard.pages.links.linkCard.toolLabels.iconColor")}
-            <input type="color" value={node.iconColor || "#000000"} onChange={(e) => onUpdateNode(sel, { iconColor: e.target.value })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-          </label>
-        )}
-        {node.iconColor && <RootToolButton icon={IconX} label={t("dashboard.pages.links.linkCard.toolLabels.clearIconColor")} onClick={() => onUpdateNode(sel, { iconColor: "" })} />}
-        {(node.customIconUrl || node.iconKey) && <RootToolButton icon={IconX} label={t("dashboard.pages.links.linkCard.toolLabels.removeIcon")} onClick={handleRemoveIcon} />}
-      </div>
-
       {error && <p className="text-[11px] text-red-600">{error}</p>}
 
       {iconPickerOpen && (
@@ -2218,6 +2336,12 @@ function RootToolsPanel({
   );
 }
 
+// RootToolButton -- restyle 23 September 2026 ke `CHIP_BASE`/`CHIP_ACTIVE`
+// BlockToolsStrip.tsx (h-9 rounded-lg tanpa garis pinggir, hantu/ghost
+// kecuali aktif), menggantikan pil lama (h-7 rounded-full border) supaya
+// SATU baris toolbar ini (schedule/kunci/ikon) konsisten dari ujung ke
+// ujung -- sebelumnya cuma tombol Ikon yang di-redesain, 2 tombol lain di
+// sampingnya masih gaya pil lama.
 function RootToolButton({
   icon: Icon,
   label,
@@ -2235,11 +2359,11 @@ function RootToolButton({
       onClick={onClick}
       title={label}
       aria-pressed={active}
-      className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition-colors ${
-        active ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+      className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors ${
+        active ? "bg-jeon-lavender/60 text-jeon-purple" : "text-app-ink hover:bg-app-surface-2"
       }`}
     >
-      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      <Icon className="h-4 w-4 flex-shrink-0" />
       {label}
     </button>
   );
