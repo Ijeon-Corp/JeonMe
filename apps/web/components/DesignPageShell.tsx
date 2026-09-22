@@ -99,12 +99,20 @@ export default function DesignPageShell({
         {description && <p className="mt-1 text-sm text-app-muted">{description}</p>}
         {children}
       </div>
+      {/* onSelectLink no-op -- perbaikan 23 September 2026, lihat catatan
+          panjang yang sama di app/dashboard/design/page.tsx: shell ini
+          dipakai theme/header/tombol/font/sticker, tidak satu pun punya
+          editor blok untuk dibuka dari pratinjau, tapi TETAP butuh
+          pembungkus applyPreviewHighlight aktif supaya <a href> asli di
+          dalam pratinjau tidak diam-diam menavigasi/membuka tab baru saat
+          diklik. */}
       <LivePreviewPanel
         page={page}
         links={links}
         products={products}
         editableStickers={editableStickers}
         onStickersChange={onStickersChange}
+        onSelectLink={() => {}}
       />
     </div>
   );

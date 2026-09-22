@@ -220,7 +220,18 @@ export default function DashboardDesignPage() {
         </section>
       </div>
 
-      <LivePreviewPanel page={page} links={links} products={products} />
+      {/* onSelectLink no-op -- perbaikan 23 September 2026 ("masih bisa
+          diam-diam membuka tab baru saat klik pratinjau"): halaman Desain
+          tidak punya editor blok untuk dibuka (beda dari Links/Toko), jadi
+          tidak ada tujuan nyata untuk sebuah klik. Tapi TANPA onSelect sama
+          sekali, applyPreviewHighlight (PagePreview.tsx) tidak membungkus
+          node pratinjau sama sekali -- beberapa tipe blok merender <a href>
+          ASLI, jadi klik tetap menavigasi/membuka tab baru walau tidak
+          terlihat seperti tombol. Callback kosong ini SENGAJA cukup untuk
+          memicu pembungkusan (yang preventDefault-nya menyerap klik) tanpa
+          harus membuka apa pun -- blok pratinjau di sini jadi murni visual,
+          konsisten dgn maksud panel ini (pratinjau, bukan editor). */}
+      <LivePreviewPanel page={page} links={links} products={products} onSelectLink={() => {}} />
     </div>
     </>
   );
