@@ -356,6 +356,16 @@ function DashboardProductsPageInner() {
     updateUrlParams({ section: next });
   }
 
+  // tokoPreviewSelectId -- audit bug 22 September 2026 ("klik blok di
+  // pratinjau Toko diam-diam membuka tab baru", parity dgn perbaikan
+  // Simple Mode 22 September yang TIDAK PERNAH menjangkau Toko): id blok
+  // yang baru diklik di kotak LivePreviewPanel di bawah, diteruskan ke
+  // ProdukPageEditor (externalSelectBlockId, lihat catatan panjang di
+  // sana) supaya editornya ikut terbuka -- pola sama seperti
+  // section/setSection di atas (state yang dibutuhkan INDUK karena
+  // pratinjau Toko dirender di sini, bukan di komponen terkontrol itu).
+  const [tokoPreviewSelectId, setTokoPreviewSelectId] = useState<string | null>(null);
+
   // Modul multi-Toko Fase 2 (permintaan langsung pengguna, 28 Agustus 2026:
   // "Tetap di menu Toko (Produk & Monetisasi)" -- jawaban AskUserQuestion
   // soal ke mana perpindah pembuatan Toko ke-2..5 setelah /dashboard/pages
@@ -1152,6 +1162,7 @@ function DashboardProductsPageInner() {
               setSection={setTokoSectionAndUrl}
               products={products}
               onProductCreated={handleProductCreated}
+              externalSelectBlockId={tokoPreviewSelectId}
             />
           </div>
         ) : tab === "reviews" ? (
@@ -1576,6 +1587,8 @@ function DashboardProductsPageInner() {
         openUrl={tokoPage ? `${SITE_URL}/${tokoUsername}/${tokoPage.slug}` : undefined}
         editableStickers={tab === "halaman_toko" && tokoSection === "stiker"}
         onStickersChange={handleTokoStickersChange}
+        highlightLinkId={tokoPreviewSelectId ?? undefined}
+        onSelectLink={setTokoPreviewSelectId}
       />
 
       {manageProduct && (

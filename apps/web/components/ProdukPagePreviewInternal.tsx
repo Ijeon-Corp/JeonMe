@@ -11,6 +11,7 @@ import {
   PageSwitcher,
   StickerOverlay,
   Watermark,
+  applyPreviewHighlight,
   renderBioHeader,
   renderLinkOrBlock,
   renderVideoBackground,
@@ -133,7 +134,21 @@ export default function ProdukPagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView))}
+            {/* applyPreviewHighlight -- audit bug 22 September 2026: bug
+                yang diperbaiki 22 September di jalur Bio (commit 968755f,
+                "klik blok di pratinjau diam-diam membuka tab baru") TIDAK
+                PERNAH menjangkau Toko -- data.onSelectLink/highlightLinkId
+                sebelumnya diabaikan total di sini, jadi klik blok di
+                pratinjau tab Toko masih membuka navigasi asli tanpa
+                sorotan apa pun. Lihat catatan lengkap di
+                applyPreviewHighlight (PagePreview.tsx). */}
+            {applyPreviewHighlight(
+              data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView)),
+              data.links,
+              data.highlightLinkId,
+              "stack",
+              data.onSelectLink
+            )}
           </div>
         )}
 

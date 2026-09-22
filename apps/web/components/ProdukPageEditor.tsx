@@ -100,6 +100,7 @@ import type { AddCategory, ContentTile, PlatformQuickAdd } from "@/app/dashboard
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { confirmAction } from "@/lib/confirm";
 
 // AddLinkModal/BlockDrilldownEditor -- susulan 15 September 2026 (permintaan
 // langsung pengguna: "samakan semua blok/link beserta fungsi nya di menu
@@ -288,6 +289,7 @@ export default function ProdukPageEditor({
   setSection,
   products,
   onProductCreated,
+  externalSelectBlockId,
 }: {
   loading: boolean;
   username: string;
@@ -311,6 +313,21 @@ export default function ProdukPageEditor({
   // Toko dirender di INDUK, bukan di komponen terkontrol ini.
   section: DesignSection;
   setSection: (s: DesignSection) => void;
+  // externalSelectBlockId -- audit bug 22 September 2026 ("klik blok di
+  // pratinjau Toko diam-diam membuka tab baru", parity dgn perbaikan
+  // dashboard/links/page.tsx commit 968755f yang TIDAK PERNAH menjangkau
+  // Toko): id blok yang baru saja diklik di LivePreviewPanel milik INDUK
+  // (dashboard/products/page.tsx, sama seperti section/setSection di
+  // atas -- pratinjau Toko dirender di induk, bukan di sini). undefined
+  // (bawaan) = belum pernah ada klik pratinjau. CATATAN JUJUR: arah
+  // SEBALIKNYA (buka blok lewat baris kiri -> sorot balik di pratinjau)
+  // BELUM diimplementasikan di sini -- contentEditId/drilldownBlockId
+  // murni state internal komponen ini, TIDAK terlihat oleh induk sama
+  // sekali, mengangkatnya keduanya ke induk (spt section/setSection)
+  // adalah refactor lebih besar yang sengaja ditunda terpisah. Prop ini
+  // HANYA memperbaiki arah "klik pratinjau -> buka editor", bukan
+  // paritas highlight dua-arah penuh seperti Simple Mode.
+  externalSelectBlockId?: string | null;
 }) {
   const router = useRouter();
   const { t } = useLocale();
@@ -541,6 +558,8 @@ export default function ProdukPageEditor({
             setError={setError}
             products={products}
             onProductCreated={onProductCreated}
+            isPremium={page.is_premium ?? false}
+            externalSelectBlockId={externalSelectBlockId}
           />
         )}
         {section === "tema" && (
@@ -600,6 +619,8 @@ function BlockSection({
   setError,
   products,
   onProductCreated,
+  isPremium,
+  externalSelectBlockId,
 }: {
   pageId: string;
   links: LinkItem[];
@@ -607,10 +628,38 @@ function BlockSection({
   setError: (msg: string | null) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
+  // isPremium -- audit bug 22 September 2026: BlockDrilldownEditor di
+  // bawah (render drilldownLink) SEBELUMNYA hardcode isPremium={false},
+  // lihat catatan panjang di situ -- diteruskan dari page.is_premium milik
+  // ProdukPageEditor (komponen ini tidak menerima `page` sama sekali,
+  // cuma pageId string).
+  isPremium: boolean;
+  // externalSelectBlockId -- lihat catatan panjang di prop sama namanya
+  // di ProdukPageEditor, diteruskan apa adanya ke komponen INI karena
+  // links/contentEditId/drilldownBlockId semuanya state LOKAL di sini,
+  // bukan di ProdukPageEditor.
+  externalSelectBlockId?: string | null;
 }) {
   const { t } = useLocale();
   const CONTENT_TILES = getContentTiles(t);
   const BLOCK_LABEL = getBlockLabel(t);
+
+  // Sinkronisasi externalSelectBlockId -- pola resmi React "adjust state
+  // during render" (CLAUDE.md: bandingkan prop ke prevXxx yang dilacak
+  // state, panggil setState kondisional LANGSUNG di badan komponen,
+  // BUKAN di useEffect) -- BUKAN useEffect supaya tidak melanggar
+  // react-hooks/set-state-in-effect. selectBlockForEdit didefinisikan
+  // LEBIH BAWAH di komponen ini tapi tetap aman dipanggil di sini --
+  // `function` declaration di-hoist penuh oleh JS/TS, beda dari
+  // `const`/arrow function.
+  const [lastHandledExternalSelectId, setLastHandledExternalSelectId] = useState<string | null | undefined>(undefined);
+  if (externalSelectBlockId !== undefined && externalSelectBlockId !== lastHandledExternalSelectId) {
+    setLastHandledExternalSelectId(externalSelectBlockId);
+    if (externalSelectBlockId) {
+      const target = links.find((l) => l.id === externalSelectBlockId);
+      if (target) selectBlockForEdit(target);
+    }
+  }
 
   // addModalOpen/addCategory/addSearch -- pengganti grid tile inline lama
   // (susulan 15 September 2026, permintaan langsung pengguna: "samakan
@@ -668,6 +717,16 @@ function BlockSection({
   // dibuat (cuma bisa dihapus), lihat memori project_toko-missing-edit-
   // content -- gap itu ditutup di sini sekaligus dgn menambah 10 tipe baru.
   const [contentEditId, setContentEditId] = useState<string | null>(null);
+  // contentEditSnapshot -- audit bug 22 September 2026 (paritas dgn
+  // dashboard/links/page.tsx, ditemukan sejak 21 September di sana tapi
+  // TIDAK PERNAH ikut diporting ke Toko): menutup panel edit blok
+  // (chevron/baris header) SEBELUMNYA langsung setContentEditId(null)
+  // tanpa cek sama sekali -- draft 10 tipe blok berbasis buffer (video/
+  // maps/text/accordion/project_showcase/button/countdown/embed/
+  // video_image/embed_link) hilang senyap kalau kreator sempat mengetik
+  // lalu klik baris/blok lain tanpa Simpan. null = tidak ada blok
+  // berbasis-buffer yang sedang dibuka (tipe lain aman ditutup tanpa cek).
+  const [contentEditSnapshot, setContentEditSnapshot] = useState<string | null>(null);
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
@@ -1139,49 +1198,186 @@ function BlockSection({
     }
   }
 
+  // computeContentEditSnapshot/currentContentEditSnapshot -- paritas
+  // persis dengan dashboard/links/page.tsx (lihat catatan panjang di
+  // contentEditSnapshot), disalin APA ADANYA supaya kedua file gampang
+  // di-diff. null utk tipe blok yang tidak punya buffer sama sekali.
+  function computeContentEditSnapshot(
+    blockType: LinkItem["block_type"],
+    v: {
+      videoUrl: string;
+      mapsUrl: string;
+      mapsEmbed: boolean;
+      text: string;
+      accordionText: string;
+      showcaseUrl: string;
+      showcaseDescription: string;
+      showcaseBadge: string;
+      showcaseCta: string;
+      buttonUrl: string;
+      buttonMode: "url" | "whatsapp";
+      buttonWhatsappNumber: string;
+      buttonWhatsappMessage: string;
+      countdownTargetAt: string;
+      countdownProductId: string;
+      countdownCtaLabel: string;
+      countdownCtaUrl: string;
+      embedUrl: string;
+      videoImageVideoUrl: string;
+      embedLinkUrl: string;
+      embedLinkDescription: string;
+    }
+  ): Record<string, unknown> | null {
+    switch (blockType) {
+      case "video":
+        return { videoUrl: v.videoUrl };
+      case "maps":
+        return { mapsUrl: v.mapsUrl, mapsEmbed: v.mapsEmbed };
+      case "text":
+        return { text: v.text };
+      case "accordion":
+        return { accordionText: v.accordionText };
+      case "project_showcase":
+        return { showcaseUrl: v.showcaseUrl, showcaseDescription: v.showcaseDescription, showcaseBadge: v.showcaseBadge, showcaseCta: v.showcaseCta };
+      case "button":
+        return { buttonUrl: v.buttonUrl, buttonMode: v.buttonMode, buttonWhatsappNumber: v.buttonWhatsappNumber, buttonWhatsappMessage: v.buttonWhatsappMessage };
+      case "countdown":
+        return { countdownTargetAt: v.countdownTargetAt, countdownProductId: v.countdownProductId, countdownCtaLabel: v.countdownCtaLabel, countdownCtaUrl: v.countdownCtaUrl };
+      case "embed":
+        return { embedUrl: v.embedUrl };
+      case "video_image":
+        return { videoImageVideoUrl: v.videoImageVideoUrl };
+      case "embed_link":
+        return { embedLinkUrl: v.embedLinkUrl, embedLinkDescription: v.embedLinkDescription };
+      default:
+        return null;
+    }
+  }
+
+  function currentContentEditSnapshot(blockType: LinkItem["block_type"]) {
+    return computeContentEditSnapshot(blockType, {
+      videoUrl: editVideoUrl,
+      mapsUrl: editMapsUrl,
+      mapsEmbed: editMapsEmbed,
+      text: editText,
+      accordionText: editAccordionText,
+      showcaseUrl: editShowcaseUrl,
+      showcaseDescription: editShowcaseDescription,
+      showcaseBadge: editShowcaseBadge,
+      showcaseCta: editShowcaseCta,
+      buttonUrl: editButtonUrl,
+      buttonMode: editButtonMode,
+      buttonWhatsappNumber: editButtonWhatsappNumber,
+      buttonWhatsappMessage: editButtonWhatsappMessage,
+      countdownTargetAt: editCountdownTargetAt,
+      countdownProductId: editCountdownProductId,
+      countdownCtaLabel: editCountdownCtaLabel,
+      countdownCtaUrl: editCountdownCtaUrl,
+      embedUrl: editEmbedUrl,
+      videoImageVideoUrl: editVideoImageVideoUrl,
+      embedLinkUrl: editEmbedLinkUrl,
+      embedLinkDescription: editEmbedLinkDescription,
+    });
+  }
+
   function openContentEdit(link: LinkItem) {
     setContentEditId(link.id);
+    const v = {
+      videoUrl: (link.block_data?.video_url as string) ?? "",
+      mapsUrl: link.url ?? "",
+      mapsEmbed: Boolean(link.block_data?.embed),
+      text: (link.block_data?.text as string) ?? "",
+      accordionText: (link.block_data?.text as string) ?? "",
+      showcaseUrl: link.url ?? "",
+      showcaseDescription: link.description ?? "",
+      showcaseBadge: (link.block_data?.badge_text as string) ?? "",
+      showcaseCta: (link.block_data?.cta_text as string) ?? "",
+      buttonUrl: link.url ?? "",
+      buttonMode: ((link.block_data?.whatsapp_number as string) ? "whatsapp" : "url") as "url" | "whatsapp",
+      buttonWhatsappNumber: (link.block_data?.whatsapp_number as string) ?? "",
+      buttonWhatsappMessage: (link.block_data?.whatsapp_message as string) ?? "",
+      countdownTargetAt: toDatetimeLocalValue(link.block_data?.target_at as string | undefined),
+      countdownProductId: (link.block_data?.product_id as string) ?? "",
+      countdownCtaLabel: (link.block_data?.cta_label as string) ?? "",
+      countdownCtaUrl: (link.block_data?.cta_url as string) ?? "",
+      embedUrl: (link.block_data?.embed_url as string) ?? "",
+      videoImageVideoUrl: (link.block_data?.video_url as string) ?? "",
+      embedLinkUrl: link.url ?? "",
+      embedLinkDescription: link.description ?? "",
+    };
+    setContentEditSnapshot(JSON.stringify(computeContentEditSnapshot(link.block_type, v)));
     if (link.block_type === "video") {
-      setEditVideoUrl((link.block_data?.video_url as string) ?? "");
+      setEditVideoUrl(v.videoUrl);
     } else if (link.block_type === "maps") {
-      setEditMapsUrl(link.url ?? "");
-      setEditMapsEmbed(Boolean(link.block_data?.embed));
+      setEditMapsUrl(v.mapsUrl);
+      setEditMapsEmbed(v.mapsEmbed);
     } else if (link.block_type === "text") {
-      setEditText((link.block_data?.text as string) ?? "");
+      setEditText(v.text);
     } else if (link.block_type === "accordion") {
-      setEditAccordionText((link.block_data?.text as string) ?? "");
+      setEditAccordionText(v.accordionText);
     } else if (link.block_type === "project_showcase") {
-      setEditShowcaseUrl(link.url ?? "");
-      setEditShowcaseDescription(link.description ?? "");
-      setEditShowcaseBadge((link.block_data?.badge_text as string) ?? "");
-      setEditShowcaseCta((link.block_data?.cta_text as string) ?? "");
+      setEditShowcaseUrl(v.showcaseUrl);
+      setEditShowcaseDescription(v.showcaseDescription);
+      setEditShowcaseBadge(v.showcaseBadge);
+      setEditShowcaseCta(v.showcaseCta);
     } else if (link.block_type === "button") {
-      setEditButtonUrl(link.url ?? "");
-      const savedWhatsappNumber = (link.block_data?.whatsapp_number as string) ?? "";
-      setEditButtonMode(savedWhatsappNumber ? "whatsapp" : "url");
-      setEditButtonWhatsappNumber(savedWhatsappNumber);
-      setEditButtonWhatsappMessage((link.block_data?.whatsapp_message as string) ?? "");
+      setEditButtonUrl(v.buttonUrl);
+      setEditButtonMode(v.buttonMode);
+      setEditButtonWhatsappNumber(v.buttonWhatsappNumber);
+      setEditButtonWhatsappMessage(v.buttonWhatsappMessage);
     } else if (link.block_type === "countdown") {
-      setEditCountdownTargetAt(toDatetimeLocalValue(link.block_data?.target_at as string | undefined));
-      setEditCountdownProductId((link.block_data?.product_id as string) ?? "");
-      setEditCountdownCtaLabel((link.block_data?.cta_label as string) ?? "");
-      setEditCountdownCtaUrl((link.block_data?.cta_url as string) ?? "");
+      setEditCountdownTargetAt(v.countdownTargetAt);
+      setEditCountdownProductId(v.countdownProductId);
+      setEditCountdownCtaLabel(v.countdownCtaLabel);
+      setEditCountdownCtaUrl(v.countdownCtaUrl);
     } else if (link.block_type === "embed") {
-      setEditEmbedUrl((link.block_data?.embed_url as string) ?? "");
+      setEditEmbedUrl(v.embedUrl);
     } else if (link.block_type === "video_image") {
-      setEditVideoImageVideoUrl((link.block_data?.video_url as string) ?? "");
+      setEditVideoImageVideoUrl(v.videoImageVideoUrl);
     } else if (link.block_type === "embed_link") {
-      setEditEmbedLinkUrl(link.url ?? "");
-      setEditEmbedLinkDescription(link.description ?? "");
+      setEditEmbedLinkUrl(v.embedLinkUrl);
+      setEditEmbedLinkDescription(v.embedLinkDescription);
     }
+  }
+
+  // closeContentEdit -- audit bug 22 September 2026 (paritas dgn
+  // dashboard/links/page.tsx, lihat catatan panjang di
+  // contentEditSnapshot). Menggantikan setContentEditId(null) langsung
+  // di toggleContentEdit di bawah.
+  async function closeContentEdit(link: LinkItem) {
+    if (contentEditSnapshot !== null && JSON.stringify(currentContentEditSnapshot(link.block_type)) !== contentEditSnapshot) {
+      const ok = await confirmAction(t("dashboard.pages.links.contentEditorPage.discardDraftText"), {
+        title: t("dashboard.pages.links.contentEditorPage.discardDraftTitle"),
+        confirmButtonText: t("dashboard.pages.links.contentEditorPage.discardDraftConfirm"),
+      });
+      if (!ok) return;
+    }
+    setContentEditSnapshot(null);
+    setContentEditId(null);
   }
 
   function toggleContentEdit(link: LinkItem) {
     if (contentEditId === link.id) {
-      setContentEditId(null);
+      closeContentEdit(link);
     } else {
       openContentEdit(link);
     }
+  }
+
+  // selectBlockForEdit -- audit bug 22 September 2026: paritas dengan
+  // dashboard/links/page.tsx (fungsi sama persis, disalin 22 September
+  // untuk memperbaiki "klik blok di pratinjau diam-diam membuka tab
+  // baru") -- dipanggil dari efek externalSelectBlockId di bawah, BUKAN
+  // langsung dari sini. Sengaja TERPISAH dari toggleContentEdit: klik
+  // pratinjau pada blok yang SUDAH terbuka harus no-op (tetap terbuka),
+  // bukan menutupnya seperti toggleContentEdit.
+  function selectBlockForEdit(link: LinkItem) {
+    if (link.block_type === "catalog" || link.block_type === "faq") {
+      setDrilldownBlockId(link.id);
+      return;
+    }
+    if (contentEditId === link.id) return;
+    openContentEdit(link);
   }
 
   async function handleSaveContent(link: LinkItem) {
@@ -1279,6 +1475,7 @@ function BlockSection({
       await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
       const refreshed = await listExtraPageLinks(pageId);
       setLinks(() => refreshed);
+      setContentEditSnapshot(null);
       setContentEditId(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
@@ -1302,11 +1499,53 @@ function BlockSection({
     }
   }
 
+  // handleListItemsPatch -- audit bug 22 September 2026: ListItemsEditor's
+  // onUpdateItems SEBELUMNYA memanggil handleBlockDataPatch di atas
+  // langsung, yang PATCH ke server TANPA debounce -- field deskripsi item
+  // (RichTextEditor) memanggil onChange di SETIAP ketukan, jadi tiap
+  // huruf yang diketik kreator = satu PATCH berisi SELURUH array items
+  // ke server. Kalau dua request tiba di backend TIDAK berurutan (jitter
+  // jaringan), payload yang lebih lama (teks lebih pendek) bisa menimpa
+  // balik payload lebih baru -- sebagian ketikan hilang senyap setelah
+  // reload. dashboard/links/page.tsx SUDAH punya varian debounce ini
+  // (handleListItemsPatch) sejak field deskripsi RichTextEditor
+  // ditambahkan ke blok "list" -- Toko sengaja ketinggalan, disamakan di
+  // sini APA ADANYA (pola & nama fungsi identik). State lokal (`links`)
+  // tetap diperbarui LANGSUNG (optimis) supaya RichTextEditor yang
+  // terkontrol tetap responsif -- cuma panggilan API-nya yang ditunda.
+  const listItemsSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  function handleListItemsPatch(link: LinkItem, items: ListEditorItem[]) {
+    setError(null);
+    const nextBlockData = { ...link.block_data, items };
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: nextBlockData } : l)));
+    const existing = listItemsSaveTimers.current.get(link.id);
+    if (existing) clearTimeout(existing);
+    listItemsSaveTimers.current.set(
+      link.id,
+      setTimeout(() => {
+        listItemsSaveTimers.current.delete(link.id);
+        updateLink(link.id, { block_data: nextBlockData }).catch((err) => {
+          setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
+        });
+      }, 700)
+    );
+  }
+
+  // handleDelete -- audit bug 22 September 2026: tidak rollback saat API
+  // gagal, satu-satunya handler di file ini yang lupa menerapkan pola
+  // "previous = links; ... catch { setLinks(() => previous) }" yang SUDAH
+  // konsisten dipakai 8 handler setara lain (handleToggleActive,
+  // handleRemoveIcon, dst) -- omission murni, bukan keputusan desain.
+  // Tanpa ini, koneksi terputus/token kedaluwarsa saat hapus blok bikin
+  // blok hilang dari UI & live preview meski recordnya masih ada di server,
+  // sampai kreator reload manual.
   async function handleDelete(id: string) {
+    const previous = links;
     setLinks((prev) => prev.filter((l) => l.id !== id));
     try {
       await deleteLink(id);
     } catch (err) {
+      setLinks(() => previous);
       setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteBlock"));
     }
   }
@@ -1596,23 +1835,31 @@ function BlockSection({
     ).catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveOrder")));
   }
 
+  // handleDrop -- audit bug 22 September 2026: SEBELUMNYA memanggil
+  // reorderExtraPageLinks (side effect API) DI DALAM body updater
+  // setLinks, melanggar kontrak React "updater harus pure". reactStrictMode
+  // (next.config.js) sengaja memanggil updater DUA KALI di development
+  // utk mendeteksi persis pola ini -- satu drag-reorder memicu 2x PATCH.
+  // Payloadnya idempoten (posisi akhir sama) jadi tidak ada data yang
+  // salah, tapi tetap PATCH ganda percuma & pola berbahaya (kelas bug yang
+  // sama pernah jadi crash sungguhan di Canvas Builder -- lihat riwayat
+  // proyek). moveLinkByOffset di atas SUDAH benar (hitung di luar,
+  // setLinks(() => value) baru API terpisah) -- disamakan persis di sini.
   function handleDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
-    setLinks((prev) => {
-      const from = prev.findIndex((l) => l.id === dragId);
-      const to = prev.findIndex((l) => l.id === targetId);
-      if (from === -1 || to === -1) return prev;
-      const reordered = [...prev];
-      const [moved] = reordered.splice(from, 1);
-      reordered.splice(to, 0, moved);
-      const withPositions = reordered.map((l, idx) => ({ ...l, position: idx }));
-      reorderExtraPageLinks(
-        pageId,
-        withPositions.map((l) => ({ id: l.id, position: l.position }))
-      ).catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveOrder")));
-      return withPositions;
-    });
+    const from = links.findIndex((l) => l.id === dragId);
+    const to = links.findIndex((l) => l.id === targetId);
     setDragId(null);
+    if (from === -1 || to === -1) return;
+    const reordered = [...links];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    const withPositions = reordered.map((l, idx) => ({ ...l, position: idx }));
+    setLinks(() => withPositions);
+    reorderExtraPageLinks(
+      pageId,
+      withPositions.map((l) => ({ id: l.id, position: l.position }))
+    ).catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveOrder")));
   }
 
   // drilldownLink -- blok "catalog"/"faq" yang sedang dibuka penuh layar
@@ -1623,7 +1870,18 @@ function BlockSection({
     return (
       <BlockDrilldownEditor
         link={drilldownLink}
-        isPremium={false}
+        // isPremium -- audit bug 22 September 2026: hardcode `false`
+        // membuat "Katalog di dalam Katalog" (satu-satunya tile
+        // premium-only, lihat lib/catalog-blocks.ts) SELALU terkunci di
+        // Toko apa pun status akun -- kreator Premium yang sudah bayar
+        // tetap diarahkan ke upsell tiap edit Katalog/FAQ di sini, padahal
+        // fitur yang sama terbuka normal di halaman Bio (yang sudah pakai
+        // page?.is_premium ?? false, dashboard/links/page.tsx). Backend
+        // (checkCatalogPremiumGate) SUDAH benar memvalidasi terlepas dari
+        // ini -- bukan celah keamanan, murni bug UX/fitur berbayar. Prop
+        // `isPremium` diteruskan dari page.is_premium milik
+        // ProdukPageEditor (lihat catatan di signature BlockSection).
+        isPremium={isPremium}
         products={products}
         onProductCreated={onProductCreated}
         onCommitCatalogRoot={(items) => saveCatalogItems(drilldownLink, items)}
@@ -2955,7 +3213,7 @@ function BlockSection({
                   style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
                   items={(link.block_data?.items as ListEditorItem[] | undefined) ?? []}
                   onUpdateStyle={(style) => handleBlockDataPatch(link, { style })}
-                  onUpdateItems={(items) => handleBlockDataPatch(link, { items })}
+                  onUpdateItems={(items) => handleListItemsPatch(link, items)}
                 />
               </div>
             )}

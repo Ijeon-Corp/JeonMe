@@ -115,7 +115,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
-import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
 import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import { isRichTextEmpty } from "@/lib/catalog-blocks";
@@ -137,6 +136,19 @@ const LocationPickerModal = dynamic(() => import("@/components/LocationPickerMod
 const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 const AddLinkModal = dynamic(() => import("@/components/AddLinkModal"));
 const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEditor"));
+
+// RichTextEditor -- audit performa 22 September 2026: SEBELUMNYA
+// static-import padahal cuma dipakai di panel edit konten 4 tipe blok
+// (teks/accordion/embed_link/project_showcase) yang baru muncul SETELAH
+// pengguna klik blok tertentu -- persis kandidat next/dynamic yang sama
+// seperti 3 komponen di atas. tiptap+prosemirror SENDIRI ~382KB (chunk
+// terberat di seluruh /dashboard/links, First Load JS turun dari
+// ~1626KB), jauh lebih besar dari modal-modal di atas. TIDAK butuh
+// ssr:false -- tiptap's useEditor sudah aman di-render server (kosong
+// dulu, hydrate di klien), sama seperti pemakaiannya di
+// ProdukPageEditor.tsx (yang keseluruhan komponennya SUDAH dynamic lewat
+// dashboard/products/page.tsx, jadi tidak pernah kena masalah yang sama).
+const RichTextEditor = dynamic(() => import("@/components/dashboard/page/RichTextEditor"));
 
 // PREMIUM_EXTRA_PAGE_LIMIT -- SAMA PERSIS batas backend (premiumExtraPageLimit,
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
