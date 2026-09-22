@@ -1,14 +1,20 @@
 # Jeonme
 
 Platform link-in-bio + monetisasi kreator Indonesia (setara Linktree/Lynk.id, tapi
-dengan Toko/checkout produk digital bawaan). Domain produksi TARGET: jeon.id
-(migrasi dari jeonme.com, disiapkan 18 Agustus 2026 -- jeonme.com tetap aktif,
-redirect 301 ke jeon.id, bukan didekomisi). Sisi KODE sudah menghasilkan URL
-jeon.id di mana pun (share link, sitemap, redirect_uri OAuth, dll), TAPI
-eksekusi infra (DNS/vhost Apache/sertifikat TLS di VPS) belum jalan per
-penulisan catatan ini -- jeonme.com yang MASIH benar-benar melayani traffic
-sampai checklist di SETUP-GUIDE.md §1.1 selesai. Jangan asumsikan jeon.id
-sudah bisa diakses tanpa verifikasi langsung.
+dengan Toko/checkout produk digital bawaan). Domain produksi: **jeon.id** --
+migrasi dari jeonme.com (disiapkan 18 Agustus 2026) SUDAH SELESAI dari sisi infra
+juga, dikonfirmasi lewat verifikasi langsung 23 September 2026: `jeonme.com`
+sekarang 301 ke `jeon.id` (Apache), dan `jeon.id` sendiri melayani traffic
+sungguhan dengan TLS valid + header keamanan lengkap (`curl -sI https://jeon.id`
+langsung, bukan dari kode). jeonme.com TIDAK didekomisi -- tetap aktif sebagai
+redirect permanen, bukan mati. Checklist SETUP-GUIDE.md §1.1 (DNS/vhost Apache/
+sertifikat TLS di VPS) berarti sudah tuntas, walau dokumen itu sendiri belum tentu
+ditandai selesai (lihat catatan status-dokumen tak akurat di bawah). Sisi kode
+sudah menghasilkan URL jeon.id di mana pun (share link, sitemap, redirect_uri
+OAuth, dll) sejak sebelum migrasi infra ini rampung, jadi tidak ada perubahan kode
+yang menyertai catatan ini. Kalau sesi mendatang jaraknya jauh dari 23 September
+2026, tetap verifikasi ulang langsung (`curl`) sebelum mengandalkan status ini --
+catatan ini cuma seakurat tanggal verifikasinya.
 
 > Catatan: `README.md`/`DEVELOPER-GUIDE.md`/`SETUP-GUIDE.md` di root masih menyebut
 > proyek ini "boilerplate/skeleton dengan banyak TODO" — itu SUDAH TIDAK AKURAT.
