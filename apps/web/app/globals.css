@@ -603,8 +603,22 @@ h1, h2, h3, h4, h5 {
   display: inline;
 }
 
+/* background-image (BUKAN shorthand `background:`) -- perbaikan 23 September
+   2026 (audit UI, "panel Pratinjau Langsung nyaris tak terbaca di dark mode
+   untuk tema Default"): shorthand `background:` me-RESET semua sub-properti
+   yang tidak disebut eksplisit, TERMASUK background-color -- jadi elemen mana
+   pun yang mengoper class ini BERSAMA class warna dasar (mis. bg-primary-subtle
+   di page-themes.ts, tema "Default" -- dibuat SETIAP akun baru) diam-diam
+   kehilangan warna dasarnya, jadi latarnya cuma 3 radial-gradient yang semua
+   memudar ke transparent = TIDAK PERNAH benar-benar solid. Di halaman publik ini
+   kebetulan aman (PublicPageFrame.tsx punya bg-neutral-200 solid di baliknya
+   sebagai jaring pengaman tak sengaja), tapi di panel LivePreviewPanel.tsx
+   dashboard (dipakai di /dashboard/links, /products, /design, dll) tidak ada
+   backdrop solid apa pun -- warna gelap .app-shell bocor masuk begitu dark mode
+   aktif, teks/avatar tema jadi nyaris tak terlihat. `background-image` hanya
+   menimpa layer gambar, background-color dari class lain tetap utuh. */
 .bg-mesh {
-  background:
+  background-image:
     radial-gradient(ellipse 60% 50% at 20% 10%, rgba(118, 87, 255, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse 60% 50% at 85% 25%, rgba(217, 206, 255, 0.14) 0%, transparent 60%),
     radial-gradient(ellipse 50% 50% at 50% 90%, rgba(255, 175, 208, 0.1) 0%, transparent 60%);
