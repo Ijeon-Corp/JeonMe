@@ -112,6 +112,19 @@ export default function OnboardingBanner() {
               {nextItem.label} &rarr;
             </Link>
           )}
+          {/* quickSetupCta -- lihat catatan panjang di key i18n-nya. Selalu
+              ditawarkan BERDAMPINGAN dengan nextItem (checklist manual) di
+              atas, bukan pengganti -- wizard template ini jalan pintas
+              opsional, bukan satu-satunya jalur. */}
+          {!allDone && (
+            <Link
+              href="/dashboard/quick-setup"
+              className="hidden items-center gap-1 rounded-full border-2 border-jeon-ink bg-jeon-lavender px-2.5 py-1 text-[11px] font-bold text-[#111111] hover:-translate-y-0.5 transition-transform sm:inline-flex"
+            >
+              <IconSparkle className="h-3 w-3" />
+              {t("dashboard.components.onboardingBanner.quickSetupCta")}
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}

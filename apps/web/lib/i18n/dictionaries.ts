@@ -2636,6 +2636,15 @@ export const dictionaries = {
           hideButton: "Sembunyikan",
           showAllButton: "Lihat semua",
           closeTitle: "Tutup",
+          // quickSetupCta -- perbaikan 23 September 2026 (audit UX, "Quick
+          // Setup tidak pernah dipromosikan ke user baru -- checklist ini
+          // cuma arahkan ke /dashboard/links, jalur manual satu-per-satu").
+          // Wizard template siap-pakai sudah ada tapi cuma bisa ditemukan
+          // dengan sengaja membuka grup sidebar "Halaman Saya". CTA ini
+          // muncul di samping link langkah-berikutnya, jalur cepat SELALU
+          // ditawarkan berdampingan dengan checklist manual (bukan
+          // menggantikan) selama checklist belum semua selesai.
+          quickSetupCta: "Coba Quick Setup",
         },
         iconPickerModal: {
           title: "Pilih Ikon",
@@ -5887,6 +5896,7 @@ export const dictionaries = {
           hideButton: "Hide",
           showAllButton: "Show all",
           closeTitle: "Close",
+          quickSetupCta: "Try Quick Setup",
         },
         iconPickerModal: {
           title: "Choose Icon",
