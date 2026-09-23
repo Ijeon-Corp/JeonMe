@@ -13,6 +13,7 @@ import {
   requestAccountDeletion,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
+import PageSkeleton from "@/components/Skeleton";
 import { IconChevronRight } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
@@ -25,6 +26,17 @@ export default function DangerZonePage() {
   const { t } = useLocale();
   const { showToast } = useToast();
 
+  // loading -- perbaikan 23 September 2026 (audit UX, "Zona Berbahaya
+  // merender form aksi destruktif seolah tidak ada apa pun yang pending,
+  // SEBELUM status sungguhan termuat"): status===null SEBELUMNYA dipakai
+  // ganda sebagai "belum termuat" DAN "tidak ada nonaktivasi/penghapusan
+  // pending" (status?.deactivated/status?.pending sama-sama falsy di kedua
+  // kasus) -- pada koneksi lambat, 300ms pertama menampilkan form
+  // Nonaktifkan/Hapus Akun yang lengkap & interaktif walau sebenarnya akun
+  // itu PUNYA nonaktivasi/penghapusan pending. flag terpisah supaya render
+  // jatuh ke skeleton netral dulu, pola yang sama dipakai 31/36 halaman
+  // dashboard lain (mis. settings/payment, settings/profile).
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<AccountDeletionStatus | null>(null);
 
   const [deactivatePassword, setDeactivatePassword] = useState("");
@@ -43,9 +55,14 @@ export default function DangerZonePage() {
   }
 
   useEffect(() => {
-    reload().catch(() => {
-      // Non-fatal -- bagian lain halaman tetap bisa dipakai.
-    });
+    reload()
+      .catch(() => {
+        // Non-fatal -- bagian lain halaman tetap bisa dipakai. `loading`
+        // TETAP dimatikan lewat .finally() di bawah walau gagal -- status
+        // gagal termuat jatuh ke form default (perilaku lama), BUKAN
+        // skeleton selamanya.
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   async function handleDeactivate(e: React.FormEvent) {
@@ -124,6 +141,10 @@ export default function DangerZonePage() {
     } finally {
       setCancelling(false);
     }
+  }
+
+  if (loading) {
+    return <PageSkeleton />;
   }
 
   return (
