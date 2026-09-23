@@ -408,7 +408,15 @@ export default function CreateProductForm({
 
   if (mode === "digital") {
     return (
-      <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+      // noValidate -- perbaikan 23 September 2026 (audit UX, "form Buat
+      // Produk dibungkam validasi native browser"): input di bawah pakai
+      // atribut `required` (nama/harga/file/sampul), tapi tanpa noValidate
+      // di sini browser mem-blokir event submit SEBELUM handleCreate sempat
+      // jalan -- pengguna cuma lihat tooltip generik bawaan browser (bahasa
+      // ikut locale OS, bukan selalu Indonesia; cuma tunjuk SATU field
+      // pertama), bukan pesan custom Bahasa Indonesia yang sudah ditulis di
+      // handleCreate (nameAndPriceRequired/productFileRequired/dst).
+      <form onSubmit={handleCreate} noValidate className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
         <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">{t("dashboard.pages.products.createStep2")}</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
@@ -459,7 +467,8 @@ export default function CreateProductForm({
 
   if (mode === "payment_link") {
     return (
-      <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+      // noValidate -- lihat catatan panjang di form "digital" di atas.
+      <form onSubmit={handleCreatePaymentLink} noValidate className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
         <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">{t("dashboard.pages.products.createStep2")}</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
@@ -537,7 +546,8 @@ export default function CreateProductForm({
 
   // mode === "external_link"
   return (
-    <form onSubmit={handleCreateExternalLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+    // noValidate -- lihat catatan panjang di form "digital" di atas.
+    <form onSubmit={handleCreateExternalLink} noValidate className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
       <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">{t("dashboard.pages.products.createStep2")}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
