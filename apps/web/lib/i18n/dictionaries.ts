@@ -212,6 +212,18 @@ export const dictionaries = {
           pendingNote: "Pengajuanmu sedang direview, SLA 3x24 jam hari kerja. Kamu akan bisa mengajukan ulang kalau ditolak.",
           verifiedNote: "Akunmu sudah terverifikasi.",
           requirementNote: "Syarat: halaman sudah punya minimal 1 produk aktif",
+          // needsActiveProduct* -- perbaikan 23 September 2026 (audit UX,
+          // "wizard KYC 4-langkah tidak menggerbang syarat minimal 1 produk
+          // aktif di awal"): SEBELUMNYA requirementNote di atas cuma teks
+          // kecil dekoratif, syarat sebenarnya baru dicek backend saat submit
+          // langkah terakhir -- pengguna baru bisa habiskan seluruh wizard
+          // (termasuk upload 3 dokumen sungguhan) baru ditolak. Banner ini
+          // menggantikan form SELURUHNYA (bukan cuma peringatan di atas form)
+          // kalau akun belum punya produk aktif -- backend TETAP jadi
+          // pengaman kedua (lihat kyc.go), ini murni UX.
+          needsActiveProductTitle: "Butuh minimal 1 produk aktif dulu",
+          needsActiveProductDescription: "Verifikasi KYC baru bisa diajukan setelah halamanmu punya minimal 1 produk aktif -- ini supaya tim Jeon.id tahu apa yang kamu jual.",
+          needsActiveProductCta: "Buat produk dulu",
           fullNameLabel: "Nama lengkap (sesuai KTP)",
           bankAccountNameLabel: "Nama pemilik rekening bank (harus sama dengan nama KTP)",
           domicileAddressLabel: "Alamat domisili lengkap",
@@ -3623,6 +3635,9 @@ export const dictionaries = {
           pendingNote: "Your application is under review, SLA 3x24 business hours. You'll be able to resubmit if it's rejected.",
           verifiedNote: "Your account is verified.",
           requirementNote: "Requirement: your page must already have at least 1 active product",
+          needsActiveProductTitle: "You need at least 1 active product first",
+          needsActiveProductDescription: "KYC verification can only be submitted once your page has at least 1 active product -- this is so the Jeon.id team knows what you're selling.",
+          needsActiveProductCta: "Create a product first",
           fullNameLabel: "Full name (as on ID card)",
           bankAccountNameLabel: "Bank account holder name (must match ID card name)",
           domicileAddressLabel: "Full residential address",

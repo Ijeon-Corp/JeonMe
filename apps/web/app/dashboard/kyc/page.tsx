@@ -1,8 +1,9 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, KycStatus, getKycStatus, submitKyc } from "@/lib/api-client";
+import { ApiError, KycStatus, getKycStatus, listProducts, submitKyc } from "@/lib/api-client";
 import { IconCheck, IconShield, IconUpload } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import PageHeader from "@/components/dashboard/page/PageHeader";
@@ -25,6 +26,15 @@ export default function DashboardKycPage() {
   const STATUS_LABEL = buildStatusLabel(t);
   const [status, setStatus] = useState<KycStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  // hasActiveProduct -- perbaikan 23 September 2026 (audit UX, "wizard KYC
+  // 4-langkah tidak menggerbang syarat minimal 1 produk aktif di awal"):
+  // gerbang SEBENARNYA sudah ada di backend (kyc.go, COUNT products WHERE
+  // is_active=true) tapi hanya dicek saat submit langkah TERAKHIR -- user
+  // baru bisa habiskan seluruh wizard (isi identitas/alamat/deskripsi +
+  // upload 3 dokumen sungguhan) baru ditolak di klik submit. `null` =
+  // belum tahu (anggap TIDAK memblokir -- soft-fail kalau listProducts()
+  // gagal, backend TETAP jadi pengaman kedua yang sesungguhnya menolak).
+  const [hasActiveProduct, setHasActiveProduct] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
   const [submitting, setSubmitting] = useState(false);
@@ -59,8 +69,23 @@ export default function DashboardKycPage() {
   }
 
   useEffect(() => {
-    reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.kyc.loadError")))
+    // Promise.allSettled -- kedua panggilan berjalan paralel, kegagalan
+    // listProducts() (soft-fail) TIDAK BOLEH menggagalkan/menghambat load
+    // status KYC yang jadi inti halaman ini, dan sebaliknya. `loading`
+    // ditutup setelah KEDUANYA selesai (bukan cuma reload()) supaya tidak
+    // sempat menampilkan wizard sekilas lalu diganti banner gerbang produk
+    // (pola race yang sama pernah ditemukan & diperbaiki di halaman Zona
+    // Berbahaya sesi yang sama).
+    Promise.allSettled([
+      reload(),
+      listProducts().then((products) => setHasActiveProduct(products.some((p) => p.is_active))),
+    ])
+      .then(([kycResult]) => {
+        if (kycResult.status === "rejected") {
+          const err = kycResult.reason;
+          setError(err instanceof ApiError ? err.message : t("dashboard.pages.kyc.loadError"));
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -140,6 +165,11 @@ export default function DashboardKycPage() {
   if (loading) return <PageSkeleton />;
 
   const canSubmit = status?.status === "unverified" || status?.status === "rejected";
+  // productGateBlocked -- lihat catatan panjang di hasActiveProduct di atas.
+  // Sengaja `=== false` (BUKAN `!hasActiveProduct`) supaya `null` (belum
+  // tahu/gagal cek) TIDAK memblokir -- default permisif, backend tetap jadi
+  // pengaman sebenarnya.
+  const productGateBlocked = canSubmit && hasActiveProduct === false;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -172,7 +202,20 @@ export default function DashboardKycPage() {
         </section>
       )}
 
-      {canSubmit && (
+      {productGateBlocked && (
+        <div className="glass mt-4 flex flex-col items-start gap-2 rounded-jlg p-5 shadow-card">
+          <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.kyc.needsActiveProductTitle")}</p>
+          <p className="text-xs text-app-muted">{t("dashboard.pages.kyc.needsActiveProductDescription")}</p>
+          <Link
+            href="/dashboard/products"
+            className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white"
+          >
+            {t("dashboard.pages.kyc.needsActiveProductCta")}
+          </Link>
+        </div>
+      )}
+
+      {canSubmit && !productGateBlocked && (
         <form onSubmit={handleSubmit} className="glass mt-4 flex flex-col gap-3 rounded-jlg p-5 shadow-card">
           <p className="text-xs font-bold uppercase tracking-wider text-app-muted">
             {t("dashboard.pages.kyc.requirementNote")}
