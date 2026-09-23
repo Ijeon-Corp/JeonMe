@@ -48,6 +48,7 @@ import {
   IconUpload,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import ScrollHint from "@/components/ScrollHint";
 import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import type { DesignSection } from "@/components/ProdukPageEditor";
@@ -1334,7 +1335,9 @@ function DashboardProductsPageInner() {
             )}
 
             {filteredProducts.length > 0 ? (
-              <div className="glass mt-4 overflow-x-auto rounded-jlg shadow-card">
+              <>
+                <ScrollHint />
+                <div className="glass mt-4 overflow-x-auto rounded-jlg shadow-card">
                 <table aria-label={t("dashboard.pages.products.table.ariaLabel")} className="w-full min-w-[520px] text-left text-xs">
                   <thead>
                     <tr className="border-b-2 border-jeon-ink text-[11px] font-semibold uppercase tracking-wide text-app-muted">
@@ -1507,7 +1510,8 @@ function DashboardProductsPageInner() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             ) : products.length > 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
                 {t("dashboard.pages.products.noProductsMatch")}

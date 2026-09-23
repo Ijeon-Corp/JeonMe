@@ -3227,6 +3227,15 @@ export const dictionaries = {
         designPageShell: {
           backToDesign: "Kembali ke Desain",
         },
+        // scrollHint -- perbaikan 23 September 2026 (audit UX, "tabel data
+        // scroll horizontal di mobile tanpa afordansi visual apa pun"):
+        // dipakai ScrollHint.tsx, komponen bersama utk tabel lebar (Audiens,
+        // riwayat Pesanan) yang kolom terakhirnya (biasanya tombol aksi)
+        // terpotong di viewport sempit tanpa petunjuk apa pun kalau ada
+        // lebih banyak kolom di luar layar.
+        scrollHint: {
+          text: "Geser untuk lihat kolom lainnya",
+        },
       },
     },
     watermark: {
@@ -6429,6 +6438,9 @@ export const dictionaries = {
         },
         designPageShell: {
           backToDesign: "Back to Design",
+        },
+        scrollHint: {
+          text: "Scroll to see more columns",
         },
       },
     },

@@ -20,6 +20,7 @@ import {
 } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
 import EmptyState from "@/components/EmptyState";
+import ScrollHint from "@/components/ScrollHint";
 import StatCard from "@/components/StatCard";
 import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
@@ -609,7 +610,9 @@ function DashboardAudiencePageInner() {
         </div>
       )}
 
-      <div className="glass mt-3 overflow-x-auto rounded-jlg shadow-card">
+      <div className="mt-3">
+        <ScrollHint />
+        <div className="glass overflow-x-auto rounded-jlg shadow-card">
         <table aria-label={t("dashboard.pages.audience.managerHeading")} className="w-full text-left text-xs">
           <thead>
             <tr className="border-b-2 border-jeon-ink text-app-muted">
@@ -683,6 +686,7 @@ function DashboardAudiencePageInner() {
         {contacts.length > 0 && visibleContacts.length === 0 && (
           <p className="px-4 py-6 text-center text-xs text-app-muted">{t("dashboard.pages.audience.filterEmpty")}</p>
         )}
+        </div>
       </div>
       </>
       )}
