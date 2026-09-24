@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 // StickerIcon -- Modul Desain (koreksi langsung pengguna, 8 Agustus 2026):
 // bentuk stiker SVG garis/flat -- terinspirasi galeri stiker Pinterest
 // (panah/kursor/dekoratif) di referensi pengguna, TAPI sengaja bukan
@@ -15,7 +17,67 @@ export const STICKER_SHAPES: { value: string; label: string }[] = [
   { value: "heart-sketch", label: "Hati Sketsa" },
 ];
 
+// FLUENT_STICKERS -- 24 September 2026 (permintaan pengguna: "Fluent Emoji
+// untuk stiker"): stiker 3D glossy dari Microsoft Fluent Emoji (MIT, lihat
+// public/stickers/fluent/LICENSE) -- gaya yang dulu sengaja dihindari
+// komentar di atas karena butuh aset ilustrasi asli. PNG 256px resmi
+// dikonversi ke WebP (cwebp q85, alpha lossless, 5-10 KB/berkas) dan
+// di-host sendiri, bukan hotlink ke GitHub/CDN. value "fluent-<slug>"
+// HARUS sinkron dgn availableStickerTypes di page.go (test backend
+// TestFluentStickerTypes_HaveAssetFiles memastikan tiap tipe punya berkas).
+export const FLUENT_STICKERS: { value: string; label: string }[] = [
+  { value: "fluent-fire", label: "Api" },
+  { value: "fluent-sparkles", label: "Kilau" },
+  { value: "fluent-red-heart", label: "Hati Merah" },
+  { value: "fluent-glowing-star", label: "Bintang Bersinar" },
+  { value: "fluent-star-struck", label: "Takjub" },
+  { value: "fluent-heart-eyes", label: "Mata Hati" },
+  { value: "fluent-sunglasses", label: "Kacamata Hitam" },
+  { value: "fluent-party-popper", label: "Terompet Pesta" },
+  { value: "fluent-rocket", label: "Roket" },
+  { value: "fluent-hundred", label: "Seratus" },
+  { value: "fluent-gift", label: "Hadiah" },
+  { value: "fluent-shopping-bags", label: "Tas Belanja" },
+  { value: "fluent-money-bag", label: "Kantong Uang" },
+  { value: "fluent-crown", label: "Mahkota" },
+  { value: "fluent-trophy", label: "Piala" },
+  { value: "fluent-camera", label: "Kamera" },
+  { value: "fluent-musical-notes", label: "Not Musik" },
+  { value: "fluent-megaphone", label: "Megafon" },
+  { value: "fluent-high-voltage", label: "Petir" },
+  { value: "fluent-rainbow", label: "Pelangi" },
+  { value: "fluent-hot-beverage", label: "Kopi Panas" },
+  { value: "fluent-pointing-down", label: "Tunjuk ke Bawah" },
+  { value: "fluent-thumbs-up", label: "Jempol" },
+  { value: "fluent-eyes", label: "Mata" },
+];
+
+const FLUENT_STICKER_VALUES = new Set(FLUENT_STICKERS.map((s) => s.value));
+
+// stickerLabel -- label tampilan utk tipe apa pun (garis maupun 3D),
+// dipakai daftar "Stiker Terpasang".
+export function stickerLabel(type: string): string | undefined {
+  return (STICKER_SHAPES.find((s) => s.value === type) ?? FLUENT_STICKERS.find((s) => s.value === type))?.label;
+}
+
 export default function StickerIcon({ type, className = "" }: { type: string; className?: string }) {
+  if (FLUENT_STICKER_VALUES.has(type)) {
+    // unoptimized -- berkas statis WebP 256px yang sudah kecil, tidak perlu
+    // lewat /_next/image. draggable={false} supaya seret-geser stiker di
+    // pratinjau (pointer events StickerOverlay) tidak direbut drag gambar
+    // bawaan browser.
+    return (
+      <Image
+        src={`/stickers/fluent/${type.slice("fluent-".length)}.webp`}
+        alt=""
+        width={256}
+        height={256}
+        unoptimized
+        draggable={false}
+        className={`select-none object-contain ${className}`}
+      />
+    );
+  }
   switch (type) {
     case "arrow-curve":
       return (

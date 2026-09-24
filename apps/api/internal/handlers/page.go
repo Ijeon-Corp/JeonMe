@@ -76,10 +76,22 @@ type PageSticker struct {
 // terinspirasi galeri stiker Pinterest (panah/kursor/dekoratif) -- SENGAJA
 // bentuk garis/flat SVG, bukan tiruan gaya glossy 3D/foto, supaya ringan &
 // tidak butuh aset gambar hosting terpisah.
+//
+// "fluent-*" -- 24 September 2026 (permintaan pengguna: "Fluent Emoji untuk
+// stiker"): 24 emoji 3D dari Microsoft Fluent Emoji (MIT), di-host sendiri
+// sbg WebP di apps/web/public/stickers/fluent/ (bukan hotlink). Gaya glossy
+// 3D yang dulu sengaja dihindari di atas karena butuh aset ilustrasi asli
+// -- kini asetnya ada. HARUS sinkron dgn FLUENT_STICKERS di StickerIcon.tsx.
 var availableStickerTypes = map[string]bool{
 	"arrow-curve": true, "arrow-straight": true, "arrow-sketch": true,
 	"cursor-pixel": true, "cursor-hand": true, "pointing-hand": true,
 	"star-sketch": true, "heart-sketch": true,
+	"fluent-fire": true, "fluent-sparkles": true, "fluent-red-heart": true, "fluent-glowing-star": true,
+	"fluent-star-struck": true, "fluent-heart-eyes": true, "fluent-sunglasses": true, "fluent-party-popper": true,
+	"fluent-rocket": true, "fluent-hundred": true, "fluent-gift": true, "fluent-shopping-bags": true,
+	"fluent-money-bag": true, "fluent-crown": true, "fluent-trophy": true, "fluent-camera": true,
+	"fluent-musical-notes": true, "fluent-megaphone": true, "fluent-high-voltage": true, "fluent-rainbow": true,
+	"fluent-hot-beverage": true, "fluent-pointing-down": true, "fluent-thumbs-up": true, "fluent-eyes": true,
 }
 
 // maxStickersPerPage -- batas wajar supaya payload/render tidak membengkak

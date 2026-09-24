@@ -1,7 +1,7 @@
 "use client";
 
 import { PageStickerData } from "@/lib/api-client";
-import StickerIcon, { STICKER_SHAPES } from "@/components/StickerIcon";
+import StickerIcon, { FLUENT_STICKERS, STICKER_SHAPES, stickerLabel } from "@/components/StickerIcon";
 import { IconPlus, IconTrash } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 
@@ -47,19 +47,29 @@ export default function StickerCanvasEditor({
     <div className="flex flex-col gap-4">
       <div>
         <p className="mb-1.5 text-xs font-semibold text-app-ink">{t("dashboard.components.stickerCanvasEditor.addStickerLabel")}</p>
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
-          {STICKER_SHAPES.map((shape) => (
-            <button
-              key={shape.value}
-              type="button"
-              onClick={() => handleAdd(shape.value)}
-              title={t("dashboard.components.stickerCanvasEditor.addStickerTitle").replace("{shape}", shape.label)}
-              className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-jeon-ink bg-app-surface p-2 text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-            >
-              <StickerIcon type={shape.value} className="h-6 w-6" />
-            </button>
-          ))}
-        </div>
+        {/* Dua grup (24 Sept 2026): stiker garis lama + emoji 3D Fluent. */}
+        {[
+          { key: "line", heading: t("dashboard.components.stickerCanvasEditor.lineGroup"), items: STICKER_SHAPES, iconClass: "h-6 w-6" },
+          { key: "emoji3d", heading: t("dashboard.components.stickerCanvasEditor.emoji3dGroup"), items: FLUENT_STICKERS, iconClass: "h-8 w-8" },
+        ].map((group) => (
+          <div key={group.key} className="mb-3 last:mb-0">
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">{group.heading}</p>
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+              {group.items.map((shape) => (
+                <button
+                  key={shape.value}
+                  type="button"
+                  onClick={() => handleAdd(shape.value)}
+                  title={t("dashboard.components.stickerCanvasEditor.addStickerTitle").replace("{shape}", shape.label)}
+                  aria-label={t("dashboard.components.stickerCanvasEditor.addStickerTitle").replace("{shape}", shape.label)}
+                  className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-jeon-ink bg-app-surface p-2 text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                >
+                  <StickerIcon type={shape.value} className={group.iconClass} />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <p className="flex items-center gap-1 text-xs font-semibold text-jeon-purple">
@@ -73,13 +83,12 @@ export default function StickerCanvasEditor({
             {t("dashboard.components.stickerCanvasEditor.installedStickers").replace("{count}", String(stickers.length))}
           </p>
           {stickers.map((s) => {
-            const meta = STICKER_SHAPES.find((shape) => shape.value === s.type);
             return (
               <div key={s.id} className="flex items-center gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-2.5">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-app-ink">
                   <StickerIcon type={s.type} className="h-5 w-5" />
                 </span>
-                <p className="flex-1 truncate text-xs font-semibold text-app-ink">{meta?.label ?? s.type}</p>
+                <p className="flex-1 truncate text-xs font-semibold text-app-ink">{stickerLabel(s.type) ?? s.type}</p>
                 <button
                   type="button"
                   onClick={() => handleDelete(s.id)}

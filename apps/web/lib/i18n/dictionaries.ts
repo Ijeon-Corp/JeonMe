@@ -3166,6 +3166,8 @@ export const dictionaries = {
           addStickerTitle: "Tambah {shape}",
           dragHint: "Seret & ubah ukuran langsung di panel Pratinjau Langsung di samping.",
           installedStickers: "Stiker Terpasang ({count})",
+          lineGroup: "Garis",
+          emoji3dGroup: "Emoji 3D",
         },
         designPageShell: {
           backToDesign: "Kembali ke Desain",
@@ -6289,6 +6291,8 @@ export const dictionaries = {
           addStickerTitle: "Add {shape}",
           dragHint: "Drag & resize directly in the Live Preview panel alongside.",
           installedStickers: "Stickers Attached ({count})",
+          lineGroup: "Line",
+          emoji3dGroup: "3D Emoji",
         },
         designPageShell: {
           backToDesign: "Back to Design",
