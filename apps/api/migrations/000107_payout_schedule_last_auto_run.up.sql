@@ -1,0 +1,34 @@
+-- Perbaikan keandalan auto-withdraw (audit menyeluruh 24 September 2026).
+--
+-- HandleAutoWithdrawScan menentukan "jatuh tempo" murni dari tanggal saat
+-- handler-nya KEBETULAN jalan (now().Weekday() == Monday untuk weekly,
+-- now().Day() == 1 untuk monthly), tanpa menyimpan state apa pun soal
+-- kapan terakhir benar-benar dijalankan. asynq.Scheduler memakai cron
+-- in-process TANPA catch-up: kalau container worker tidak hidup tepat saat
+-- jadwal @daily lewat tengah malam UTC di hari Senin -- deploy
+-- --force-recreate, restart OOM, reboot VPS, atau Redis belum siap --
+-- task-nya tidak pernah dienqueue. Run harian berikutnya (Selasa) langsung
+-- return karena bukan Senin.
+--
+-- Akibatnya SEMUA kreator dengan auto-withdraw weekly tidak dibayar minggu
+-- itu; untuk monthly (miss tanggal 1) berarti dilewati SATU BULAN PENUH.
+-- Tidak ada log "terlewat", tidak ada alert, dan tidak ada satu pun baris
+-- DB yang bisa dipakai admin untuk menyadarinya -- komplain kreator adalah
+-- satu-satunya mekanisme deteksi.
+--
+-- last_auto_run_at mengubah gerbangnya dari "hari ini hari X?" menjadi
+-- "periode berjalan sudah lewat DAN belum dijalankan untuk periode ini",
+-- sehingga run yang terlewat otomatis disusul pada run harian berikutnya.
+-- Kolom ini sekaligus jadi guard idempotensi yang benar kalau worker suatu
+-- saat di-scale ke lebih dari satu replika.
+ALTER TABLE payout_schedule ADD COLUMN last_auto_run_at TIMESTAMPTZ;
+
+-- Backfill WAJIB, bukan kosmetik: kalau dibiarkan NULL, setiap baris
+-- weekly/monthly yang sudah ada akan terbaca "belum pernah dijalankan" dan
+-- langsung jatuh tempo SERENTAK pada scan harian pertama setelah deploy --
+-- memicu gelombang penarikan dana massal yang tidak diminta siapa pun,
+-- di luar jadwal yang dijanjikan ke kreator. Diisi now() supaya penarikan
+-- otomatis pertama terjadi pada batas periode berikutnya yang WAJAR
+-- (Senin berikutnya / tanggal 1 berikutnya), persis seperti perilaku hari
+-- ini.
+UPDATE payout_schedule SET last_auto_run_at = now() WHERE frequency IN ('weekly', 'monthly');

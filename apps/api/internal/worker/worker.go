@@ -566,16 +566,32 @@ func revokeAllSessions(ctx context.Context, rdb *redis.Client, userID string) {
 // payout.MinIDR) -- cukup SATU scan harian yang tahu sendiri frekuensi
 // mana yang "jatuh tempo" hari ini, bukan job terpisah per frekuensi.
 func (h *Handler) HandleAutoWithdrawScan(ctx context.Context, t *asynq.Task) error {
+	// Gerbang berbasis STATE, bukan tanggal -- perbaikan 24 September 2026
+	// (audit backend). SEBELUMNYA syaratnya cuma "hari ini Senin?" /
+	// "hari ini tanggal 1?", tanpa menyimpan apa pun soal kapan terakhir
+	// benar-benar dijalankan. asynq.Scheduler adalah cron in-process TANPA
+	// catch-up: kalau worker tidak hidup tepat saat @daily lewat tengah
+	// malam UTC hari Senin (deploy --force-recreate, restart OOM, reboot
+	// VPS, Redis belum siap), task-nya tidak pernah dienqueue -- dan run
+	// harian berikutnya langsung berhenti karena bukan Senin lagi. Satu
+	// siklus pembayaran HILANG untuk semua kreator weekly; untuk monthly
+	// berarti satu bulan penuh. Tanpa log, tanpa alert, tanpa jejak DB --
+	// komplain kreator satu-satunya cara tahu.
+	//
+	// Sekarang: jatuh tempo kalau belum dijalankan untuk PERIODE BERJALAN.
+	// Run yang terlewat otomatis disusul di run harian berikutnya, dan
+	// menjalankannya dua kali dalam periode yang sama tidak mungkin.
 	now := time.Now()
-	dueWeekly := now.Weekday() == time.Monday
-	dueMonthly := now.Day() == 1
-	if !dueWeekly && !dueMonthly {
-		return nil
-	}
+	weekdayOffset := (int(now.Weekday()) + 6) % 7 // Senin = 0
+	weeklyPeriodStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).
+		AddDate(0, 0, -weekdayOffset)
+	monthlyPeriodStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT user_id, frequency, min_threshold_idr FROM payout_schedule WHERE frequency IN ('weekly', 'monthly')
-	`)
+		SELECT user_id, frequency, min_threshold_idr FROM payout_schedule
+		WHERE (frequency = 'weekly'  AND (last_auto_run_at IS NULL OR last_auto_run_at < $1))
+		   OR (frequency = 'monthly' AND (last_auto_run_at IS NULL OR last_auto_run_at < $2))
+	`, weeklyPeriodStart, monthlyPeriodStart)
 	if err != nil {
 		return fmt.Errorf("worker: gagal memuat jadwal auto-withdraw: %w", err)
 	}
@@ -590,9 +606,7 @@ func (h *Handler) HandleAutoWithdrawScan(ctx context.Context, t *asynq.Task) err
 		if err := rows.Scan(&d.UserID, &d.Frequency, &d.MinThresholdIDR); err != nil {
 			continue
 		}
-		if (d.Frequency == "weekly" && dueWeekly) || (d.Frequency == "monthly" && dueMonthly) {
-			candidates = append(candidates, d)
-		}
+		candidates = append(candidates, d)
 	}
 	rows.Close()
 
@@ -603,6 +617,16 @@ func (h *Handler) HandleAutoWithdrawScan(ctx context.Context, t *asynq.Task) err
 			// kreator lain -- log & lanjut, bukan return error (yang akan
 			// membuat asynq me-retry SELURUH scan dari awal).
 			log.Printf("worker: auto-withdraw gagal untuk user %s: %v", d.UserID, err)
+		}
+		// Periode ditandai terpakai setelah PERCOBAAN, bukan hanya setelah
+		// sukses -- sengaja, supaya semantiknya tetap sama dengan perilaku
+		// lama: saldo yang belum mencapai threshold pada jadwalnya menunggu
+		// periode BERIKUTNYA, bukan dicoba ulang tiap hari sampai cukup
+		// (itu akan mengubah "mingguan" jadi "harian begitu cukup").
+		if _, uErr := h.DB.Exec(ctx, `
+			UPDATE payout_schedule SET last_auto_run_at = now() WHERE user_id = $1
+		`, d.UserID); uErr != nil {
+			log.Printf("worker: gagal menandai last_auto_run_at user %s: %v", d.UserID, uErr)
 		}
 	}
 	return nil
