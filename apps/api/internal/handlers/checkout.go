@@ -1233,8 +1233,44 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 	shouldNotifyBuyer := false
 
 	if res.RowsAffected() > 0 {
-		if _, err := tx.Exec(ctx, `UPDATE orders SET status = $1 WHERE id = $2`, orderStatus, orderID); err != nil {
+		// GERBANG KEDUA -- perbaikan 24 September 2026 (audit backend).
+		//
+		// Sampai sebelum ini, SELURUH blok uang di bawah (kredit ledger
+		// kreator, komisi afiliator, split tiap kolaborator, poin loyalitas,
+		// email "pesanan siap diunduh", webhook kreator) digerbang HANYA
+		// oleh RowsAffected INSERT payments di atas -- yang idempoten
+		// semata-mata karena index PARSIAL `WHERE psp_transaction_id != ''`.
+		// Begitu gateway mengirim transaction id KOSONG, index itu tidak
+		// mengindeks barisnya sama sekali, ON CONFLICT tidak pernah kena,
+		// dan setiap callback berulang menambah satu baris payments baru
+		// -- artinya kredit ledger DOBEL, dan saldo hasil penggandaan itu
+		// langsung bisa ditarik lewat payout.
+		//
+		// Dibuktikan lewat eksperimen di transaksi yang di-ROLLBACK: dua
+		// INSERT dengan psp_transaction_id 'TRX-1' menghasilkan 1 baris
+		// (dedup bekerja), tiga INSERT dengan '' menghasilkan 3 baris
+		// (dedup hilang). Duitku's ParseWebhook mengambil `reference` apa
+		// adanya tanpa cek non-empty, jadi ini laten hari ini (provider
+		// default masih midtrans) tapi jadi nyata begitu Duitku diaktifkan.
+		//
+		// Gerbang ini TIDAK bergantung pada index mana pun: status order
+		// sendiri yang jadi penanda "sudah pernah diproses". `status <>
+		// 'paid'` sekaligus mencegah order yang sudah lunas diturunkan
+		// statusnya oleh callback yang datang terlambat/di luar urutan.
+		upd, err := tx.Exec(ctx, `UPDATE orders SET status = $1 WHERE id = $2 AND status <> 'paid'`, orderStatus, orderID)
+		if err != nil {
 			return fmt.Errorf("gagal memperbarui status order")
+		}
+		if upd.RowsAffected() == 0 {
+			log.Printf("checkout: order %s sudah lunas sebelumnya, callback %s dilewati (tidak dikredit ulang)", orderID, orderStatus)
+			return nil
+		}
+		if pspTransactionID == "" {
+			// Bukan kegagalan -- gerbang di atas sudah menahan duplikatnya --
+			// tapi tetap ditandai karena artinya integrasi gateway mengirim
+			// referensi kosong, dan dedup lapis pertama (index parsial)
+			// memang tidak bisa bekerja untuk baris seperti ini.
+			log.Printf("checkout: order %s dibayar dengan psp_transaction_id KOSONG dari %s -- dedup index parsial tidak berlaku, hanya gerbang status order yang menahan duplikat", orderID, psp)
 		}
 		if err := audit.Log(ctx, tx, productUserID, "order."+orderStatus, "order", orderID, nil); err != nil {
 			return fmt.Errorf("gagal mencatat audit log")
