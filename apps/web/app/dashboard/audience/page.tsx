@@ -66,6 +66,8 @@ function toCSV(contacts: AudienceContact[]): string {
 // production sejak v0.37.0/v0.38.0, flag "marketing" dihapus dari file
 // ini 8 September 2026.
 type AudienceView = "contacts" | "broadcast" | "forms";
+const CONTACTS_PAGE_SIZE = 100;
+
 const AUDIENCE_VIEW_FROM_URL: Record<string, AudienceView> = {
   contacts: "contacts",
   broadcast: "broadcast",
@@ -97,6 +99,14 @@ function DashboardAudiencePageInner() {
   // kontak sudah ada di memori, tidak perlu round-trip.
   const [tagFilter, setTagFilter] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<string>("");
+  // Render bertahap (audit 24 Sept 2026): GetAudience mengirim SEMUA kontak
+  // (dibutuhkan utuh utk ekspor CSV & filter tag di browser), tapi tabel
+  // SEBELUMNYA merender semuanya sekaligus -- kreator dgn ribuan kontak
+  // membuat ribuan <tr> dan halaman terasa beku. Sekarang 100 baris dulu,
+  // "Tampilkan lagi" menambah 100; kembali ke 100 tiap filter berganti
+  // (pola adjust-state-during-render, bukan efek).
+  const [shownCount, setShownCount] = useState(CONTACTS_PAGE_SIZE);
+  const [prevFilterKey, setPrevFilterKey] = useState("|");
   const [editing, setEditing] = useState<{ key: string; tags: string; notes: string } | null>(null);
   const [savingMeta, setSavingMeta] = useState(false);
   // newContacts (kontak 30 hari terakhir) DIHITUNG saat fetch, bukan di
@@ -244,6 +254,13 @@ function DashboardAudiencePageInner() {
     if (tagFilter && !(c.tags ?? []).includes(tagFilter)) return false;
     return true;
   });
+  const filterKey = `${sourceFilter}|${tagFilter}`;
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setShownCount(CONTACTS_PAGE_SIZE);
+  }
+  const renderedContacts = visibleContacts.slice(0, shownCount);
+  const hiddenContactCount = visibleContacts.length - renderedContacts.length;
 
   function openEdit(c: AudienceContact) {
     setEditing({ key: contactKeyOf(c), tags: (c.tags ?? []).join(", "), notes: c.notes ?? "" });
@@ -627,7 +644,7 @@ function DashboardAudiencePageInner() {
             </tr>
           </thead>
           <tbody>
-            {visibleContacts.map((c, i) => (
+            {renderedContacts.map((c, i) => (
               <tr key={i} className="border-b border-app-border last:border-0">
                 <td className="px-4 py-2.5 text-app-ink">{c.name || "-"}</td>
                 <td className="px-4 py-2.5 text-app-ink">{c.email || "-"}</td>
@@ -682,6 +699,19 @@ function DashboardAudiencePageInner() {
             ctaLabel={t("dashboard.pages.audience.emptyContactsCta")}
             onCtaClick={() => router.push("/dashboard/links")}
           />
+        )}
+        {hiddenContactCount > 0 && (
+          <div className="border-t border-app-border px-4 py-3 text-center">
+            <button
+              type="button"
+              onClick={() => setShownCount((n) => n + CONTACTS_PAGE_SIZE)}
+              className="rounded-md border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+            >
+              {t("dashboard.pages.audience.showMoreContacts")
+                .replace("{count}", String(Math.min(CONTACTS_PAGE_SIZE, hiddenContactCount)))
+                .replace("{remaining}", String(hiddenContactCount))}
+            </button>
+          </div>
         )}
         {contacts.length > 0 && visibleContacts.length === 0 && (
           <p className="px-4 py-6 text-center text-xs text-app-muted">{t("dashboard.pages.audience.filterEmpty")}</p>
