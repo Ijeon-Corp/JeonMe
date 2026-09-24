@@ -66,7 +66,9 @@
 import type { ReactElement } from "react";
 import type { PagePreviewData } from "@/components/PagePreview";
 import type { SocialPlatformKey } from "@/lib/social-links";
+import type { ProfileExtras } from "@/lib/api-client";
 import {
+  IconBadgeCheck,
   IconBook,
   IconBriefcase,
   IconGift,
@@ -104,6 +106,12 @@ export interface QuickSetupCategory {
 // warga lokal (barbershop/salon/fotografer), bukan agen wisata/pemandu yang
 // melayani wisatawan.
 export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
+  // "profile" -- permintaan langsung pengguna, 24 September 2026 ("buat
+  // quick template yang seperti ini karna ini sesuai tema home page nya",
+  // gambar 5 kartu profil): 10 template bergaya kartu profil jeon.id
+  // (layout "profile" + tema keluarga Joyful). Ditaruh PALING DEPAN karena
+  // paling sesuai identitas visual homepage.
+  { key: "profile", label: "Profil Kreator", Icon: IconBadgeCheck },
   { key: "creator", label: "Kreator & Personal Brand", Icon: IconSparkle },
   { key: "business", label: "Bisnis & Profesional", Icon: IconBriefcase },
   { key: "shop", label: "Toko Online", Icon: IconShoppingBag },
@@ -196,6 +204,12 @@ export interface QuickSetupTemplateLink {
   // 26 Agustus 2026 (lihat catatan revisi di atas) lewat parameter ke-3
   // baru di link().
   description?: string;
+  // iconKey/accentColor/badgeText -- template "Profil Kreator" (24
+  // September 2026): ikon galeri, warna tombol per tautan, dan chip
+  // harga/label -- diterapkan lewat updateLink setelah createLink.
+  iconKey?: string;
+  accentColor?: string;
+  badgeText?: string;
 }
 
 export interface QuickSetupTemplateFaqItem {
@@ -291,6 +305,13 @@ export interface QuickSetupTemplate {
   // tidak pernah menghancurkan data monetisasi" yang sudah ada.
   products?: QuickSetupTemplateProduct[];
   monetizationHint?: string;
+  // profileExtras -- chip keahlian & baris statistik layout "profile"
+  // (migrasi 000109), diterapkan lewat updateMyPageProfileExtras.
+  profileExtras?: ProfileExtras;
+  // showcaseFirst -- kartu "project_showcase" tampil DI ATAS tautan (bukan
+  // di bawah seperti urutan bawaan orderedTemplateItems), sesuai gambar
+  // referensi template Profil Kreator.
+  showcaseFirst?: boolean;
   // social -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
   // tangkapan layar template "Dimas Dev": baris ikon GitHub/LinkedIn/
   // Website/Email di bawah bio). Sama semangatnya dengan PLATFORM_URL.website
@@ -501,6 +522,11 @@ export interface OrderedTemplateItem {
   badgeText?: string;
   ctaText?: string;
   showcaseImagePath?: string;
+  iconKey?: string;
+  accentColor?: string;
+  // linkBadgeText -- chip harga tautan biasa (beda dari badgeText milik
+  // project_showcase yang artinya label kartu).
+  linkBadgeText?: string;
 }
 
 // orderedTemplateItems -- SATU sumber kebenaran urutan tampil: blok
@@ -512,9 +538,37 @@ export interface OrderedTemplateItem {
 export function orderedTemplateItems(t: QuickSetupTemplate): OrderedTemplateItem[] {
   const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
   const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
+  const toBlockItem = (b: QuickSetupTemplateBlock): OrderedTemplateItem => ({
+    title: b.title,
+    blockType: b.type,
+    url: b.url ?? "",
+    text: b.text,
+    faqItems: b.faqItems,
+    description: b.description,
+    badgeText: b.badgeText,
+    ctaText: b.ctaText,
+    showcaseImagePath: b.showcaseImagePath,
+  });
+  const linkItems: OrderedTemplateItem[] = t.links.map((l) => ({
+    title: l.title,
+    blockType: "link" as const,
+    url: l.url,
+    description: l.description,
+    iconKey: l.iconKey,
+    accentColor: l.accentColor,
+    linkBadgeText: l.badgeText,
+  }));
+  if (t.showcaseFirst) {
+    return [
+      ...mapsBlocks.map((b) => ({ title: b.title, blockType: "maps" as const, url: b.url ?? "" })),
+      ...otherBlocks.filter((b) => b.type === "project_showcase").map(toBlockItem),
+      ...linkItems,
+      ...otherBlocks.filter((b) => b.type !== "project_showcase").map(toBlockItem),
+    ];
+  }
   return [
     ...mapsBlocks.map((b) => ({ title: b.title, blockType: "maps" as const, url: b.url ?? "" })),
-    ...t.links.map((l) => ({ title: l.title, blockType: "link" as const, url: l.url, description: l.description })),
+    ...linkItems,
     ...otherBlocks.map((b) => ({
       title: b.title,
       blockType: b.type,
@@ -545,6 +599,7 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
     avatarUrl,
     theme: t.theme,
     layoutVariant: t.layoutVariant ?? "centered",
+    profileExtras: t.profileExtras,
     links: orderedTemplateItems(t).map((item) => ({
       id: item.title,
       title: item.title,
@@ -564,6 +619,9 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
       // "project_showcase" (paragraf) -- lihat catatan lengkap di
       // QuickSetupTemplateLink.description.
       description: item.description,
+      iconKey: item.iconKey,
+      accentColor: item.accentColor,
+      badgeText: item.linkBadgeText,
     })),
     products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
     social: t.social,
@@ -571,6 +629,309 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
 }
 
 export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
+  // ---------- Profil Kreator (24 September 2026) ----------
+  // Permintaan langsung pengguna: template bergaya kartu profil seperti
+  // gambar referensi homepage (Full-Stack Developer, Penulis Buku, Guru,
+  // Freelancer, Toko Online) + 5 niche tambahan. Semuanya layout "profile"
+  // (PagePreview.tsx) dgn tema keluarga Joyful, chip & statistik
+  // (profileExtras), kartu unggulan bergambar DI ATAS tombol
+  // (showcaseFirst), tombol warna palet brand (accentColor), dan chip
+  // harga (badgeText). Foto kartu unggulan CC0, lihat
+  // public/quick-setup-showcase/CREDITS.md.
+  {
+    key: "profile-fullstack-developer",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Full-Stack Developer",
+    description: "Proyek unggulan, GitHub, CV, dan jasa pembuatan website",
+    theme: "joyful",
+    bio: "Full-Stack Developer",
+    social: { github: "username", linkedin: "username", website: "websitekamu.com" },
+    profileExtras: { chips: [{ label: "React", icon: "brand-react" }, { label: "Laravel", icon: "brand-laravel" }, { label: "Go", icon: "brand-go" }], stats: [{ value: "48", label: "Proyek" }, { value: "6", label: "Tahun" }, { value: "4.9 ★", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Lihat GitHub", url: "https://github.com/username", iconKey: "brand-github", accentColor: "#d7ff60" },
+      { title: "Unduh CV", url: "https://websitekamu.com/cv.pdf", iconKey: "file-text", accentColor: "#d9ceff" },
+      { title: "Buat Website", url: "https://wa.me/62", description: "Website profesional untuk bisnis atau personal brand kamu.", iconKey: "laptop", badgeText: "Mulai Rp3jt" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Sistem Ticketing Modern",
+        description: "Aplikasi manajemen tiket untuk tim modern, dengan notifikasi real-time dan laporan lengkap.",
+        badgeText: "Proyek Unggulan",
+        ctaText: "Lihat proyek",
+        url: "https://websitekamu.com/proyek",
+        imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
+      }),
+    ],
+    monetizationHint: "Tambahkan Produk Digital (paket review kode, template project) di menu Toko untuk penghasilan tambahan.",
+  },
+  {
+    key: "profile-book-author",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Penulis Buku",
+    description: "Buku terbaru, artikel, newsletter, dan media sosial",
+    theme: "joyful",
+    bio: "Penulis · Editor · Storyteller",
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username", website: "websitekamu.com" },
+    profileExtras: { chips: [], stats: [{ value: "5", label: "Buku" }, { value: "120K", label: "Pembaca" }, { value: "4.8", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Beli Bukunya", url: "https://websitekamu.com/beli", iconKey: "shopping-bag", accentColor: "#ff6448" },
+      { title: "Baca Artikel", url: "https://websitekamu.com/blog", iconKey: "newspaper", accentColor: "#d9ceff" },
+      { title: "Newsletter Mingguan", url: "https://websitekamu.com/newsletter", description: "Rekomendasi buku, tulisan baru, dan cerita di balik layar.", iconKey: "mail", badgeText: "Gratis" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Pulang Sebelum Senja",
+        description: "Tentang rumah, kehilangan, dan keberanian untuk kembali.",
+        badgeText: "Buku Terbaru",
+        ctaText: "Baca sinopsis",
+        url: "https://websitekamu.com/buku",
+        imagePath: "/quick-setup-showcase/book-writer.jpg",
+      }),
+    ],
+    monetizationHint: "Jual e-book atau bab bonus langsung dari menu Toko sebagai Produk Digital.",
+  },
+  {
+    key: "profile-teacher",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Guru",
+    description: "Info kelas, materi gratis, jadwal, dan les privat",
+    theme: "joyful",
+    bio: "Guru Matematika & Sains",
+    social: { instagram: "username", youtube: "@namachannel", whatsapp: "62812xxxxxxxx" },
+    profileExtras: { chips: [{ label: "Matematika", icon: "calculator" }, { label: "Sains", icon: "lightbulb" }, { label: "Edukasi", icon: "book-open" }], stats: [{ value: "320", label: "Siswa" }, { value: "86", label: "Materi" }, { value: "4.9", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Lihat Materi Gratis", url: "https://websitekamu.com/materi", iconKey: "book-open", accentColor: "#d7ff60" },
+      { title: "Jadwal Kelas", url: "https://websitekamu.com/jadwal", iconKey: "calendar-days", accentColor: "#8ad5ff" },
+      { title: "Private Class Online", url: "https://wa.me/62", description: "Sesi 1-on-1 sesuai kebutuhanmu.", iconKey: "video", badgeText: "Rp75K" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Matematika Jadi Mudah",
+        description: "Konsep simpel, contoh nyata, dan latihan interaktif.",
+        badgeText: "Kelas Terbaru",
+        ctaText: "Lihat kelas",
+        url: "https://websitekamu.com/kelas",
+        imagePath: "/quick-setup-showcase/teacher-class.jpg",
+      }),
+    ],
+    monetizationHint: "Buka Kelas & Kursus berbayar atau jual modul latihan sebagai Produk Digital di menu Toko.",
+  },
+  {
+    key: "profile-freelancer-designer",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Freelancer",
+    description: "Portofolio, layanan, harga, dan konsultasi",
+    theme: "joyful",
+    bio: "Freelance UI/UX Designer",
+    social: { instagram: "username", linkedin: "username", website: "websitekamu.com" },
+    profileExtras: { chips: [{ label: "Figma", icon: "brand-figma" }, { label: "UI Design", icon: "palette" }, { label: "UX Research", icon: "target" }], stats: [{ value: "92", label: "Proyek" }, { value: "68", label: "Klien" }, { value: "5.0", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Lihat Portofolio", url: "https://behance.net/username", iconKey: "brand-behance", accentColor: "#7657ff" },
+      { title: "Paket Layanan", url: "https://websitekamu.com/layanan", iconKey: "layout-grid", accentColor: "#ffafd0" },
+      { title: "Konsultasi Desain", url: "https://wa.me/62", description: "Diskusi kebutuhan proyekmu.", iconKey: "calendar", badgeText: "30 Menit" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Redesign Aplikasi Finansial",
+        description: "Desain UI/UX untuk aplikasi keuangan yang lebih simpel, aman, dan modern.",
+        badgeText: "Portofolio Pilihan",
+        ctaText: "Lihat studi kasus",
+        url: "https://websitekamu.com/studi-kasus",
+        imagePath: "/quick-setup-showcase/app-design.jpg",
+      }),
+    ],
+    monetizationHint: "Jual UI kit atau template Figma sebagai Produk Digital di menu Toko.",
+  },
+  {
+    key: "profile-online-store",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Toko Online",
+    description: "Produk laris, katalog, marketplace, dan promo",
+    theme: "joyful",
+    bio: "Aksesori Lokal Penuh Warna",
+    social: { instagram: "username", tiktok: "username", whatsapp: "62812xxxxxxxx" },
+    profileExtras: { chips: [], stats: [{ value: "12K", label: "Pembeli" }, { value: "180", label: "Produk" }, { value: "4.9", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Belanja Sekarang", url: "https://shopee.co.id/username", iconKey: "shopping-cart", accentColor: "#ffafd0" },
+      { title: "Katalog Terbaru", url: "https://websitekamu.com/katalog", iconKey: "layout-grid", accentColor: "#8ad5ff" },
+      { title: "Gratis Ongkir", url: "https://websitekamu.com/promo", description: "Min. belanja Rp150K ke seluruh Indonesia.", iconKey: "package", badgeText: "Promo" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Everyday Mini Bag",
+        description: "Praktis, ringan, dan cocok untuk segala aktivitas.",
+        badgeText: "Paling Laku",
+        ctaText: "Lihat produk",
+        url: "https://websitekamu.com/produk",
+        imagePath: "/quick-setup-showcase/leather-bag.jpg",
+      }),
+    ],
+    products: [
+      {
+        name: "Everyday Mini Bag (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 189000,
+        coverImagePath: "/quick-setup-products/fashion-store-1.jpg",
+      },
+      {
+        name: "Koleksi Aksesori Terbaru (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 79000,
+        coverImagePath: "/quick-setup-products/fashion-store-2.jpg",
+      },
+    ],
+    monetizationHint: "Lengkapi produk di menu Toko -- pembeli bisa checkout langsung tanpa pindah ke marketplace.",
+  },
+  {
+    key: "profile-content-creator",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Content Creator",
+    description: "Video terbaru, kolaborasi brand, dan media kit",
+    theme: "spark",
+    bio: "Content Creator · Lifestyle & Travel",
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel" },
+    profileExtras: { chips: [{ label: "Vlog", icon: "video" }, { label: "Travel", icon: "plane" }, { label: "Kuliner", icon: "utensils" }], stats: [{ value: "250K", label: "Followers" }, { value: "1.2K", label: "Video" }, { value: "80+", label: "Brand" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Tonton di YouTube", url: "https://youtube.com/@namachannel", iconKey: "brand-youtube", accentColor: "#d7ff60" },
+      { title: "Kolaborasi Brand", url: "https://wa.me/62", iconKey: "handshake", accentColor: "#d9ceff" },
+      { title: "Media Kit", url: "https://websitekamu.com/mediakit", description: "Statistik audiens & rate card terbaru.", iconKey: "file-text", badgeText: "PDF" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Seminggu Keliling Flores",
+        description: "Itinerary lengkap, budget, dan spot tersembunyi yang wajib dikunjungi.",
+        badgeText: "Video Terbaru",
+        ctaText: "Tonton sekarang",
+        url: "https://youtube.com/@namachannel",
+        imagePath: "/quick-setup-showcase/video-creator.jpg",
+      }),
+    ],
+    monetizationHint: "Aktifkan Brand & Sponsor atau jual preset/itinerary sebagai Produk Digital di menu Toko.",
+  },
+  {
+    key: "profile-photographer",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Fotografer",
+    description: "Portofolio foto, paket sesi, dan booking",
+    theme: "breezy",
+    bio: "Fotografer Wedding & Portrait",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", website: "websitekamu.com" },
+    profileExtras: { chips: [{ label: "Wedding", icon: "heart" }, { label: "Portrait", icon: "camera" }, { label: "Produk", icon: "package" }], stats: [{ value: "300+", label: "Sesi" }, { value: "8", label: "Tahun" }, { value: "5.0", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Lihat Portofolio", url: "https://websitekamu.com/portfolio", iconKey: "images", accentColor: "#ff6448" },
+      { title: "Paket & Harga", url: "https://websitekamu.com/paket", iconKey: "tags", accentColor: "#d7ff60" },
+      { title: "Booking Sesi Foto", url: "https://wa.me/62", description: "Cek tanggal kosong & konsultasi konsep.", iconKey: "calendar-days", badgeText: "Mulai Rp1,5jt" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Golden Hour di Pantai",
+        description: "Sesi prewedding saat matahari terbenam, 120 foto teredit.",
+        badgeText: "Karya Pilihan",
+        ctaText: "Lihat galeri",
+        url: "https://websitekamu.com/galeri",
+        imagePath: "/quick-setup-showcase/photographer.jpg",
+      }),
+    ],
+    monetizationHint: "Jual preset Lightroom sebagai Produk Digital atau terima DP booking lewat Payment Link di menu Toko.",
+  },
+  {
+    key: "profile-musician",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Musisi",
+    description: "Rilisan terbaru, jadwal manggung, dan booking",
+    theme: "dreamy",
+    bio: "Singer-Songwriter · Akustik",
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username" },
+    profileExtras: { chips: [{ label: "Akustik", icon: "music" }, { label: "Pop", icon: "music-2" }, { label: "Live", icon: "mic" }], stats: [{ value: "1.2M", label: "Streams" }, { value: "24", label: "Lagu" }, { value: "120", label: "Show" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Dengar di Spotify", url: "https://open.spotify.com", iconKey: "brand-spotify", accentColor: "#d7ff60" },
+      { title: "Jadwal Manggung", url: "https://websitekamu.com/jadwal", iconKey: "ticket", accentColor: "#d9ceff" },
+      { title: "Booking Acara", url: "https://wa.me/62", description: "Wedding, kafe, dan acara kantor.", iconKey: "mic", badgeText: "Tersedia" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Rumah di Ujung Jalan",
+        description: "Single terbaru, kini tersedia di semua platform musik.",
+        badgeText: "Rilisan Baru",
+        ctaText: "Dengarkan",
+        url: "https://open.spotify.com",
+        imagePath: "/quick-setup-showcase/guitar-music.jpg",
+      }),
+    ],
+    monetizationHint: "Jual tiket konser lewat Event atau terima dukungan penggemar lewat Donasi di menu Toko.",
+  },
+  {
+    key: "profile-cafe",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Kafe & Kuliner",
+    description: "Menu favorit, pesan antar, lokasi, dan reservasi",
+    theme: "cheer",
+    bio: "Kopi & Roti Rumahan",
+    social: { instagram: "username", tiktok: "username", whatsapp: "62812xxxxxxxx" },
+    profileExtras: { chips: [{ label: "Kopi", icon: "coffee" }, { label: "Pastry", icon: "croissant" }, { label: "Wi-Fi", icon: "wifi" }], stats: [{ value: "4.8", label: "Rating" }, { value: "25", label: "Menu" }, { value: "7", label: "Hari Buka" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Pesan Antar", url: "https://wa.me/62", iconKey: "brand-whatsapp", accentColor: "#d7ff60" },
+      { title: "Lokasi Kafe", url: "https://maps.google.com", iconKey: "map-pin", accentColor: "#8ad5ff" },
+      { title: "Reservasi Meja", url: "https://wa.me/62", description: "Untuk acara, meeting, atau kumpul bareng.", iconKey: "calendar", badgeText: "Gratis" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Es Kopi Susu Gula Aren",
+        description: "Espresso house blend, susu segar, dan gula aren asli.",
+        badgeText: "Menu Favorit",
+        ctaText: "Lihat menu",
+        url: "https://websitekamu.com/menu",
+        imagePath: "/quick-setup-showcase/cafe-table.jpg",
+      }),
+    ],
+    monetizationHint: "Terima pre-order atau voucher lewat Payment Link di menu Toko.",
+  },
+  {
+    key: "profile-fitness-coach",
+    category: "profile",
+    layoutVariant: "profile",
+    label: "Fitness Coach",
+    description: "Program latihan, jadwal kelas, dan konsultasi",
+    theme: "zesty",
+    bio: "Personal Trainer · Strength & Mobility",
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username" },
+    profileExtras: { chips: [{ label: "Strength", icon: "dumbbell" }, { label: "Mobility", icon: "activity" }, { label: "Nutrisi", icon: "salad" }], stats: [{ value: "500+", label: "Klien" }, { value: "7", label: "Tahun" }, { value: "4.9", label: "Rating" }] },
+    showcaseFirst: true,
+    links: [
+      { title: "Mulai Program", url: "https://websitekamu.com/program", iconKey: "rocket", accentColor: "#d7ff60" },
+      { title: "Jadwal Kelas", url: "https://websitekamu.com/jadwal", iconKey: "calendar-days", accentColor: "#ffafd0" },
+      { title: "Konsultasi Gratis", url: "https://wa.me/62", description: "Cek kebutuhan latihan & target kamu.", iconKey: "message-circle", badgeText: "15 Menit" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "8 Minggu Lebih Kuat",
+        description: "Program latihan bertahap untuk pemula, lengkap dengan video panduan.",
+        badgeText: "Program Unggulan",
+        ctaText: "Lihat program",
+        url: "https://websitekamu.com/program",
+        imagePath: "/quick-setup-showcase/gym-studio.jpg",
+      }),
+    ],
+    monetizationHint: "Jual program latihan sebagai Produk Digital atau buka Kelas & Kursus di menu Toko.",
+  },
   // ---------- Creator & Personal Brand ----------
   {
     key: "creator-profile",

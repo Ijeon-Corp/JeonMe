@@ -15,7 +15,10 @@ import {
   listLinks,
   listMyExtraPages,
   updateExtraPage,
+  updateExtraPageProfileExtras,
+  updateLink,
   updateMyPage,
+  updateMyPageProfileExtras,
   updateProduct,
   uploadProductCover,
   uploadShowcaseImage,
@@ -256,6 +259,16 @@ export default function QuickSetupPage() {
       // dua item kebetulan dapat posisi yang sama. Satu loop mengikuti
       // orderedTemplateItems APA ADANYA -- SATU sumber kebenaran urutan,
       // sama persis dengan yang ditampilkan pratinjau.
+      // Chip & statistik layout "profile" -- soft-fail, pola sama dgn gaya
+      // tautan di bawah (fitur tampilan pendukung, bukan inti template).
+      if (tmpl.profileExtras) {
+        try {
+          await updateMyPageProfileExtras(tmpl.profileExtras);
+        } catch {
+          // soft-fail
+        }
+      }
+
       for (const item of orderedTemplateItems(tmpl)) {
         if (item.blockType === "link") {
           // "email" (PLATFORM_URL.email = "mailto:") TIDAK PERNAH bisa lolos
@@ -272,7 +285,22 @@ export default function QuickSetupPage() {
           if (item.url.startsWith("mailto:")) {
             await createBlock({ block_type: "contact_form", title: item.title, block_data: {} });
           } else {
-            await createLink({ title: item.title, url: item.url, description: item.description });
+            const createdLink = await createLink({ title: item.title, url: item.url, description: item.description });
+            // Template "Profil Kreator" (24 Sept 2026): ikon galeri, warna
+            // tombol & chip harga hanya bisa diatur lewat PATCH (createLink
+            // tidak menerimanya). Soft-fail: tautan tetap ada walau gaya
+            // gagal diterapkan, kreator bisa mengaturnya sendiri.
+            if (item.iconKey || item.accentColor || item.linkBadgeText) {
+              try {
+                await updateLink(createdLink.id, {
+                  ...(item.iconKey ? { icon_key: item.iconKey } : {}),
+                  ...(item.accentColor ? { accent_color: item.accentColor } : {}),
+                  ...(item.linkBadgeText ? { badge_text: item.linkBadgeText } : {}),
+                });
+              } catch {
+                // soft-fail, lihat catatan di atas
+              }
+            }
           }
         } else if (item.blockType === "maps") {
           await createBlock({ block_type: "maps", title: item.title, url: item.url, block_data: { embed: false } });
@@ -362,6 +390,7 @@ export default function QuickSetupPage() {
       if (tokoAfter) {
         try {
           await updateExtraPage(tokoAfter.id, { theme: tmpl.theme, layout_variant: layoutVariant });
+          if (tmpl.profileExtras) await updateExtraPageProfileExtras(tokoAfter.id, tmpl.profileExtras);
         } catch {
           // soft-fail -- Bio & produk tetap berhasil diterapkan, kreator
           // bisa samakan tema Toko manual lewat menu Produk kalau ini gagal.
