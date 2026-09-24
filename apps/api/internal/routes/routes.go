@@ -149,6 +149,19 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// menyentuh nilai/nilai riwayat sungguhan.
 		loyaltyRateLimit := middleware.RateLimit(rdb, "loyalty", 20, time.Minute)
 		kycRateLimit := middleware.RateLimit(rdb, "kyc-submit", 5, time.Minute)
+		// payoutOTPRateLimit & collabInviteRateLimit -- 24 September 2026
+		// (audit backend). BUCKET SENDIRI, sengaja BUKAN authRateLimit:
+		// selama TRUSTED_PROXIES belum diset di produksi (tidak ada di file
+		// compose mana pun, jadi default 127.0.0.1 berlaku), ClientIP() untuk
+		// SEMUA pengguna adalah IP gateway Docker -- setiap bucket rate limit
+		// efektif berlaku SE-SITUS. Rute OTP pencairan sempat dipasangi
+		// authRateLimit (a2b6f10), artinya percobaan OTP ikut menghabiskan
+		// kuota login/register seluruh situs; bucket terpisah memutus
+		// keterkaitan itu. Undangan kolaborator mengirim email ke alamat
+		// pihak ketiga dengan subject yang ikut dikendalikan lewat username,
+		// jadi dibatasi -- juga di bucket sendiri.
+		payoutOTPRateLimit := middleware.RateLimit(rdb, "payout-otp", 10, time.Minute)
+		collabInviteRateLimit := middleware.RateLimit(rdb, "collab-invite", 10, time.Minute)
 		// checkoutStatusRateLimit -- LEBIH LONGGAR dari checkoutRateLimit
 		// (20/menit) SENGAJA: app/checkout/[id]/page.tsx (frontend) polling
 		// status TIAP 2 DETIK selagi menunggu konfirmasi pembayaran (~30
@@ -524,7 +537,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// sebagai diri sendiri (bukan lewat ActAsOwner) -- pemilik
 			// mengundang/mencabut, siapa pun bisa melihat & menerima
 			// undangan yang ditujukan ke emailnya sendiri.
-			dashboard.POST("/collaborators", collaborator.Invite)
+			dashboard.POST("/collaborators", collabInviteRateLimit, collaborator.Invite)
 			dashboard.GET("/collaborators", collaborator.ListMine)
 			dashboard.PATCH("/collaborators/:id/role", collaborator.UpdateRole)
 			dashboard.DELETE("/collaborators/:id", collaborator.Revoke)
@@ -597,17 +610,17 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// pembayaran/jadwal auto-withdraw pemilik).
 			dashboard.GET("/payout-methods", payoutMethod.List)
 			dashboard.POST("/payout-methods", payoutMethod.Create)
-			// authRateLimit di kedua rute OTP -- DITAMBAHKAN 24 September
-			// 2026 (audit menyeluruh). SEBELUMNYA seluruh grup
+			// payoutOTPRateLimit di kedua rute OTP -- DITAMBAHKAN 24
+			// September 2026 (audit menyeluruh). SEBELUMNYA seluruh grup
 			// payout-methods tidak punya middleware rate-limit sama sekali,
-			// padahal rute auth di atas justru dipasangi authRateLimit untuk
-			// ancaman yang PERSIS sama (gempur kode 6 digit). Ini lapis
-			// kedua di atas lockout per-user di handler-nya: rate-limit ini
-			// per-IP, lockout itu per-akun, jadi keduanya saling menutup
-			// celah (satu IP menggempur banyak akun, atau banyak IP
-			// menggempur satu akun).
-			dashboard.POST("/payout-methods/:id/request-verification", authRateLimit, payoutMethod.RequestVerification)
-			dashboard.POST("/payout-methods/:id/verify", authRateLimit, payoutMethod.Verify)
+			// padahal rute auth di atas justru dibatasi untuk ancaman yang
+			// PERSIS sama (gempur kode 6 digit). Ini lapis kedua di atas
+			// lockout per-user di handler-nya: rate-limit ini per-IP,
+			// lockout itu per-akun. Bucket-nya sendiri (bukan "auth") --
+			// lihat catatan di deklarasi payoutOTPRateLimit soal
+			// TRUSTED_PROXIES yang belum diset di produksi.
+			dashboard.POST("/payout-methods/:id/request-verification", payoutOTPRateLimit, payoutMethod.RequestVerification)
+			dashboard.POST("/payout-methods/:id/verify", payoutOTPRateLimit, payoutMethod.Verify)
 			dashboard.PATCH("/payout-methods/:id/primary", payoutMethod.SetPrimary)
 			dashboard.DELETE("/payout-methods/:id", payoutMethod.Delete)
 
