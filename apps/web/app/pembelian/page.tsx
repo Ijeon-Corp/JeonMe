@@ -216,7 +216,7 @@ export default function OrderHistoryPage() {
           membalik jadi terang di dark mode -> rasio 1.16:1, judul & isi
           praktis tidak terlihat. Token app-* sendiri didefinisikan global di
           :root (lihat globals.css), jadi aman dipakai di luar shell. */}
-      <div className="w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-8 shadow-card">
+      <div className="w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-5 shadow-card sm:p-8">
         <p className="font-heading text-lg font-bold text-app-ink">Riwayat Pembelian</p>
         <p className="mt-1 text-sm text-muted">
           Lihat semua pesanan yang pernah kamu buat di Jeon.id, lintas semua toko kreator.
@@ -302,11 +302,27 @@ export default function OrderHistoryPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-app-ink">{order.product_name}</p>
-                    <p className="text-xs text-app-muted">
+                    <p className="truncate text-xs text-app-muted">
                       @{order.creator_username} &middot; {new Date(order.created_at).toLocaleDateString("id-ID", { dateStyle: "medium" })}
                     </p>
+                    {/* Badge + harga pindah ke BAWAH nama di layar sempit --
+                        perbaikan 24 September 2026 (audit UX pembeli, 390px).
+                        Kolom kanan flex-shrink-0 berisi badge panjang
+                        ("Menunggu Pembayaran") memaksa lebarnya sendiri
+                        sehingga kolom nama tergencet habis: nama produk
+                        terpotong jadi "P...", tanggal pecah 4 baris, dan
+                        badge menimpa nama & username. Ini satu-satunya tempat
+                        pembeli melacak pesanannya, dan mayoritas pembeli
+                        membukanya dari ponsel. Di sm ke atas tata letak
+                        lama (kolom kanan) dipertahankan. */}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_BADGE_CLASS[order.status] ?? "bg-app-surface-2 text-app-muted"}`}>
+                        {STATUS_LABEL[order.status] ?? order.status}
+                      </span>
+                      <span className="text-xs font-bold text-app-ink">Rp {order.amount_idr.toLocaleString("id-ID")}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                  <div className="hidden flex-shrink-0 flex-col items-end gap-1 sm:flex">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_BADGE_CLASS[order.status] ?? "bg-app-surface-2 text-app-muted"}`}>
                       {STATUS_LABEL[order.status] ?? order.status}
                     </span>
