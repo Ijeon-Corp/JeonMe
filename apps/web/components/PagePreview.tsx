@@ -3276,6 +3276,28 @@ export default function PagePreview({
           </div>
         )}
 
+        {/* Keadaan kosong -- DITAMBAHKAN 24 September 2026 (audit UX pembeli).
+            Akun baru yang belum mengisi apa pun menghasilkan halaman publik
+            berisi avatar huruf, username, watermark, footer -- sisanya
+            kosong. Pengunjung yang datang dari QR atau bio Instagram tidak
+            punya cara tahu apakah halamannya belum jadi, salah orang, atau
+            rusak -- padahal itu kesan pertama platform untuk kunjungan
+            pertama ke setiap akun baru. Syaratnya sengaja KETAT (tidak ada
+            tautan, lead capture, donasi, event, ikon sosial, maupun feed):
+            halaman yang cuma punya ikon sosial pun tetap dianggap berisi. */}
+        {data.links.length === 0 &&
+          !data.leadCapture &&
+          !data.donation &&
+          !(data.events && data.events.length > 0) &&
+          !data.instagramFeed &&
+          !data.tiktokFeed &&
+          !Object.values(data.social ?? {}).some(Boolean) && (
+            <div className={`mt-8 w-full rounded-xl p-4 text-center ${theme.productCard}`}>
+              <p className={`text-sm font-semibold ${theme.productTitle}`}>Halaman ini masih disiapkan</p>
+              <p className={`mt-1 text-xs ${theme.bio}`}>Pemiliknya belum menambahkan tautan atau produk. Coba kunjungi lagi nanti.</p>
+            </div>
+          )}
+
         {data.leadCapture && (
           <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
             <IconMail className={`h-5 w-5 ${theme.chevron}`} />

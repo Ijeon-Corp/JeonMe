@@ -152,6 +152,29 @@ export default function ProdukPagePreview({
           </div>
         )}
 
+        {/* Keadaan kosong -- DITAMBAHKAN 24 September 2026 (audit UX pembeli).
+            Toko pertama dibuat OTOMATIS lalu LANGSUNG dipublikasikan begitu
+            produk pertama ada (ensureProdukPage), tapi sejak grid otomatis di
+            bawah dihapus (15 Sept) produk hanya tampil lewat blok "produk"
+            yang ditambahkan manual. Di jendela antara dua hal itu -- keadaan
+            DEFAULT setiap akun baru, bukan kasus pinggir -- pengunjung yang
+            menekan "Toko" di menu halaman utama mendapat halaman yang ~60%-nya
+            kosong melompong: tanpa "belum ada produk", tanpa jalan kembali.
+            Teks kosong lama ("Belum ada produk untuk ditampilkan") ikut
+            terhapus bersama grid itu. Tautan kembali hanya saat interactive:
+            di pratinjau dashboard tautan itu akan menavigasi pergi. */}
+        {data.links.length === 0 && (
+          <div className={`mt-8 w-full rounded-xl p-4 text-center ${theme.productCard}`}>
+            <p className={`text-sm font-semibold ${theme.productTitle}`}>Belum ada produk di toko ini</p>
+            <p className={`mt-1 text-xs ${theme.bio}`}>Pemilik toko belum menampilkan produk apa pun. Coba kunjungi lagi nanti.</p>
+            {interactive && (
+              <a href={`/${data.username}`} className={`mt-3 inline-block text-xs font-bold underline ${theme.productTitle}`}>
+                Kunjungi halaman utama @{data.username}
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15
             September 2026: "saya mau semua product yang sudah ditambahkan
             di menu product itu jangan langsung ditampilkan tapi itu data
