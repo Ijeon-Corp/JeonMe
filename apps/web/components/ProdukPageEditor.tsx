@@ -2813,7 +2813,10 @@ function BlockSection({
                     onClick={() => handleSaveContent(link)}
                     className="btn-primary rounded-md px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                   >
-                    {savingContent ? t("dashboard.components.produkPageEditor.blockForm.saving") : t("dashboard.components.produkPageEditor.blockForm.add")}
+                    {/* Label "Simpan" (bukan "Tambah" milik form buat-blok) --
+                        audit 24 Sept 2026: tombol ini MENYIMPAN blok yang sudah
+                        ada, sama seperti tombol yang sama di halaman utama. */}
+                    {savingContent ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                   </button>
                 </div>
               </div>
