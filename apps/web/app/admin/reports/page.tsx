@@ -158,11 +158,24 @@ export default function AdminReportsPage() {
                     September 2026 (audit menyeluruh): sebelumnya cuma UUID
                     mentah tampil di sini, admin diminta Takedown tanpa cara
                     melihat konten yang dimaksud dari dalam panel. */}
-                <div className="mt-1.5 flex items-center gap-2 text-sm">
+                {/* flex-wrap + min-w-0/truncate -- perbaikan overflow 24
+                    September 2026 (audit admin). Baris ini memaksa label
+                    target, username, dan tautan "Lihat konten" berjejer di
+                    satu baris tanpa boleh menyusut: di 390px scrollWidth
+                    halaman jadi 567px, dan yang terdorong KELUAR LAYAR
+                    justru tautan "Lihat konten" -- satu-satunya cara admin
+                    memeriksa konten yang dilaporkan sebelum menekan
+                    Takedown. Tombol Takedown merahnya sendiri tetap
+                    terlihat & bisa diklik, jadi admin di ponsel praktis
+                    diminta men-takedown sesuatu yang tidak bisa dia lihat.
+                    Pola min-w-0 yang sama sudah diterapkan di
+                    support-chat/page.tsx (21 Sept) tapi tidak pernah
+                    dirambatkan ke sini. */}
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
                   {r.target_label ? (
                     <>
-                      <span className="font-semibold text-app-ink">{r.target_label}</span>
-                      {r.target_username && <span className="text-app-muted">@{r.target_username}</span>}
+                      <span className="min-w-0 truncate font-semibold text-app-ink">{r.target_label}</span>
+                      {r.target_username && <span className="min-w-0 truncate text-app-muted">@{r.target_username}</span>}
                       {r.target_url && (
                         <a href={r.target_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-jeon-purple hover:underline">
                           Lihat konten ↗

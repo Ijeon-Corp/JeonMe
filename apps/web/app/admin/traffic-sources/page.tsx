@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ScrollHint from "@/components/ScrollHint";
 import { ApiError, TrafficSourcesResponse, getAdminTrafficSources } from "@/lib/api-client";
 import { useErrorToast } from "@/lib/use-error-toast";
 import AdminEmptyState from "@/components/admin/AdminEmptyState";
@@ -202,6 +203,8 @@ export default function AdminTrafficSourcesPage() {
               2026 (audit menyeluruh): halaman ini belum ikut migrasi visual
               bold-ink-border yang sudah diterapkan di 6 sub-halaman admin
               lain (17 September 2026), terasa seperti "produk lain". */}
+          {/* ScrollHint -- 24 September 2026 (audit admin): tabel ini overflow di 390px dan kolom aksinya (Status, Tangguhkan/Aktifkan, hapus) tersembunyi tanpa afordansi apa pun. Tabel admin dipakai untuk AKSI, bukan cuma baca, jadi dampaknya lebih besar dari tabel kreator yang sudah diperbaiki 23 Sept. */}
+          <ScrollHint className="mt-2" />
           <div className="mt-6 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ScrollHint from "@/components/ScrollHint";
 import { AdminUser, ApiError, activateUser, listAdminUsers, suspendUser } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { IconUsers } from "@/components/icons";
@@ -163,6 +164,8 @@ export default function AdminUsersPage() {
           pengguna jadi kartu bertumpuk borosin ruang vertikal & tidak
           scalable seiring jumlah pengguna bertambah -- pola sama yang
           sudah dipakai /admin/traffic-sources (tabel), disamakan di sini. */}
+      {/* ScrollHint -- 24 September 2026 (audit admin): tabel ini overflow di 390px dan kolom aksinya (Status, Tangguhkan/Aktifkan, hapus) tersembunyi tanpa afordansi apa pun. Tabel admin dipakai untuk AKSI, bukan cuma baca, jadi dampaknya lebih besar dari tabel kreator yang sudah diperbaiki 23 Sept. */}
+      <ScrollHint className="mt-2" />
       <div className="mt-2 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card">
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>

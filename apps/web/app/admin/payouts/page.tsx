@@ -148,18 +148,23 @@ export default function AdminPayoutsPage() {
         {payouts.map((p) => (
           <div key={p.id} className="rounded-xl border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                   <IconWallet className="h-[18px] w-[18px]" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-app-ink">
+                {/* min-w-0 + break-all -- perbaikan overflow 24 September
+                    2026 (audit admin, pola sama /admin/kyc). break-all, BUKAN
+                    truncate: nomor rekening tujuan di baris bawah wajib bisa
+                    dibaca UTUH oleh admin yang sedang memproses transfer,
+                    jadi dipatahkan ke baris baru alih-alih dipotong "...". */}
+                <div className="min-w-0">
+                  <p className="break-all text-sm font-semibold text-app-ink">
                     Rp {p.amount_idr.toLocaleString("id-ID")}
                     <span className="ml-2 font-normal text-app-muted">
                       @{p.username} ({p.email})
                     </span>
                   </p>
-                  <p className="text-xs text-app-muted">{p.destination_account}</p>
+                  <p className="break-all text-xs text-app-muted">{p.destination_account}</p>
                 </div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-1.5">

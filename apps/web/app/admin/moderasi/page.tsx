@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ScrollHint from "@/components/ScrollHint";
 import { Ban, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import {
   ApiError,
@@ -224,6 +225,8 @@ export default function AdminModerationPage() {
           puluhan/ratusan kata kunci, pola kartu boros ruang & lebih
           lambat disisir dibanding tabel padat -- pola sama yang sudah
           dipakai /admin/traffic-sources & /admin/users. */}
+        {/* ScrollHint -- 24 September 2026 (audit admin): tabel ini overflow di 390px dan kolom aksinya (Status, Tangguhkan/Aktifkan, hapus) tersembunyi tanpa afordansi apa pun. Tabel admin dipakai untuk AKSI, bukan cuma baca, jadi dampaknya lebih besar dari tabel kreator yang sudah diperbaiki 23 Sept. */}
+        <ScrollHint className="mt-2" />
         <div className="mt-3 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <tbody className="divide-y divide-app-border">
@@ -319,6 +322,8 @@ export default function AdminModerationPage() {
           ))}
         </div>
 
+        {/* ScrollHint -- 24 September 2026 (audit admin): tabel ini overflow di 390px dan kolom aksinya (Status, Tangguhkan/Aktifkan, hapus) tersembunyi tanpa afordansi apa pun. Tabel admin dipakai untuk AKSI, bukan cuma baca, jadi dampaknya lebih besar dari tabel kreator yang sudah diperbaiki 23 Sept. */}
+        <ScrollHint className="mt-2" />
         <div className="mt-3 overflow-x-auto rounded-jmd border-2 border-jeon-ink bg-app-surface">
           <table className="w-full min-w-[480px] border-collapse text-sm">
             <tbody className="divide-y divide-app-border">

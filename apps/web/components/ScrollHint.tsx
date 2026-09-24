@@ -17,10 +17,14 @@ import { useLocale } from "@/lib/locale-context";
 // `overflow-x-auto`, bukan fade-mask CSS di pinggir tabel -- fade-mask
 // beresiko tampil aneh (potongan gradient di atas area kosong) kalau suatu
 // saat tabel ini punya sedikit kolom dan pas muat tanpa overflow.
-export default function ScrollHint() {
+// className -- opsional, ditambahkan 24 September 2026 saat komponen ini
+// dipakai ulang di 4 tabel panel admin: tiap pemanggil punya jarak atas yang
+// berbeda dengan konten di atasnya. Tanpa prop ini kedua pemanggil lama
+// (Audiens, Produk) tetap berperilaku persis sama.
+export default function ScrollHint({ className = "" }: { className?: string }) {
   const { t } = useLocale();
   return (
-    <div className="flex items-center justify-end gap-1 px-1 pb-1.5 text-[11px] font-medium text-app-muted sm:hidden">
+    <div className={`flex items-center justify-end gap-1 px-1 pb-1.5 text-[11px] font-medium text-app-muted sm:hidden ${className}`}>
       <span>{t("dashboard.components.scrollHint.text")}</span>
       <IconChevronRight className="h-3 w-3" />
     </div>
