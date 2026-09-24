@@ -2075,17 +2075,22 @@ function ColoredIcon({ color, children }: { color?: string; children: React.Reac
 }
 
 // readableTextOn -- warna teks yang terbaca di atas warna tombol pilihan
-// kreator (accentColor): gelap utk latar terang (lime/pink/lavender khas
-// jeon.id), putih utk latar gelap. Luminans sRGB berbobot sederhana,
-// cukup utk memilih salah satu dari dua warna.
+// kreator (accentColor): pilih #111111 atau putih, mana yang RASIO KONTRAS
+// WCAG-nya lebih tinggi. SEBELUMNYA ambang luminans sederhana (>150) --
+// audit visual template 25 September 2026: koral #ff6448 jatuh ke teks
+// putih (2.9:1, gagal AA) padahal teks gelap di atasnya 6.5:1.
 function readableTextOn(hex: string): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
   if (!m) return "#111111";
   const n = parseInt(m[1], 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  const onDark = (lum + 0.05) / (0.0056 + 0.05); // #111111
+  const onWhite = 1.05 / (lum + 0.05);
+  return onDark >= onWhite ? "#111111" : "#ffffff";
 }
 
 function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentType<{ className?: string }>, sizeClass: string) {
@@ -2365,7 +2370,7 @@ export function renderLinkOrBlock(
           type="button"
           disabled
           title="Pratinjau -- tombol ini tidak aktif"
-          className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+          className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs ${theme.buyButton}`}
         >
           Kirim Pesan
         </button>
@@ -2439,8 +2444,11 @@ export function renderLinkOrBlock(
             dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(link.description) }}
           />
         )}
-        <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.chevron}`}>
-          {ctaText} <IconChevronRight className="h-3.5 w-3.5" />
+        {/* Teks CTA pakai warna judul, panahnya saja yg warna chevron --
+            theme.chevron sengaja redup (ikon dekoratif), sebagai TEKS
+            cuma 1.3-3:1 di beberapa tema (audit 25 September 2026). */}
+        <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.cardTitle}`}>
+          {ctaText} <IconChevronRight className={`h-3.5 w-3.5 ${theme.chevron}`} />
         </span>
       </>
     );
@@ -2867,8 +2875,12 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-[12px] font-semibold ${titleColorClass}`}>{link.title}</span>
-            <span className={`block truncate text-[10.5px] opacity-70 ${titleColorClass}`}>{link.description}</span>
+            {/* line-clamp-2 (bukan truncate) -- audit visual template 25
+                September 2026: deskripsi yang berbagi baris dgn chip harga
+                terpotong "..." di 18 template (termasuk 9 Profil Kreator).
+                Dua baris cukup utk kalimat ajakan tanpa kartu jadi raksasa. */}
+            <span className={`block line-clamp-2 break-words text-[12px] font-semibold leading-snug ${titleColorClass}`}>{link.title}</span>
+            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug opacity-70 ${titleColorClass}`}>{link.description}</span>
           </span>
           {badgeNode}
           <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />
@@ -2943,8 +2955,12 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-[12px] font-semibold ${titleColorClass}`}>{link.title}</span>
-            <span className={`block truncate text-[10.5px] opacity-70 ${titleColorClass}`}>{link.description}</span>
+            {/* line-clamp-2 (bukan truncate) -- audit visual template 25
+                September 2026: deskripsi yang berbagi baris dgn chip harga
+                terpotong "..." di 18 template (termasuk 9 Profil Kreator).
+                Dua baris cukup utk kalimat ajakan tanpa kartu jadi raksasa. */}
+            <span className={`block line-clamp-2 break-words text-[12px] font-semibold leading-snug ${titleColorClass}`}>{link.title}</span>
+            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug opacity-70 ${titleColorClass}`}>{link.description}</span>
           </span>
           {badgeNode}
           <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />

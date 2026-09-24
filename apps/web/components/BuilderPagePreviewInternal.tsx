@@ -714,7 +714,7 @@ function renderBuilderNode(
                 role="button"
                 aria-disabled="true"
                 title="Pratinjau -- tombol ini tidak aktif"
-                className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs ${theme.buyButton}`}
               >
                 Kirim Pesan
               </div>
@@ -750,8 +750,10 @@ function renderBuilderNode(
               dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(node.description) }}
             />
           )}
-          <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.chevron}`}>
-            {ctaText} <IconChevronRight className="h-3.5 w-3.5" />
+          {/* Paritas PagePreview (audit kontras 25 September 2026): teks
+              CTA warna judul, cuma panahnya yg warna chevron. */}
+          <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.cardTitle}`}>
+            {ctaText} <IconChevronRight className={`h-3.5 w-3.5 ${theme.chevron}`} />
           </span>
         </>
       );

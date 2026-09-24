@@ -740,7 +740,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     profileExtras: { chips: [{ label: "Figma", icon: "brand-figma" }, { label: "UI Design", icon: "palette" }, { label: "UX Research", icon: "target" }], stats: [{ value: "92", label: "Proyek" }, { value: "68", label: "Klien" }, { value: "5.0", label: "Rating" }] },
     showcaseFirst: true,
     links: [
-      { title: "Lihat Portofolio", url: "https://behance.net/username", iconKey: "brand-behance", accentColor: "#7657ff" },
+      { title: "Lihat Portofolio", url: "https://behance.net/username", iconKey: "brand-behance", accentColor: "#5b3fe0" },
       { title: "Paket Layanan", url: "https://websitekamu.com/layanan", iconKey: "layout-grid", accentColor: "#ffafd0" },
       { title: "Konsultasi Desain", url: "https://wa.me/62", description: "Diskusi kebutuhan proyekmu.", iconKey: "calendar", badgeText: "30 Menit" },
     ],
@@ -2914,7 +2914,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     category: "special",
     label: "Kumpulan Tautan",
     description: "Kumpulan semua tautanmu",
-    theme: "default",
+    theme: "minimal",
     bio: "Semua link pentingku, di satu tempat.",
     // Sengaja TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat
     // catatan lengkap di atas file ini) -- "Link Hub" tujuannya SANGAT
