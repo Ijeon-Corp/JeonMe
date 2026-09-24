@@ -67,12 +67,29 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
   return (
     <PublicPageFrame
       theme={page.theme}
+      // 7 field terakhir DITAMBAHKAN 24 September 2026 (audit UX pembeli).
+      // SEBELUMNYA rute halaman tambahan/Toko ini cuma meneruskan 5 dari 12
+      // field customTheme yang diteruskan rute halaman utama, padahal API
+      // MENGIRIM keduabelasnya dengan benar -- murni frontend yang membuang.
+      // Akibatnya kreator mengatur warna brand-nya, melihatnya benar di
+      // editor & di halaman utama, lalu halaman TOKO yang justru dia sebar
+      // untuk jualan tampil dengan warna default Jeon: tombol Beli ungu
+      // bawaan & judul hitam bawaan, bukan warnanya sendiri. Bertentangan
+      // langsung dengan kontrak "fitur paritas penuh" Bio <-> Toko di
+      // CLAUDE.md.
       customTheme={{
         backgroundType: page.custom_background_type,
         backgroundValue: page.custom_background_value,
         font: page.custom_font,
         buttonColor: page.custom_button_color,
         buttonStyle: page.custom_button_style,
+        buttonRounded: page.custom_button_rounded,
+        buttonShadow: page.custom_button_shadow,
+        buttonTextColor: page.custom_button_text_color,
+        pageTextColor: page.custom_page_text_color,
+        titleFont: page.custom_title_font,
+        titleColor: page.custom_title_color,
+        styleOverride: page.custom_style_override,
       }}
     >
       <AnalyticsScripts analytics={page.analytics} />
@@ -94,12 +111,25 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
           hideWatermark: page.hide_watermark,
           loyaltyActive: page.loyalty_active,
           stickers: page.stickers,
+          // 7 field terakhir ditambahkan bersamaan dengan yang di
+          // PublicPageFrame di atas -- lihat catatan lengkap di sana. Kedua
+          // tempat ini harus sinkron: PublicPageFrame mengatur kerangka
+          // halaman (latar/font halaman), PagePreview merender isi blok &
+          // tombolnya. Kalau cuma salah satu diperbaiki, tombol/judul tetap
+          // memakai warna default.
           customTheme: {
             backgroundType: page.custom_background_type,
             backgroundValue: page.custom_background_value,
             font: page.custom_font,
             buttonColor: page.custom_button_color,
             buttonStyle: page.custom_button_style,
+            buttonRounded: page.custom_button_rounded,
+            buttonShadow: page.custom_button_shadow,
+            buttonTextColor: page.custom_button_text_color,
+            pageTextColor: page.custom_page_text_color,
+            titleFont: page.custom_title_font,
+            titleColor: page.custom_title_color,
+            styleOverride: page.custom_style_override,
           },
           links: page.links.map((l) => ({
             id: l.id,

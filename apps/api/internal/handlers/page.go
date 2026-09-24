@@ -1932,10 +1932,20 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	// sejak pertama kali live, bukan etalase kosong tanpa identitas --
 	// kreator tetap bebas mengubahnya sendiri nanti lewat "Kelola" di
 	// dashboard/pages.
+	//
+	// display_name IKUT disalin sejak 24 September 2026 (audit UX pembeli).
+	// SEBELUMNYA displayName di atas hanya dipakai untuk `name` (label
+	// internal di dashboard) dan kolom display_name dibiarkan kosong --
+	// renderer publik tidak punya fallback ke display_name halaman utama,
+	// jadi judul halaman Toko jatuh ke "@username" MENTAH. Karena Toko
+	// pertama dibuat otomatis lalu LANGSUNG dipublikasikan, setiap kreator
+	// yang pernah membuat satu produk punya halaman jualan live berjudul
+	// string acak seperti "@e2eaudbuyerfull1790..." -- persis di halaman
+	// tempat pengunjung diminta mengeluarkan uang.
 	if _, err := db.Exec(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
-		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8)
-	`, userID, name, autoProdukPageSlug, bio, avatarURL, theme, stickersRaw, hideWatermark); err != nil {
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, display_name, bio, avatar_url, theme, stickers, hide_watermark)
+		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8, $9)
+	`, userID, name, autoProdukPageSlug, displayName, bio, avatarURL, theme, stickersRaw, hideWatermark); err != nil {
 		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
 		// akun ini sudah punya halaman tambahan lain ber-slug "produk").
 		return
