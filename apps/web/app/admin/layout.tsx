@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import { ToastProvider } from "@/components/Toast";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 import { Me, clearToken, getMe, logout as apiLogout } from "@/lib/api-client";
 import { MessageCircle, ShieldAlert } from "lucide-react";
 import {
@@ -38,6 +39,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Drawer menu mobile -- audit aksesibilitas 24 September 2026: Escape
+  // tidak menutupnya, fokus tetap di tombol hamburger setelah dibuka, dan
+  // setelah 12x Tab fokus sudah mendarat di kartu halaman yang tertutup
+  // drawer. Backdrop-nya bisa diklik, jadi pengguna mouse aman -- murni
+  // jebakan keyboard. Hook yang sama dengan modal (lib/use-modal-a11y.ts).
+  const drawerRef = useModalA11y(mobileOpen, () => setMobileOpen(false));
   // me/profileMenuOpen -- permintaan langsung pengguna, 5 September 2026:
   // "buat navbar juga seperti di dashboard jadi di ujung kanan ada profile
   // dan tombol logout ketika di klik profile nya". Pola SAMA PERSIS dengan
@@ -172,6 +179,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           list tanpa penanda sukses, staf baru bisa mengira aksinya gagal.
           Pola sama persis dashboard/layout.tsx. */}
       <ToastProvider>
+      {/* Skip-to-content -- audit aksesibilitas 24 September 2026. Dashboard
+          kreator sudah punya ini (dashboard/layout.tsx), panel admin belum:
+          setiap pemuatan halaman admin, pengguna keyboard harus melewati logo
+          + 8 item navigasi dulu sebelum menyentuh konten. Tak terlihat
+          sampai difokus. */}
+      <a
+        href="#admin-main"
+        className="sr-only z-50 rounded-lg bg-jeon-purple px-4 py-2 text-sm font-bold text-white focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
+      >
+        Langsung ke konten
+      </a>
       {/* bg-mesh + sidebar "glass" -- sama seperti dashboard/layout.tsx,
           lihat catatan panjang di sana soal overflow-hidden terpisah
           supaya tidak mematikan sticky. */}
@@ -264,7 +282,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {mobileOpen && (
             <div className="fixed inset-0 z-40 md:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-              <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero">
+              <aside
+                ref={drawerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menu admin"
+                className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero"
+              >
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
@@ -278,7 +302,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           )}
 
-          <main className="flex-1 p-4 sm:p-6">{children}</main>
+          <main id="admin-main" tabIndex={-1} className="flex-1 p-4 outline-none sm:p-6">{children}</main>
         </div>
       </div>
       </ToastProvider>

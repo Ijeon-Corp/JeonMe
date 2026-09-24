@@ -113,7 +113,12 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    // mx-auto -- 24 September 2026 (audit admin): halaman ini menempel
+    // kiri sementara menu admin lain terpusat, jadi konten melompat posisi
+    // setiap berpindah menu dan separuh kanan layar lebar kosong -- satu-
+    // satunya hal yang membuat panel ini terasa "halaman internal yang
+    // ditinggalkan". Lebarnya sengaja tidak diubah.
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Laporan Konten</h1>
 
       <div className="mt-3 flex flex-wrap gap-2">

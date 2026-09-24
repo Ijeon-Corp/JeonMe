@@ -110,7 +110,12 @@ export default function AdminPayoutsPage() {
   if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    // mx-auto -- 24 September 2026 (audit admin): halaman ini menempel
+    // kiri sementara menu admin lain terpusat, jadi konten melompat posisi
+    // setiap berpindah menu dan separuh kanan layar lebar kosong -- satu-
+    // satunya hal yang membuat panel ini terasa "halaman internal yang
+    // ditinggalkan". Lebarnya sengaja tidak diubah.
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Penarikan Dana</h1>
       <p className="mt-1 text-sm text-app-muted">
         Proses pengajuan penarikan kreator secara manual -- transfer dana dilakukan di luar sistem

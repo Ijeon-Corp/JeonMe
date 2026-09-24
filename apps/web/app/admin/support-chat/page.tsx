@@ -120,7 +120,12 @@ export default function AdminSupportChatPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    // mx-auto -- 24 September 2026 (audit admin): halaman ini menempel
+    // kiri sementara menu admin lain terpusat, jadi konten melompat posisi
+    // setiap berpindah menu dan separuh kanan layar lebar kosong -- satu-
+    // satunya hal yang membuat panel ini terasa "halaman internal yang
+    // ditinggalkan". Lebarnya sengaja tidak diubah.
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Live Chat</h1>
       <p className="mt-1 text-sm text-app-muted">
         Percakapan dukungan dengan kreator. Balasan di sini tampil ke kreator sbg &quot;Tim Jeon.id&quot; (identitas staf

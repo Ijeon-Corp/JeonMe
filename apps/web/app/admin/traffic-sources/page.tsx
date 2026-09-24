@@ -80,10 +80,16 @@ export default function AdminTrafficSourcesPage() {
   const maxSourceViews = Math.max(1, ...bySource.map((s) => s.views));
 
   return (
-    <div className="max-w-4xl">
+    // mx-auto -- 24 September 2026 (audit admin): halaman ini menempel
+    // kiri sementara menu admin lain terpusat, jadi konten melompat posisi
+    // setiap berpindah menu dan separuh kanan layar lebar kosong -- satu-
+    // satunya hal yang membuat panel ini terasa "halaman internal yang
+    // ditinggalkan". Lebarnya sengaja tidak diubah.
+    <div className="mx-auto max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold text-app-ink">Sumber Trafik</h1>
         <select
+          aria-label="Rentang waktu"
           value={rangeDays}
           onChange={(e) => {
             setLoading(true);

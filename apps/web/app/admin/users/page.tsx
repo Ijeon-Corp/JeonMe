@@ -131,6 +131,7 @@ export default function AdminUsersPage() {
           className="min-w-0 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20 lg:min-w-[160px] lg:flex-1"
         />
         <select
+          aria-label="Filter role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
           className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
@@ -140,6 +141,7 @@ export default function AdminUsersPage() {
           <option value="admin">Admin</option>
         </select>
         <select
+          aria-label="Filter status akun"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           className="bg-app-surface text-app-ink min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
