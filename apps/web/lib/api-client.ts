@@ -1119,6 +1119,16 @@ export const THEME_PRESETS = [
   "arcade",
   "reef",
   "rimba",
+  "stardust",
+  "drizzle",
+  "horizon",
+  "falls",
+  "petal",
+  "bokeh",
+  "shoal",
+  "flurry",
+  "ink",
+  "fiesta",
 ] as const;
 
 export function getMyPage() {

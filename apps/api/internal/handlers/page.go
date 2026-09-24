@@ -1209,6 +1209,9 @@ var availableThemes = map[string]bool{
 	// sinkron dgn PAGE_THEMES di page-themes.ts.
 	"villa": true, "bistro": true, "gala": true, "harapan": true,
 	"rave": true, "arcade": true, "reef": true, "rimba": true,
+	// 10 tema video baru (25 September 2026), sinkron dgn VIDEO_THEME_NAMES.
+	"stardust": true, "drizzle": true, "horizon": true, "falls": true, "petal": true,
+	"bokeh": true, "shoal": true, "flurry": true, "ink": true, "fiesta": true,
 	"custom": true,
 }
 

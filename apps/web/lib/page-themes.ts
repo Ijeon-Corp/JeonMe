@@ -212,6 +212,16 @@ export type PageThemeName =
   | "arcade"
   | "reef"
   | "rimba"
+  | "stardust"
+  | "drizzle"
+  | "horizon"
+  | "falls"
+  | "petal"
+  | "bokeh"
+  | "shoal"
+  | "flurry"
+  | "ink"
+  | "fiesta"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -277,6 +287,25 @@ export const VIDEO_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "polaris",
   "atmos",
   "ember",
+  // 10 video baru -- permintaan langsung pengguna, 25 September 2026:
+  // "tambahkan 10 vidio untuk design tema nya". Sumber Mixkit HANYA yang
+  // berlisensi "Free" (copyrightNotice "Free" di JSON-LD halaman Mixkit;
+  // item "Mixkit Restricted License" = khusus non-komersial, sengaja
+  // disaring). BEDA dari 6 video di atas (640x360 landscape): 720x960
+  // (3:4) dari sumber 1080p supaya tajam di ponsel (mayoritas pengunjung
+  // halaman link-in-bio) & masih layak di desktop; loop 6-8 detik dgn
+  // crossfade 1 detik di ujung (sambungan mulus, diukur SSIM frame
+  // terakhir vs pertama), tanpa audio, faststart, 0,2-1,3 MB.
+  "stardust",
+  "drizzle",
+  "horizon",
+  "falls",
+  "petal",
+  "bokeh",
+  "shoal",
+  "flurry",
+  "ink",
+  "fiesta",
 ];
 
 // THREE_D_THEME_NAMES -- permintaan langsung pengguna: "buatkan beberapa
@@ -2405,6 +2434,246 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
     videoSrc: "/videos/fireplace.mp4",
     posterSrc: "/videos/fireplace-poster.jpg",
+  },
+  stardust: {
+    // Video Mixkit #30073 "Shining stars around a blue nebula" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Stardust",
+    page: "bg-[#050816]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#7C8CFF",
+    previewBg: "url('/videos/stardust-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+    videoSrc: "/videos/stardust.mp4",
+    posterSrc: "/videos/stardust-poster.jpg",
+  },
+  drizzle: {
+    // Video Mixkit #2846 "Window on a rainy day" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Drizzle",
+    page: "bg-[#0B1220]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#7AA2C8",
+    previewBg: "url('/videos/drizzle-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+    videoSrc: "/videos/drizzle.mp4",
+    posterSrc: "/videos/drizzle-poster.jpg",
+  },
+  horizon: {
+    // Video Mixkit #50155 "Sunset from a beach" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Horizon",
+    page: "bg-[#1A0F14]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#FF9A5A",
+    previewBg: "url('/videos/horizon-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+    videoSrc: "/videos/horizon.mp4",
+    posterSrc: "/videos/horizon-poster.jpg",
+  },
+  falls: {
+    // Video Mixkit #2213 "Waterfall in forest" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Falls",
+    page: "bg-[#07140F]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#5FD3A6",
+    previewBg: "url('/videos/falls-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+    videoSrc: "/videos/falls.mp4",
+    posterSrc: "/videos/falls-poster.jpg",
+  },
+  petal: {
+    // Video Mixkit #1168 "Pink flowers wave in the breeze" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Petal",
+    page: "bg-[#1A0E16]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#FF8FC4",
+    previewBg: "url('/videos/petal-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+    videoSrc: "/videos/petal.mp4",
+    posterSrc: "/videos/petal-poster.jpg",
+  },
+  bokeh: {
+    // Video Mixkit #1359 "Purple and pink lights with bokeh effect" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Bokeh",
+    page: "bg-[#12061C]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#C084FC",
+    previewBg: "url('/videos/bokeh-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+    videoSrc: "/videos/bokeh.mp4",
+    posterSrc: "/videos/bokeh-poster.jpg",
+  },
+  shoal: {
+    // Video Mixkit #4291 "School of fish swimming" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Shoal",
+    page: "bg-[#021824]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#38BDF8",
+    previewBg: "url('/videos/shoal-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+    videoSrc: "/videos/shoal.mp4",
+    posterSrc: "/videos/shoal-poster.jpg",
+  },
+  flurry: {
+    // Video Mixkit #3352 "Snow falling in a pine forest" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Flurry",
+    page: "bg-[#0C1420]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#CFE8FF",
+    previewBg: "url('/videos/flurry-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+    videoSrc: "/videos/flurry.mp4",
+    posterSrc: "/videos/flurry-poster.jpg",
+  },
+  ink: {
+    // Video Mixkit #44818 "Abstract video of a liquid with dark ink flowing" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Ink",
+    page: "bg-[#08080C]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#A5B4FC",
+    previewBg: "url('/videos/ink-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
+    videoSrc: "/videos/ink.mp4",
+    posterSrc: "/videos/ink-poster.jpg",
+  },
+  fiesta: {
+    // Video Mixkit #4064 "Fireworks at night sky" (Free License) -- lihat catatan
+    // VIDEO_THEME_NAMES.
+    label: "Fiesta",
+    page: "bg-[#0A0612]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#FBBF24",
+    previewBg: "url('/videos/fiesta-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+    videoSrc: "/videos/fiesta.mp4",
+    posterSrc: "/videos/fiesta-poster.jpg",
   },
   // 5 preset baru (hasil analisa galeri tema kompetitor, 16 Agustus 2026 --
   // pengguna: "saya mau baca dan lihat semua gambar yang ada di folder
