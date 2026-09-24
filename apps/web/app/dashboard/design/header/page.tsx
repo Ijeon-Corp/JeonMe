@@ -52,6 +52,7 @@ const LAYOUT_VALUES: MyPage["layout_variant"][] = [
   "masthead",
   "portrait",
   "profile",
+  "billboard",
 ];
 
 export default function DesignHeaderPage() {

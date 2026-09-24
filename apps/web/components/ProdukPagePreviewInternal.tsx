@@ -121,7 +121,7 @@ export default function ProdukPagePreview({
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" ? "" : "flex flex-col items-center"}`}>
+          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" || data.layoutVariant === "billboard" ? "" : "flex flex-col items-center"}`}>
             {renderBioHeader(data, theme)}
           </div>
         </div>

@@ -204,6 +204,14 @@ export type PageThemeName =
   | "zesty"
   | "dreamy"
   | "radiant"
+  | "villa"
+  | "bistro"
+  | "gala"
+  | "harapan"
+  | "rave"
+  | "arcade"
+  | "reef"
+  | "rimba"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -239,6 +247,16 @@ export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "sakura",
   "nova",
   "maple",
+  // 8 tema foto bergaya kartu template homepage (25 September 2026) --
+  // lihat catatan di entri PAGE_THEMES "villa".
+  "villa",
+  "bistro",
+  "gala",
+  "harapan",
+  "rave",
+  "arcade",
+  "reef",
+  "rimba",
 ];
 
 // VIDEO_THEME_NAMES -- permintaan langsung pengguna, 13 Agustus 2026: "juga
@@ -3528,6 +3546,192 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7657ff",
     previewBg: "linear-gradient(135deg, #7657ff 0%, #ff6448 55%, #d7ff60 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  villa: {
+    // Tema foto bergaya kartu template di homepage (permintaan langsung
+    // pengguna, 25 September 2026: "buatkan juga quick setup template yang
+    // ada seperti di homepage ini buatkan persis yang sesuai"). Delapan
+    // tema (villa/bistro/gala/harapan/rave/arcade/reef/rimba) berbagi satu
+    // bahasa visual yang dibaca langsung dari public/homepage/templates/*.png
+    // (OCR + sampel piksel, karena gambar itu mockup jadi): foto memenuhi
+    // latar dgn gradasi gelap dibakar (public/wallpapers/CREDITS.md), judul
+    // putih besar, tombol putih ber-border tinta, tombol utama berwarna
+    // persis sampel kartunya (villa = coral #fe5642). Dipasangkan dgn
+    // layout "billboard" (header rata kiri) di 8 template Quick Setup
+    // yang sama dgn kartu homepage.
+    label: "Villa",
+    page: "bg-[url('/wallpapers/nusa-villa.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#fe5642] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#fe5642",
+    previewBg: "url('/wallpapers/nusa-villa.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  bistro: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Bistro",
+    page: "bg-[url('/wallpapers/rasa-resto.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#5d46fc] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#5d46fc",
+    previewBg: "url('/wallpapers/rasa-resto.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  gala: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Gala",
+    page: "bg-[url('/wallpapers/ruang-event.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#defb53] text-[#111111] font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#defb53",
+    previewBg: "url('/wallpapers/ruang-event.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  harapan: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Harapan",
+    page: "bg-[url('/wallpapers/langkah-baik.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#fea5cb] text-[#111111] font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#fea5cb",
+    previewBg: "url('/wallpapers/langkah-baik.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  rave: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Rave",
+    page: "bg-[url('/wallpapers/nara-dj.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#6f48fc] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#6f48fc",
+    previewBg: "url('/wallpapers/nara-dj.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  arcade: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Arcade",
+    page: "bg-[url('/wallpapers/raka-game.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#f45a4a] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#f45a4a",
+    previewBg: "url('/wallpapers/raka-game.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  reef: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Reef",
+    page: "bg-[url('/wallpapers/blue-depth.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#8ad5ff] text-[#111111] font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#8ad5ff",
+    previewBg: "url('/wallpapers/blue-depth.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  rimba: {
+    // Tema foto kartu homepage -- lihat catatan di "villa".
+    label: "Rimba",
+    page: "bg-[url('/wallpapers/jelajah-rimba.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-white/80",
+    name: "text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+    bio: "text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.4)]",
+    card: "border-2 border-[#111111] bg-white shadow-[3px_3px_0_#111111] hover:-translate-y-0.5",
+    cardTitle: "text-[#111111]",
+    chevron: "text-[#111111]/50",
+    productCard: "border-2 border-[#111111] bg-white",
+    productTitle: "text-[#111111]",
+    productPrice: "text-[#111111]",
+    buyButton: "bg-[#83f98b] text-[#111111] font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#83f98b",
+    previewBg: "url('/wallpapers/jelajah-rimba.jpg') center/cover",
+    previewIsDark: true,
+    cardRounded: "rounded-2xl",
     pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
 };

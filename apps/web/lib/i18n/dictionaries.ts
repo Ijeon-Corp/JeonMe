@@ -2521,6 +2521,7 @@ export const dictionaries = {
             masthead: { label: "Masthead", description: "Pita warna selebar penuh berisi avatar+nama+bio langsung di dalamnya." },
             portrait: { label: "Portrait", description: "Foto tegak dibingkai & berbayang ala poster. Isi Foto Profil dulu supaya efeknya terlihat." },
             profile: { label: "Profil", description: "Kartu profil kreator: @username, chip keahlian, statistik, tombol warna-warni." },
+            billboard: { label: "Billboard", description: "Judul besar rata kiri di atas foto latar -- cocok dgn tema foto." },
           },
         },
         designTombol: {
@@ -2610,6 +2611,7 @@ export const dictionaries = {
             masthead: "Pita warna selebar penuh berisi avatar+nama+bio langsung di dalamnya.",
             portrait: "Foto tegak dibingkai & berbayang ala poster. Isi Foto Profil dulu.",
             profile: "Kartu profil kreator: @username, chip keahlian, statistik.",
+            billboard: "Judul besar rata kiri di atas foto latar.",
           },
           contentTiles: {
             link: {
@@ -5723,6 +5725,7 @@ export const dictionaries = {
             masthead: { label: "Masthead", description: "A full-width color band containing the avatar, name, and bio directly inside it." },
             portrait: { label: "Portrait", description: "Vertical photo, framed and shadowed like a poster. Fill in your Profile Photo first so the effect shows." },
             profile: { label: "Profile", description: "Creator profile card: @username, skill chips, stats, colorful buttons." },
+            billboard: { label: "Billboard", description: "Big left-aligned headline over a photo background -- pairs with photo themes." },
           },
         },
         designTombol: {
@@ -5804,6 +5807,7 @@ export const dictionaries = {
             masthead: "A full-width color band containing the avatar+name+bio directly inside it.",
             portrait: "Portrait photo framed with a shadow, like a poster. Add a Profile Photo first.",
             profile: "Creator profile card: @username, skill chips, stats.",
+            billboard: "Big left-aligned headline over a photo background.",
           },
           contentTiles: {
             link: {

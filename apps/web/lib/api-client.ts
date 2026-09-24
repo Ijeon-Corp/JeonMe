@@ -487,7 +487,12 @@ export type PageLayoutVariant =
   // Full-Stack Developer/Penulis Buku/Guru/Freelancer/Toko Online):
   // @username, chip keahlian, ikon sosial outline, baris statistik. Data
   // chip & statistik di profile_extras (lihat ProfileExtras).
-  | "profile";
+  | "profile"
+  // "billboard" -- header rata kiri berhuruf besar ala kartu template
+  // homepage (25 September 2026): logo kecil + nama brand kapital, judul
+  // besar, tagline, ikon sosial bulat putih. Dipasangkan dgn tema foto
+  // villa/bistro/gala/harapan/rave/arcade/reef/rimba.
+  | "billboard";
 
 // ProfileExtras -- pages.profile_extras (migrasi 000109): chip keahlian
 // berikon & baris statistik 3 angka, dipakai layout "profile". Disimpan
@@ -1106,6 +1111,14 @@ export const THEME_PRESETS = [
   "zesty",
   "dreamy",
   "radiant",
+  "villa",
+  "bistro",
+  "gala",
+  "harapan",
+  "rave",
+  "arcade",
+  "reef",
+  "rimba",
 ] as const;
 
 export function getMyPage() {

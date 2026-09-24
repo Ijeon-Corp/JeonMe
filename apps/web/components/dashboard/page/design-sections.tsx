@@ -98,6 +98,7 @@ function getLayoutOptions(t: (key: string) => string): { value: PageLayoutVarian
     { value: "masthead", label: "Masthead", description: t("dashboard.components.produkPageEditor.layoutOptions.masthead") },
     { value: "portrait", label: "Portrait", description: t("dashboard.components.produkPageEditor.layoutOptions.portrait") },
     { value: "profile", label: t("dashboard.pages.designHeader.layouts.profile.label"), description: t("dashboard.components.produkPageEditor.layoutOptions.profile") },
+    { value: "billboard", label: "Billboard", description: t("dashboard.components.produkPageEditor.layoutOptions.billboard") },
   ];
 }
 

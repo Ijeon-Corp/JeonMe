@@ -395,7 +395,8 @@ export interface PagePreviewData {
     | "duo"
     | "masthead"
     | "portrait"
-    | "profile";
+    | "profile"
+    | "billboard";
   // profileExtras -- chip keahlian & statistik layout "profile" (lihat
   // ProfileExtras, api-client.ts).
   profileExtras?: ProfileExtras;
@@ -553,7 +554,8 @@ export interface PreviewSourcePage {
     | "duo"
     | "masthead"
     | "portrait"
-    | "profile";
+    | "profile"
+    | "billboard";
   profile_extras?: ProfileExtras;
   // builder_mode -- lihat catatan lengkap di PagePreviewData.builderMode.
   builder_mode?: "simple" | "builder";
@@ -1378,11 +1380,11 @@ function renderSocialRow(social: PagePreviewData["social"], align: "center" | "l
 // putih ber-border tebal #111 (bahasa visual jeon.id), ikon hitam -- beda
 // dari renderSocialRow yang berlatar warna brand. Mandiri warnanya (tidak
 // ikut tema) supaya tetap terbaca di tema terang maupun gelap.
-function renderSocialRowOutline(social: PagePreviewData["social"]) {
+function renderSocialRowOutline(social: PagePreviewData["social"], align: "center" | "left" = "center") {
   const items = buildFilledSocialLinks(social ?? {});
   if (items.length === 0) return null;
   return (
-    <div className="relative mt-3 flex flex-wrap items-center justify-center gap-2">
+    <div className={`relative mt-3 flex flex-wrap items-center gap-2 ${align === "center" ? "justify-center" : "justify-start"}`}>
       {items.map((item) => (
         <a
           key={item.key}
@@ -1618,6 +1620,41 @@ export function renderBioHeader(
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // "billboard" -- header rata kiri berhuruf besar, dibaca langsung dari
+  // kartu template homepage (public/homepage/templates/*.png, permintaan
+  // langsung pengguna 25 September 2026: "buatkan persis yang sesuai"):
+  // logo/avatar kecil + nama brand KAPITAL berspasi lebar sbg eyebrow,
+  // judul besar (nama tampilan), tagline (bio), lalu ikon sosial bulat
+  // putih rata kiri. Warna teks dari tema -- dirancang utk tema foto
+  // (villa/bistro/dst) yang teksnya putih di atas foto bergradasi gelap.
+  if (variant === "billboard") {
+    const brand = data.displayName || data.username;
+    return (
+      <div className="relative flex w-full flex-col items-start text-left">
+        <div className="flex items-center gap-2.5">
+          {data.avatarUrl ? (
+            <Image src={data.avatarUrl} alt={data.username} width={36} height={36} fetchPriority="high" className={`h-9 w-9 flex-shrink-0 rounded-full object-cover ${theme.avatarRing}`} />
+          ) : (
+            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/20 font-heading text-sm font-bold ${theme.name} ${theme.avatarRing}`}>
+              {data.username.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className={`text-[11px] font-bold uppercase tracking-[0.22em] ${theme.bio}`}>{brand}</span>
+          {data.isVerified && (
+            <span title="Kreator terverifikasi">
+              <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-white" />
+            </span>
+          )}
+        </div>
+        <h1 className={`mt-6 font-heading text-[40px] font-extrabold leading-[1.02] tracking-tight ${theme.name}`} style={theme.nameStyle}>
+          {brand}
+        </h1>
+        {data.bio && <p className={`mt-2.5 max-w-[19rem] text-[17px] font-medium leading-snug ${theme.bio}`}>{data.bio}</p>}
+        {renderSocialRowOutline(data.social, "left")}
       </div>
     );
   }
@@ -3446,7 +3483,7 @@ export default function PagePreview({
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" ? "" : "flex flex-col items-center"}`}>
+          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" || data.layoutVariant === "billboard" ? "" : "flex flex-col items-center"}`}>
             {data.showProfileHeader !== false && renderBioHeader(data, theme)}
           </div>
         </div>

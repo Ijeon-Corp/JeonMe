@@ -1205,6 +1205,10 @@ var availableThemes = map[string]bool{
 	// sini bersamaan dengan frontend, pola sama seperti catatan di atas.
 	"bliss": true, "cheer": true, "spark": true, "sunny": true, "breezy": true,
 	"festive": true, "zesty": true, "dreamy": true, "radiant": true,
+	// 8 tema foto bergaya kartu template homepage (25 September 2026),
+	// sinkron dgn PAGE_THEMES di page-themes.ts.
+	"villa": true, "bistro": true, "gala": true, "harapan": true,
+	"rave": true, "arcade": true, "reef": true, "rimba": true,
 	"custom": true,
 }
 
@@ -1281,7 +1285,7 @@ type updatePageRequest struct {
 	SocialGithub  *string `json:"social_github" binding:"omitempty,max=255"`
 	SocialWebsite *string `json:"social_website" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile billboard"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse. Halaman utama
 	// SELALU page_type='bio' (tidak pernah 'produk'), jadi TIDAK perlu guard
 	// page_type di sini -- guard itu cuma relevan di UpdateExtraPage (Toko
@@ -2413,7 +2417,7 @@ type updateExtraPageRequest struct {
 	SocialEmail       *string `json:"social_email" binding:"omitempty,max=255"`
 	SocialGithub      *string `json:"social_github" binding:"omitempty,max=255"`
 	SocialWebsite     *string `json:"social_website" binding:"omitempty,max=255"`
-	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile"`
+	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile billboard"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
 	// (migrasi 000096). Halaman tambahan BISA page_type='produk' (Toko) --
 	// SEMPAT dikecualikan dari mode builder saat Fase 1-3 (produk/katalog
