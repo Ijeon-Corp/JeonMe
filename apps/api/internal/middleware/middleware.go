@@ -198,8 +198,28 @@ func ActAsOwner(db *pgxpool.Pool, permissionColumn string) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 		defer cancel()
 
+		// JOIN ke users -- DITAMBAHKAN 24 September 2026 (audit backend).
+		// SEBELUMNYA query ini hanya menyentuh tabel collaborators, tidak
+		// pernah memeriksa keadaan PEMILIKNYA. Akibatnya ketika admin
+		// men-suspend sebuah akun (AdminHandler.SuspendUser, yang juga
+		// memanggil revokeAllUserSessions), sesi pemiliknya memang mati --
+		// tapi kolaboratornya, yang akunnya sendiri normal, tetap bisa
+		// mengubah konten akun yang sedang ditangguhkan itu cukup dengan
+		// satu header X-Act-As-Owner: menyunting tautan, membuat produk,
+		// bahkan menghapus halaman. Pencabutan sesi saat suspend adalah
+		// temuan yang audit OWASP A01 sendiri tandai "PALING SERIUS"
+		// (lihat catatan di admin.go) -- ini jalan pintas yang melewatinya.
+		// Berlaku sama untuk pemilik yang sudah deleted_at: baris
+		// collaborators tidak pernah dibersihkan saat akun dihapus.
+		//
+		// File ini sudah punya konvensi cek `deleted_at IS NULL`
+		// (AdminRequired/SupportRequired di atas) -- ActAsOwner satu-satunya
+		// yang melewatkannya.
 		var allowed bool
-		query := `SELECT ` + permissionColumn + ` FROM collaborators WHERE owner_user_id = $1 AND collaborator_user_id = $2 AND status = 'active'`
+		query := `SELECT c.` + permissionColumn + `
+			FROM collaborators c JOIN users u ON u.id = c.owner_user_id
+			WHERE c.owner_user_id = $1 AND c.collaborator_user_id = $2 AND c.status = 'active'
+				AND u.suspended_at IS NULL AND u.deleted_at IS NULL`
 		if err := db.QueryRow(ctx, query, ownerID, requesterID).Scan(&allowed); err != nil || !allowed {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "kamu tidak punya akses ke ruang kerja ini"})
 			return
