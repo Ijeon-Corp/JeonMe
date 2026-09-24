@@ -168,7 +168,7 @@ export default function ManageProductModal({
   // X-Act-As-Owner). Lihat catatan lengkap di products/page.tsx.
   canManageSplits: boolean;
   splitsEditId: string | null;
-  splitRows: CollaboratorSplit[];
+  splitRows: (CollaboratorSplit & { _key?: number })[];
   savingSplits: boolean;
   onUpdateSplitRow: (index: number, patch: Partial<CollaboratorSplit>) => void;
   onRemoveSplitRow: (index: number) => void;
@@ -535,7 +535,7 @@ export default function ManageProductModal({
               <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>
                 {splitRows.map((row, i) => (
-                  <div key={i} className="flex gap-1.5">
+                  <div key={row._key ?? i} className="flex gap-1.5">
                     <select
                       value={row.user_id}
                       onChange={(e) => onUpdateSplitRow(i, { user_id: e.target.value })}

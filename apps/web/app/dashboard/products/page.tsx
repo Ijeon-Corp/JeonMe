@@ -312,7 +312,18 @@ function DashboardProductsPageInner() {
   // yang sama.
   const [canManageSplits] = useState(() => getActiveWorkspaceOwnerId() === null);
   const [splitsEditId, setSplitsEditId] = useState<string | null>(null);
-  const [splitRows, setSplitRows] = useState<CollaboratorSplit[]>([]);
+  // SplitRowDraft -- baris bagi hasil + kunci React stabil (_key), 24
+  // September 2026 (audit kualitas kode): daftar ini sebelumnya key={i}
+  // padahal baris bisa dihapus dari tengah, jadi identitas DOM (fokus &
+  // pilihan dropdown yang sedang terbuka) melompat ke baris lain. Kunci
+  // dibuat sekali saat baris dibuat/dimuat, lalu DIBUANG di handleSaveSplits
+  // sebelum dikirim. Pola sama dengan bab kursus (courses/page.tsx).
+  const [splitRows, setSplitRows] = useState<(CollaboratorSplit & { _key: number })[]>([]);
+  const splitKeySeq = useRef(0);
+  const newSplitRow = (r: CollaboratorSplit = { user_id: "", percent: 0 }) => {
+    splitKeySeq.current += 1;
+    return { ...r, _key: splitKeySeq.current };
+  };
   const [savingSplits, setSavingSplits] = useState(false);
 
   // Advance Option (permintaan langsung pengguna, 5 September 2026): Release
@@ -937,7 +948,7 @@ function DashboardProductsPageInner() {
 
   function openSplitsForm(product: DashboardProduct) {
     setSplitsEditId(product.id);
-    setSplitRows(product.collaborator_splits.length > 0 ? product.collaborator_splits : [{ user_id: "", percent: 0 }]);
+    setSplitRows(product.collaborator_splits.length > 0 ? product.collaborator_splits.map((r) => newSplitRow(r)) : [newSplitRow()]);
   }
 
   function updateSplitRow(index: number, patch: Partial<CollaboratorSplit>) {
@@ -945,7 +956,7 @@ function DashboardProductsPageInner() {
   }
 
   async function handleSaveSplits(product: DashboardProduct) {
-    const rows = splitRows.filter((r) => r.user_id && r.percent > 0);
+    const rows = splitRows.filter((r) => r.user_id && r.percent > 0).map((r) => ({ user_id: r.user_id, percent: r.percent }));
     setError(null);
     setSavingSplits(true);
     try {
@@ -1680,7 +1691,7 @@ function DashboardProductsPageInner() {
           savingSplits={savingSplits}
           onUpdateSplitRow={updateSplitRow}
           onRemoveSplitRow={(index) => setSplitRows((prev) => prev.filter((_, idx) => idx !== index))}
-          onAddSplitRow={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
+          onAddSplitRow={() => setSplitRows((prev) => [...prev, newSplitRow()])}
           onCancelSplitsEdit={() => setSplitsEditId(null)}
           onSaveSplits={handleSaveSplits}
           onOpenSplitsForm={openSplitsForm}

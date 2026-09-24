@@ -28,6 +28,26 @@ import { useErrorToast } from "@/lib/use-error-toast";
 
 const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_url: "" };
 
+// ChapterDraft -- bab + kunci React yang STABIL, ditambahkan 24 September
+// 2026 (audit kualitas kode). Daftar bab sebelumnya memakai key={i} padahal
+// bab bisa dihapus dari tengah: menghapus Bab 2 membuat node DOM yang
+// sebelumnya milik Bab 3 dipakai ulang untuk data lain. Input-nya controlled
+// jadi datanya tidak korup, tapi identitas DOM (fokus, posisi kursor) lompat
+// ke baris yang salah. Bab tidak punya id sendiri, dan membuat kunci dari
+// objeknya (WeakMap) tidak bisa dipakai karena objeknya diganti di setiap
+// ketikan -- jadi kunci dibuat SEKALI saat bab ditambahkan/dimuat, ikut
+// terbawa lewat spread saat diedit, lalu DIBUANG eksplisit (stripChapterKey)
+// sebelum dikirim ke backend.
+type ChapterDraft = CourseChapterInput & { _key: number };
+let chapterKeySeq = 0;
+function newChapter(c: CourseChapterInput = EMPTY_CHAPTER): ChapterDraft {
+  chapterKeySeq += 1;
+  return { ...c, _key: chapterKeySeq };
+}
+function stripChapterKey(c: ChapterDraft): CourseChapterInput {
+  return { title: c.title, description: c.description, video_url: c.video_url };
+}
+
 export default function DashboardCoursesPage() {
   const { t } = useLocale();
   // Manager template (SPEC §7.2/§14, Phase 5): PageHeader + primary
@@ -45,10 +65,10 @@ export default function DashboardCoursesPage() {
   const [description, setDescription] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
   const [prerequisites, setPrerequisites] = useState("");
-  const [chapters, setChapters] = useState<CourseChapterInput[]>([{ ...EMPTY_CHAPTER }]);
+  const [chapters, setChapters] = useState<ChapterDraft[]>([newChapter()]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editChapters, setEditChapters] = useState<CourseChapterInput[]>([]);
+  const [editChapters, setEditChapters] = useState<ChapterDraft[]>([]);
   const [savingChapters, setSavingChapters] = useState(false);
 
   function reload() {
@@ -66,7 +86,7 @@ export default function DashboardCoursesPage() {
     setDescription("");
     setPriceIDR("");
     setPrerequisites("");
-    setChapters([{ ...EMPTY_CHAPTER }]);
+    setChapters([newChapter()]);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -83,7 +103,7 @@ export default function DashboardCoursesPage() {
     setError(null);
     setCreating(true);
     try {
-      await createCourse({ name, description, price_idr: price, prerequisites, chapters });
+      await createCourse({ name, description, price_idr: price, prerequisites, chapters: chapters.map(stripChapterKey) });
       await reload();
       resetForm();
       setAdding(false);
@@ -145,7 +165,7 @@ export default function DashboardCoursesPage() {
     setEditingId(course.id);
     try {
       const chs = await getCourseChapters(course.id);
-      setEditChapters(chs.map((c: DashboardCourseChapter) => ({ title: c.title, description: c.description, video_url: c.video_url })));
+      setEditChapters(chs.map((c: DashboardCourseChapter) => newChapter({ title: c.title, description: c.description, video_url: c.video_url })));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.loadChaptersFailed"));
       setEditingId(null);
@@ -160,7 +180,7 @@ export default function DashboardCoursesPage() {
     setError(null);
     setSavingChapters(true);
     try {
-      await replaceCourseChapters(courseId, editChapters);
+      await replaceCourseChapters(courseId, editChapters.map(stripChapterKey));
       await reload();
       setEditingId(null);
     } catch (err) {
@@ -229,7 +249,7 @@ export default function DashboardCoursesPage() {
               <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.chaptersLabel")}</label>
               <div className="flex flex-col gap-3">
                 {chapters.map((ch, i) => (
-                  <div key={i} className="rounded-lg border border-app-border p-3">
+                  <div key={ch._key} className="rounded-lg border border-app-border p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-bold text-app-muted">{t("dashboard.pages.courses.chapterN").replace("{n}", String(i + 1))}</p>
                       {chapters.length > 1 && (
@@ -273,7 +293,7 @@ export default function DashboardCoursesPage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setChapters((prev) => [...prev, { ...EMPTY_CHAPTER }])}
+                  onClick={() => setChapters((prev) => [...prev, newChapter()])}
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-jeon-purple hover:border-jeon-purple"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
@@ -374,7 +394,7 @@ export default function DashboardCoursesPage() {
             {editingId === course.id && (
               <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-3">
                 {editChapters.map((ch, i) => (
-                  <div key={i} className="rounded-lg border-2 border-jeon-ink bg-app-surface p-3">
+                  <div key={ch._key} className="rounded-lg border-2 border-jeon-ink bg-app-surface p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-bold text-app-muted">{t("dashboard.pages.courses.chapterN").replace("{n}", String(i + 1))}</p>
                       {editChapters.length > 1 && (
@@ -418,7 +438,7 @@ export default function DashboardCoursesPage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setEditChapters((prev) => [...prev, { ...EMPTY_CHAPTER }])}
+                  onClick={() => setEditChapters((prev) => [...prev, newChapter()])}
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-jeon-purple hover:border-jeon-purple"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
