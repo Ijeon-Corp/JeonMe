@@ -634,11 +634,32 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		eventStarts, eventEnds = &starts, &ends
 	}
 
+	// clearSetFragments -- perbaikan integritas data 24 September 2026
+	// (audit backend). Kelima operasi "hapus batas" (kuota event, flash
+	// sale, batas waktu link, batas jumlah pembayaran, jadwal rilis)
+	// SEBELUMNYA dieksekusi sebagai UPDATE berdiri sendiri DI TEMPAT ini
+	// juga -- artinya sebagian perubahan sudah permanen SEBELUM gerbang
+	// validasi di bawahnya sempat menolak request, dan tidak ada transaksi
+	// sama sekali di seluruh fungsi (7 pernyataan yang mengubah data).
+	//
+	// Kerusakan nyatanya: kreator menyunting produk EVENT, dalam satu simpan
+	// mematikan batas kuota sekaligus mengubah sesuatu yang ternyata
+	// bentrok (mis. pwyw + flash sale). Baris ini sudah menjalankan
+	// `event_capacity = NULL`, lalu validasi di bawah membalas 400.
+	// Frontend menampilkan error, kreator yakin tidak ada yang tersimpan --
+	// padahal batas kuota event-nya SUDAH HILANG permanen. Kuota itu
+	// ditegakkan sungguhan saat checkout (checkout.go memeriksa
+	// `isEvent && eventCapacity != nil`), jadi begitu NULL gerbangnya
+	// dilewati total dan event bisa OVERSELL tanpa batas.
+	//
+	// Sekarang cuma dikumpulkan sebagai fragmen SET, lalu dijalankan
+	// bersama UPDATE utama di bawah dalam SATU transaksi -- jadi validasi
+	// yang menolak berarti benar-benar tidak ada yang berubah. Fungsi
+	// tetangga di file yang sama (Reorder) memang sudah memakai transaksi;
+	// ini menyelaraskannya.
+	var clearSetFragments []string
 	if req.ClearEventCapacity {
-		if _, err := h.DB.Exec(ctx, `UPDATE products SET event_capacity = NULL WHERE id = $1`, productID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas kuota"})
-			return
-		}
+		clearSetFragments = append(clearSetFragments, "event_capacity = NULL")
 	}
 
 	// No.69: pwyw & flash sale (No.68) sengaja tidak boleh aktif bersamaan
@@ -713,13 +734,8 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	}
 
 	if req.ClearFlashSale {
-		if _, err := h.DB.Exec(ctx, `
-			UPDATE products SET flash_sale_price_idr = NULL, flash_sale_starts_at = NULL, flash_sale_ends_at = NULL
-			WHERE id = $1
-		`, productID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membatalkan flash sale"})
-			return
-		}
+		clearSetFragments = append(clearSetFragments,
+			"flash_sale_price_idr = NULL", "flash_sale_starts_at = NULL", "flash_sale_ends_at = NULL")
 	}
 
 	// Modul Toko (Fase D): link_expires_at -- pola sama seperti flash sale
@@ -734,16 +750,10 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		linkExpiresAt = &t
 	}
 	if req.ClearLinkExpiration {
-		if _, err := h.DB.Exec(ctx, `UPDATE products SET link_expires_at = NULL WHERE id = $1`, productID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas waktu link"})
-			return
-		}
+		clearSetFragments = append(clearSetFragments, "link_expires_at = NULL")
 	}
 	if req.ClearPaymentLimit {
-		if _, err := h.DB.Exec(ctx, `UPDATE products SET payment_limit_count = NULL WHERE id = $1`, productID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas jumlah pembayaran"})
-			return
-		}
+		clearSetFragments = append(clearSetFragments, "payment_limit_count = NULL")
 	}
 
 	// Advance Option: release_at -- pola sama seperti link_expires_at (nil
@@ -758,10 +768,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		releaseAt = &t
 	}
 	if req.ClearReleaseAt {
-		if _, err := h.DB.Exec(ctx, `UPDATE products SET release_at = NULL WHERE id = $1`, productID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus jadwal rilis"})
-			return
-		}
+		clearSetFragments = append(clearSetFragments, "release_at = NULL")
 	}
 
 	// Modul Settings §3: divalidasi SEBELUM UPDATE dijalankan -- nil berarti
@@ -799,7 +806,33 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		newWebhookSecret = &s
 	}
 
-	_, err = h.DB.Exec(ctx, `
+	// SATU transaksi untuk seluruh penulisan -- lihat catatan lengkap di
+	// deklarasi clearSetFragments. Semua gerbang validasi sudah dilewati di
+	// atas titik ini, jadi begitu transaksi dimulai tidak ada lagi jalan
+	// keluar yang menyisakan perubahan separuh jadi.
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	// Dijalankan sebagai pernyataan terpisah (bukan disisipkan ke SET
+	// UPDATE di bawah) karena kolom yang sama akan ter-assign DUA KALI
+	// dalam satu UPDATE -- Postgres menolaknya dengan "multiple assignments
+	// to same column". Urutannya sengaja clear DULU baru UPDATE: kalau
+	// kreator mengirim clear_x sekaligus nilai x yang baru, nilai barulah
+	// yang menang, sama persis dengan perilaku sebelum perubahan ini.
+	// Fragmennya konstanta literal yang ditulis di fungsi ini sendiri,
+	// TIDAK ADA input pengguna yang masuk ke string SQL.
+	if len(clearSetFragments) > 0 {
+		if _, err := tx.Exec(ctx, `UPDATE products SET `+strings.Join(clearSetFragments, ", ")+` WHERE id = $1`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas pada produk"})
+			return
+		}
+	}
+
+	_, err = tx.Exec(ctx, `
 		UPDATE products SET
 			name = COALESCE($1, name),
 			description = COALESCE($2, description),
@@ -839,6 +872,11 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured, req.ExternalURL,
 		releaseAt, req.TransactionFeeEnabled, req.NotifyWhatsappEnabled, req.NotifyWhatsappMessage, req.ShowSoldCount)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return
 	}

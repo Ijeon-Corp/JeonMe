@@ -1069,3 +1069,85 @@ func TestProduct_CollaboratorSplits_RejectsOver100Percent(t *testing.T) {
 		t.Fatalf("status = %d, ekspektasi 400 (total > 100%%), body %s", rec.Code, rec.Body.String())
 	}
 }
+
+// Update tidak boleh menyisakan perubahan separuh jadi saat validasi
+// menolak (audit menyeluruh 24 September 2026).
+//
+// SEBELUM perbaikan: ProductHandler.Update menjalankan lima operasi "hapus
+// batas" sebagai UPDATE berdiri sendiri DI TENGAH fungsi, sebelum gerbang
+// validasi di bawahnya sempat menolak request, dan tanpa transaksi sama
+// sekali. Kreator yang dalam satu simpan mematikan batas kuota event
+// SEKALIGUS mengirim kombinasi yang bentrok (pwyw + flash sale) mendapat
+// 400 -- frontend menampilkan error, kreator yakin tidak ada yang
+// tersimpan -- padahal event_capacity SUDAH jadi NULL permanen. Kuota itu
+// ditegakkan sungguhan di checkout (`isEvent && eventCapacity != nil`),
+// jadi begitu NULL gerbangnya dilewati total dan event bisa OVERSELL.
+func TestProductUpdate_RejectedUpdateDoesNotClearEventCapacity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Event Berkuota", "price_idr": 50000,
+	}, headers)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create: status %d, body %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode create: %v", err)
+	}
+
+	// Jadikan event berkuota lewat DB langsung -- yang diuji di sini alur
+	// Update-nya, bukan alur pembuatan event.
+	if _, err := product.DB.Exec(t.Context(), `
+		UPDATE products SET is_event = true, event_capacity = 100 WHERE id = $1
+	`, created.ID); err != nil {
+		t.Fatalf("gagal menyiapkan event berkuota: %v", err)
+	}
+
+	// Satu request: hapus kuota + kombinasi yang PASTI ditolak validasi
+	// (pwyw dan flash sale tidak boleh aktif bersamaan).
+	rejectRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"clear_event_capacity": true,
+		"pwyw_enabled":         true,
+		"pwyw_min_price_idr":   10000,
+		"flash_sale_price_idr": 25000,
+		"flash_sale_starts_at": time.Now().Add(time.Hour).Format(time.RFC3339),
+		"flash_sale_ends_at":   time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+	}, headers)
+	if rejectRec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, ekspektasi 400 (pwyw + flash sale bentrok), body %s", rejectRec.Code, rejectRec.Body.String())
+	}
+
+	// INTI: kuota harus MASIH ADA. Sebelum perbaikan, nilainya sudah NULL.
+	var capacity *int
+	if err := product.DB.QueryRow(t.Context(), `SELECT event_capacity FROM products WHERE id = $1`, created.ID).Scan(&capacity); err != nil {
+		t.Fatalf("gagal membaca event_capacity: %v", err)
+	}
+	if capacity == nil || *capacity != 100 {
+		t.Fatalf("event_capacity = %v, ekspektasi tetap 100 -- request yang DITOLAK tidak boleh menghapus kuota (event jadi bisa oversell)", capacity)
+	}
+
+	// Kontrol: request yang VALID tetap bisa menghapus kuota.
+	okRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"clear_event_capacity": true,
+	}, headers)
+	if okRec.Code != http.StatusOK {
+		t.Fatalf("clear valid: status %d, body %s", okRec.Code, okRec.Body.String())
+	}
+	if err := product.DB.QueryRow(t.Context(), `SELECT event_capacity FROM products WHERE id = $1`, created.ID).Scan(&capacity); err != nil {
+		t.Fatalf("gagal membaca event_capacity setelah clear valid: %v", err)
+	}
+	if capacity != nil {
+		t.Fatalf("event_capacity = %v, ekspektasi NULL setelah clear yang valid", *capacity)
+	}
+}
