@@ -115,7 +115,16 @@ export default function QuickSetupPage() {
   const [myPage, setMyPage] = useState<MyPage | null>(null);
 
   useEffect(() => {
-    fetchMyPage().then(setMyPage);
+    // .catch -- 24 September 2026 (audit kualitas kode): satu-satunya .then
+    // jalur data di repo ini yang tanpa .catch. Soft-fail disengaja (mockup
+    // cukup jatuh ke placeholder "Nama Kamu"), tapi tanpa catch kegagalannya
+    // jadi unhandled promise rejection. Relevan karena commit 6d22570 baru
+    // saja mempromosikan halaman ini lewat banner onboarding.
+    fetchMyPage()
+      .then(setMyPage)
+      .catch(() => {
+        // Soft-fail: mockup memakai placeholder, bukan data akun.
+      });
   }, []);
 
   // Auto-redirect setelah berhasil -- pola SAMA PERSIS dgn
