@@ -1,0 +1,28 @@
+-- Dua index parsial untuk tabel orders (audit backend menyeluruh 24
+-- September 2026, temuan di luar 10 besar -- murah, additive, tanpa
+-- perubahan kode).
+--
+-- 1. idx_orders_product_paid -- hitungan "terjual" di halaman PUBLIK.
+--    page.go menjalankan subquery
+--      SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id AND o.status = 'paid'
+--    untuk SETIAP produk yang show_sold_count-nya aktif, pada SETIAP
+--    kunjungan halaman publik yang tidak kena cache (TTL cache cuma 30 detik,
+--    dan tiap username/slug baru selalu miss). idx_orders_product_id yang ada
+--    hanya menemukan SEMUA order produk itu lalu mem-heap-fetch satu per satu
+--    untuk memfilter status di memori -- produk laris dengan ribuan order
+--    yang sebagian besar pending/expired membayar biaya itu terus-menerus.
+--    Index parsial WHERE status='paid' membuat COUNT-nya index-only.
+--
+-- 2. idx_orders_pending_reconcile -- job reconcile 5 menitan
+--    (ReconcilePendingOrders, checkout.go) memilih
+--      WHERE status = 'pending' AND psp_reference != '' AND created_at dalam 2 hari
+--    Satu-satunya index yang bisa dipakai hanya idx_orders_status (seluruh
+--    order pending sepanjang masa), jadi setiap 5 menit Postgres menyaring
+--    semua order pending historis berdasarkan created_at. Index parsial ini
+--    hanya berisi order pending yang ber-psp_reference -- kecil, dan
+--    langsung terurut created_at.
+--
+-- Murni ADDITIVE: tidak ada kolom dihapus/diubah, tidak ada jendela bahaya
+-- deploy (lihat catatan DROP COLUMN di CLAUDE.md).
+CREATE INDEX idx_orders_product_paid ON orders(product_id) WHERE status = 'paid';
+CREATE INDEX idx_orders_pending_reconcile ON orders(created_at) WHERE status = 'pending' AND psp_reference <> '';
