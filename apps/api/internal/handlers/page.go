@@ -924,9 +924,20 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		g.Go(func() error {
 			var pixelID, gaID string
 			var utmEnabled bool
+			// Gerbangnya mencakup utmEnabled sejak 24 September 2026 (audit
+			// cross-check tipe API). SEBELUMNYA syaratnya hanya
+			// `pixelID != "" || gaID != ""`, padahal utm_enabled HIDUP DI
+			// DALAM objek publicAnalytics yang sama -- jadi kreator yang
+			// menyalakan toggle UTM tapi belum mengisi Pixel ID maupun GA ID
+			// mendapat resp.Analytics = nil, dan tautan di halaman publiknya
+			// keluar TANPA satu pun parameter utm_* (lihat PagePreview.tsx
+			// buildUtmHref). Dashboard-nya sendiri tetap menampilkan toggle
+			// itu ON, jadi kreator tidak punya petunjuk apa pun bahwa
+			// fiturnya tidak jalan. UTM tidak butuh Pixel/GA sama sekali --
+			// parameternya ditempel ke URL tujuan, bukan dikirim ke siapa pun.
 			if err := h.DB.QueryRow(gctx, `
 				SELECT fb_pixel_id, ga_measurement_id, utm_enabled FROM analytics_settings WHERE user_id = $1
-			`, userID).Scan(&pixelID, &gaID, &utmEnabled); err == nil && (pixelID != "" || gaID != "") {
+			`, userID).Scan(&pixelID, &gaID, &utmEnabled); err == nil && (pixelID != "" || gaID != "" || utmEnabled) {
 				resp.Analytics = &publicAnalytics{FbPixelID: pixelID, GaMeasurementID: gaID, UtmEnabled: utmEnabled}
 			}
 			return nil
