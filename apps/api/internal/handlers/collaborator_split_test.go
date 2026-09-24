@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/jeonme/api/internal/database"
+	"github.com/jeonme/api/internal/middleware"
 )
 
 func newTestAffiliateHandler(t *testing.T) (*AffiliateHandler, *AuthHandler) {
@@ -142,5 +143,102 @@ func TestAffiliateUpsert_RejectedWhenCombinedWithExistingCollaboratorSplitsExcee
 	}, headers)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status upsert afiliasi = %d, ekspektasi 400 (bentrok dengan split kolaborator 70%% yang sudah aktif), body %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Kolaborator TIDAK boleh mengarahkan uang penjualan (audit menyeluruh
+// 24 September 2026). SEBELUM perbaikan ini, kolaborator dengan izin
+// can_edit_products SAJA (peran "sales_admin") bisa:
+//
+//	PATCH /dashboard/products/<produk-pemilik>
+//	X-Act-As-Owner: <id-pemilik>
+//	{"collaborator_splits":[{"user_id":"<id-DIRINYA-SENDIRI>","percent":100}]}
+//
+// dan dibalas 200. Penjaga anti-self-dealing yang ada membandingkan penerima
+// split ke ownerUserID, padahal middleware.ActAsOwner SUDAH menimpa
+// "userID" jadi ID PEMILIK sebelum handler jalan -- jadi ID kolaborator
+// tidak pernah sama dengan pembanding itu dan selalu lolos. Setiap penjualan
+// produk itu lalu meng-kredit ledger si kolaborator (checkout.go), yang bisa
+// dia cairkan sebagai DIRINYA SENDIRI lewat rute payout (rute payout memang
+// tidak ber-ActAsOwner, jadi tidak terhalang apa pun). Ini menembus kontrak
+// yang ditulis CollaboratorHandler: "kolaborator TIDAK PERNAH bisa menyentuh
+// saldo/penarikan".
+//
+// Test ini memakai middleware.ActAsOwner SUNGGUHAN (bukan fakeAuth saja)
+// karena bug-nya justru hidup di interaksi middleware <-> handler.
+func TestProductUpdate_CollaboratorCannotRouteMoneyToSelf(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	ownerID := registerTestUser(t, auth)
+	collaboratorID := registerTestUser(t, auth)
+
+	// Kolaborator aktif dengan izin produk saja -- persis peran sales_admin.
+	var collaboratorEmail string
+	if err := product.DB.QueryRow(t.Context(), `SELECT email FROM users WHERE id = $1`, collaboratorID).Scan(&collaboratorEmail); err != nil {
+		t.Fatalf("gagal ambil email kolaborator: %v", err)
+	}
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO collaborators (id, owner_user_id, collaborator_email, collaborator_user_id, status, role, can_edit_links, can_edit_products, can_edit_design)
+		VALUES (gen_random_uuid(), $1, $2, $3, 'active', 'sales_admin', false, true, false)
+	`, ownerID, collaboratorEmail, collaboratorID); err != nil {
+		t.Fatalf("gagal membuat kolaborator: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth(), middleware.ActAsOwner(product.DB, "can_edit_products"))
+	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
+
+	// Pemilik membuat produknya sendiri (tanpa impersonasi).
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Pemilik", "price_idr": 100000,
+	}, map[string]string{"X-Test-UserID": ownerID})
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("status create = %d, ekspektasi 201, body %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created product: %v", err)
+	}
+
+	asCollaborator := map[string]string{"X-Test-UserID": collaboratorID, "X-Act-As-Owner": ownerID}
+
+	// INTI TEST: kolaborator mencoba mengalihkan 100% pendapatan ke dirinya.
+	hijackRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"collaborator_splits": []map[string]any{{"user_id": collaboratorID, "percent": 100}},
+	}, asCollaborator)
+	if hijackRec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, ekspektasi 403 -- kolaborator TIDAK boleh mengatur bagi hasil, body %s", hijackRec.Code, hijackRec.Body.String())
+	}
+
+	// Tidak cukup melihat status code: pastikan benar-benar tidak ada yang
+	// tertulis ke DB (kalau penjaganya dipasang setelah penulisan, status
+	// 403 pun tidak menyelamatkan apa-apa).
+	var splitsJSON string
+	if err := product.DB.QueryRow(t.Context(), `SELECT collaborator_splits::text FROM products WHERE id = $1`, created.ID).Scan(&splitsJSON); err != nil {
+		t.Fatalf("gagal membaca collaborator_splits: %v", err)
+	}
+	if splitsJSON != "[]" {
+		t.Fatalf("collaborator_splits = %s, ekspektasi tetap [] -- tidak boleh ada yang tersimpan", splitsJSON)
+	}
+
+	// Perbaikannya harus BEDAH, bukan palu: kolaborator tetap boleh
+	// menyunting produk seperti biasa (itu memang izin yang diberikan
+	// pemilik). Kalau assertion ini gagal, perbaikannya kebablasan.
+	editRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"name": "Nama Diubah Kolaborator",
+	}, asCollaborator)
+	if editRec.Code != http.StatusOK {
+		t.Fatalf("status edit biasa = %d, ekspektasi 200 -- kolaborator harus tetap bisa menyunting produk, body %s", editRec.Code, editRec.Body.String())
+	}
+
+	// Pemilik sendiri TETAP boleh mengatur bagi hasil (ke orang lain).
+	ownerSplitRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"collaborator_splits": []map[string]any{{"user_id": collaboratorID, "percent": 30}},
+	}, map[string]string{"X-Test-UserID": ownerID})
+	if ownerSplitRec.Code != http.StatusOK {
+		t.Fatalf("status pemilik set split = %d, ekspektasi 200, body %s", ownerSplitRec.Code, ownerSplitRec.Body.String())
 	}
 }

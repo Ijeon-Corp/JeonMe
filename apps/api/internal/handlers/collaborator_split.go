@@ -4,9 +4,46 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// blockMoneyRoutingByCollaborator — penjaga bersama untuk SEMUA jalur yang
+// mengarahkan ke mana uang penjualan mengalir (bagi hasil kolaborator &
+// komisi afiliasi). Mengembalikan true (dan sudah menulis respons 403)
+// kalau request datang lewat impersonasi X-Act-As-Owner.
+//
+// Alasannya, temuan audit menyeluruh 24 September 2026: CollaboratorHandler
+// mendokumentasikan kontrak "kolaborator TIDAK PERNAH bisa menyentuh
+// saldo/penarikan" dan menegakkannya SECARA ARSITEKTUR -- rute uang sengaja
+// tidak dipasangi middleware.ActAsOwner sama sekali. Tapi dua jalur lolos
+// dari pola itu karena menumpang grup produk yang MEMANG ber-ActAsOwner:
+// field collaborator_splits di ProductHandler.Create/Update, dan
+// AffiliateHandler.Upsert. Akibatnya kolaborator ber-izin can_edit_products
+// saja (peran "sales_admin") bisa menyetel dirinya sendiri sebagai penerima
+// 100% pendapatan, lalu mencairkannya lewat rute payout sebagai DIRINYA
+// SENDIRI (rute payout tidak ber-ActAsOwner, jadi tidak terhalang apa pun).
+// Penjaga anti-self-dealing yang sudah ada tidak menangkap ini karena
+// membandingkan ke ownerUserID, yang di bawah impersonasi justru sudah
+// bernilai ID pemilik.
+//
+// Diblokir TOTAL (bukan sekadar "tidak boleh ke diri sendiri") supaya
+// konsisten dengan kontrak arsitekturnya dan sekaligus menutup kolusi
+// (mengarahkan ke rekan, bukan ke diri sendiri). Pemilik tetap bisa
+// mengubahnya sendiri; ini aksi langka & berisiko tinggi, bukan penyuntingan
+// produk rutin. Dicek juga di frontend (products/page.tsx) supaya
+// kolaborator tidak disuguhi form yang pasti ditolak.
+func blockMoneyRoutingByCollaborator(c *gin.Context) bool {
+	if !c.GetBool("actingAsOwner") {
+		return false
+	}
+	c.JSON(http.StatusForbidden, gin.H{
+		"error": "hanya pemilik akun yang bisa mengatur bagi hasil & komisi afiliasi -- minta pemilik akun yang mengubahnya",
+	})
+	return true
+}
 
 // CollaboratorSplit — Modul Settings §3 (diferensiasi dari Lynk.id):
 // revenue share otomatis ke kolaborator saat produk terjual, disimpan di
@@ -51,7 +88,7 @@ type CollaboratorSplitSnapshot struct {
 // constraint yang mencegahnya). productID "" (produk belum dibuat, lewat
 // ProductHandler.Create) berarti belum mungkin ada komisi afiliasi untuk
 // dicek -- affiliate.go mensyaratkan produk sudah ada lebih dulu.
-func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []CollaboratorSplit, ownerUserID string, productID string, platformFeePercent float64) error {
+func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []CollaboratorSplit, ownerUserID string, actorUserID string, productID string, platformFeePercent float64) error {
 	if len(splits) == 0 {
 		return nil
 	}
@@ -98,6 +135,16 @@ func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []
 			return errors.New("collaborator_splits: user_id wajib diisi")
 		}
 		if s.UserID == ownerUserID {
+			return errors.New("collaborator_splits: tidak bisa split ke akun sendiri")
+		}
+		// actorUserID -- jaring KEDUA di bawah blockMoneyRoutingByCollaborator
+		// (lihat catatan panjang di sana). Pemanggil ASLI tidak boleh jadi
+		// penerima split, walau ownerUserID di atas sudah berbeda dengannya.
+		// Hari ini kondisi ini tidak pernah tercapai lewat HTTP karena jalur
+		// impersonasi sudah ditolak lebih dulu -- ini sengaja dipertahankan
+		// supaya celah yang sama tidak terbuka lagi diam-diam kalau suatu saat
+		// rute ini diekspos ulang ke kolaborator.
+		if actorUserID != "" && s.UserID == actorUserID {
 			return errors.New("collaborator_splits: tidak bisa split ke akun sendiri")
 		}
 		if seen[s.UserID] {

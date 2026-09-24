@@ -80,6 +80,7 @@ export default function ManageProductModal({
   onClearPwyw,
   onOpenPwywForm,
   activeCollaborators,
+  canManageSplits,
   splitsEditId,
   splitRows,
   savingSplits,
@@ -162,6 +163,9 @@ export default function ManageProductModal({
   onClearPwyw: (product: DashboardProduct) => void;
   onOpenPwywForm: (product: DashboardProduct) => void;
   activeCollaborators: DashboardCollaborator[];
+  // canManageSplits -- false di ruang kerja kolaborator (impersonasi
+  // X-Act-As-Owner). Lihat catatan lengkap di products/page.tsx.
+  canManageSplits: boolean;
   splitsEditId: string | null;
   splitRows: CollaboratorSplit[];
   savingSplits: boolean;
@@ -497,7 +501,24 @@ export default function ManageProductModal({
               {t("dashboard.pages.products.manageModal.sectionCollab")}
           </p>
           )}
-          {activeCollaborators.length > 0 &&
+          {/* canManageSplits -- lihat catatan lengkap di products/page.tsx.
+              Di ruang kerja kolaborator, bagi hasil ditampilkan READ-ONLY
+              (tanpa tombol ubah/pasang) karena backend menolak perubahannya
+              dengan 403: lebih baik tidak menawarkan aksi yang pasti gagal
+              daripada memunculkan error setelah diklik. */}
+          {activeCollaborators.length > 0 && !canManageSplits && (
+            <div className="rounded-lg bg-app-surface-2 px-2.5 py-2">
+              <p className="text-[11px] text-app-muted">
+                {product.collaborator_splits.length > 0
+                  ? t("dashboard.pages.products.manageModal.collaboratorsShare")
+                      .replace("{count}", String(product.collaborator_splits.length))
+                      .replace("{percent}", String(product.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)))
+                  : t("dashboard.pages.products.manageModal.splitsOwnerOnlyEmpty")}
+              </p>
+              <p className="mt-1 text-[10px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsOwnerOnly")}</p>
+            </div>
+          )}
+          {activeCollaborators.length > 0 && canManageSplits &&
             (splitsEditId === product.id ? (
               <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>

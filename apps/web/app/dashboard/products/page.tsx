@@ -27,6 +27,7 @@ import {
   getSettingsProfile,
   listCollaborators,
   listExtraPageLinks,
+  getActiveWorkspaceOwnerId,
   listMyExtraPages,
   listProducts,
   listRecentOrders,
@@ -299,6 +300,17 @@ function DashboardProductsPageInner() {
   // CollaboratorHandler.ListMine backend. Kreator memilih dari daftar,
   // bukan mengetik user_id.
   const [activeCollaborators, setActiveCollaborators] = useState<DashboardCollaborator[]>([]);
+  // canManageSplits -- perbaikan keamanan 24 September 2026. Backend kini
+  // MENOLAK (403) perubahan bagi hasil & komisi afiliasi yang datang lewat
+  // impersonasi X-Act-As-Owner, karena itu jalur pengarahan uang dan
+  // kolaborator tidak boleh menyentuhnya (lihat
+  // blockMoneyRoutingByCollaborator di apps/api). Gerbang di sini murni
+  // UX: supaya kolaborator tidak disuguhi form yang PASTI ditolak. Ini
+  // BUKAN kontrol keamanan -- backend tetap penegak sebenarnya.
+  // useState lazy initializer (bukan dibaca langsung saat render) mengikuti
+  // pola yang sudah dipakai dashboard/layout.tsx untuk nilai localStorage
+  // yang sama.
+  const [canManageSplits] = useState(() => getActiveWorkspaceOwnerId() === null);
   const [splitsEditId, setSplitsEditId] = useState<string | null>(null);
   const [splitRows, setSplitRows] = useState<CollaboratorSplit[]>([]);
   const [savingSplits, setSavingSplits] = useState(false);
@@ -1662,6 +1674,7 @@ function DashboardProductsPageInner() {
           onClearPwyw={handleClearPwyw}
           onOpenPwywForm={openPwywForm}
           activeCollaborators={activeCollaborators}
+          canManageSplits={canManageSplits}
           splitsEditId={splitsEditId}
           splitRows={splitRows}
           savingSplits={savingSplits}

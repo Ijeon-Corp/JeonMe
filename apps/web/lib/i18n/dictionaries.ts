@@ -1544,6 +1544,13 @@ export const dictionaries = {
             chooseCollaborator: "Pilih kolaborator",
             addCollaborator: "+ Tambah kolaborator",
             collaboratorsShare: "{count} kolaborator berbagi {percent}% pendapatan",
+            // splitsOwnerOnly* -- perbaikan keamanan 24 September 2026:
+            // bagi hasil & komisi afiliasi adalah pengarahan uang, jadi
+            // backend menolaknya (403) kalau datang lewat impersonasi
+            // kolaborator. Teks ini menjelaskan KENAPA tombolnya tidak ada,
+            // supaya tidak terasa seperti fitur yang rusak.
+            splitsOwnerOnly: "Hanya pemilik akun yang bisa mengubah bagi hasil.",
+            splitsOwnerOnlyEmpty: "Belum ada bagi hasil yang diatur.",
             change: "Ubah",
             setSplits: "Atur Split Kolaborator",
             productLinkLabel: "Tautan Produk",
@@ -4811,6 +4818,8 @@ export const dictionaries = {
             chooseCollaborator: "Choose collaborator",
             addCollaborator: "+ Add collaborator",
             collaboratorsShare: "{count} collaborators sharing {percent}% of revenue",
+            splitsOwnerOnly: "Only the account owner can change revenue splits.",
+            splitsOwnerOnlyEmpty: "No revenue splits set yet.",
             change: "Change",
             setSplits: "Set Collaborator Split",
             productLinkLabel: "Product Link",

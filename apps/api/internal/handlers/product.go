@@ -197,10 +197,18 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
+	// Bagi hasil = pengarahan uang, jadi tidak boleh lewat impersonasi
+	// kolaborator -- lihat catatan lengkap di
+	// blockMoneyRoutingByCollaborator. Hanya digerbang kalau split memang
+	// dikirim: kolaborator TETAP boleh membuat produk biasa.
+	if len(req.CollaboratorSplits) > 0 && blockMoneyRoutingByCollaborator(c) {
+		return
+	}
+
 	// productID kosong -- produk belum ada, jadi belum mungkin ada komisi
 	// afiliasi yang perlu dicek (Upsert/SetProductPublic di affiliate.go
 	// mensyaratkan produk sudah ada lebih dulu).
-	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID, "", h.PlatformFeePercent); err != nil {
+	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID, c.GetString("actorUserID"), "", h.PlatformFeePercent); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -761,7 +769,15 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	// kosong (`[]`) yang berarti "hapus semua split".
 	var collaboratorSplitsJSON []byte
 	if req.CollaboratorSplits != nil {
-		if err := validateCollaboratorSplits(ctx, h.DB, *req.CollaboratorSplits, userID, productID, h.PlatformFeePercent); err != nil {
+		// Lihat catatan di ProductHandler.Create -- digerbang hanya kalau
+		// field ini benar-benar dikirim (nil = tidak diubah), jadi
+		// penyuntingan produk biasa oleh kolaborator tidak terpengaruh.
+		// Frontend pun hanya mengirimnya lewat aksi khusus "Simpan bagi
+		// hasil" (products/page.tsx handleSaveSplits), bukan di setiap PATCH.
+		if blockMoneyRoutingByCollaborator(c) {
+			return
+		}
+		if err := validateCollaboratorSplits(ctx, h.DB, *req.CollaboratorSplits, userID, c.GetString("actorUserID"), productID, h.PlatformFeePercent); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

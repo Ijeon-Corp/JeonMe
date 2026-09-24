@@ -205,6 +205,21 @@ func ActAsOwner(db *pgxpool.Pool, permissionColumn string) gin.HandlerFunc {
 			return
 		}
 
+		// actorUserID & actingAsOwner -- DITAMBAHKAN 24 September 2026 (audit
+		// menyeluruh). Sampai sebelum ini, begitu "userID" ditimpa jadi
+		// ownerID identitas pemanggil ASLI hilang total dari context, jadi
+		// handler di balik middleware ini MUSTAHIL membedakan "pemilik
+		// sendiri" dari "kolaborator yang sedang menyamar". Itu melahirkan
+		// celah nyata: validateCollaboratorSplits menolak split ke
+		// `ownerUserID`, yang di bawah impersonasi justru sudah bernilai ID
+		// PEMILIK -- sehingga kolaborator bisa lolos menyetel split 100% ke
+		// akunnya sendiri lalu mencairkannya lewat rute payout (yang memang
+		// tidak ber-ActAsOwner, jadi dia mencairkan sebagai dirinya sendiri).
+		// Dua nilai ini yang memungkinkan handler menegakkan batas "kolaborator
+		// tidak pernah mengarahkan uang" yang sudah jadi kontrak di
+		// CollaboratorHandler.
+		c.Set("actorUserID", requesterID)
+		c.Set("actingAsOwner", true)
 		c.Set("userID", ownerID)
 		c.Next()
 	}

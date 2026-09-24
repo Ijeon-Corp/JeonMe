@@ -74,6 +74,18 @@ type upsertAffiliateRequest struct {
 // Dipanggil ulang dengan product_id berbeda untuk menambah komisi produk
 // lain ke afiliator yang sama -- referral_code tetap satu untuk semuanya.
 func (h *AffiliateHandler) Upsert(c *gin.Context) {
+	// Komisi afiliasi = pengarahan uang, jadi tidak boleh lewat impersonasi
+	// kolaborator -- lihat catatan lengkap di
+	// blockMoneyRoutingByCollaborator (collaborator_split.go). Tanpa ini,
+	// kolaborator ber-izin produk bisa mendaftarkan emailnya SENDIRI dengan
+	// commission_percent 100 (penjaga di bawah cuma menolak kalau sama
+	// dengan creatorUserID, yang di bawah impersonasi sudah bernilai ID
+	// pemilik). Endpoint BACA afiliasi (ListMine/ListPrograms) sengaja tidak
+	// ikut digerbang -- melihat program bukan mengarahkan uang.
+	if blockMoneyRoutingByCollaborator(c) {
+		return
+	}
+
 	var req upsertAffiliateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
@@ -96,6 +108,15 @@ func (h *AffiliateHandler) Upsert(c *gin.Context) {
 		return
 	}
 	if affiliateUserID == creatorUserID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tidak bisa mengundang diri sendiri sebagai afiliator"})
+		return
+	}
+	// Jaring KEDUA di bawah blockMoneyRoutingByCollaborator di atas: pemanggil
+	// ASLI tidak boleh jadi afiliator, walau creatorUserID sudah berbeda
+	// dengannya. Tidak tercapai lewat HTTP hari ini (impersonasi sudah
+	// ditolak di awal fungsi) -- dipertahankan supaya celah yang sama tidak
+	// terbuka lagi diam-diam kalau rute ini suatu saat diekspos ulang.
+	if actorUserID := c.GetString("actorUserID"); actorUserID != "" && affiliateUserID == actorUserID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "tidak bisa mengundang diri sendiri sebagai afiliator"})
 		return
 	}
@@ -450,6 +471,17 @@ func (h *AffiliateHandler) SetProductPublic(c *gin.Context) {
 	}
 	if req.Enabled && (req.CommissionPercent < 0.01 || req.CommissionPercent > 100) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "komisi harus antara 0.01% dan 100%"})
+		return
+	}
+	// Menetapkan komisi marketplace publik juga pengarahan uang (audit 24
+	// September 2026, jalur sejenis dengan Upsert di atas): kolaborator bisa
+	// menyetel komisi 100% lalu mengambil sendiri tautan afiliasi produk itu
+	// -- hasilnya sama dengan mengalihkan seluruh pendapatan ke dirinya.
+	// Digerbang HANYA saat req.Enabled: MEMATIKAN produk dari marketplace
+	// tidak mengarahkan uang ke mana pun, jadi keputusan lama "boleh
+	// kolaborator ber-akses produk" (lihat komentar rutenya di routes.go)
+	// tetap berlaku untuk sisi itu.
+	if req.Enabled && blockMoneyRoutingByCollaborator(c) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
