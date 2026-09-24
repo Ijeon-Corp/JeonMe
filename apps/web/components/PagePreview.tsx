@@ -2830,7 +2830,16 @@ export function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
-      const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
+      // Di atas tombol berwarna (accentColor), ikon ikut warna teks yg
+      // terbaca -- logo berwarna merek (hijau WhatsApp di tombol mint, dst)
+      // bisa lenyap menyatu dgn latarnya. Warna ikon pilihan kreator tetap
+      // menang (audit visual template 25 September 2026).
+      const effectiveIconColor =
+        link.accentColor && !link.iconColor
+          ? readableTextOn(link.accentColor)
+          : libraryIcon
+          ? libraryIconColor(link.iconKey, link.iconColor)
+          : link.iconColor;
       // accentColor/badgeText (migrasi 000109): tombol berwarna pilihan
       // kreator -- teks & panah ikut warna terbaca di atasnya (bukan warna
       // judul tema), chip harga di kanan. Panah kanan khusus layout
@@ -2852,7 +2861,7 @@ export function renderLinkOrBlock(
       ) : libraryIcon ? (
         <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
       ) : (
-        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor ? "" : iconColorClass}`} />
+        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor || link.accentColor ? "" : iconColorClass}`} />
       );
       // description -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
       // template "Dimas Dev"): kalau diisi, kartu "kaya" (ikon + judul +
@@ -2880,7 +2889,7 @@ export function renderLinkOrBlock(
                 terpotong "..." di 18 template (termasuk 9 Profil Kreator).
                 Dua baris cukup utk kalimat ajakan tanpa kartu jadi raksasa. */}
             <span className={`block line-clamp-2 break-words text-[12px] font-semibold leading-snug ${titleColorClass}`}>{link.title}</span>
-            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug opacity-70 ${titleColorClass}`}>{link.description}</span>
+            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug ${link.accentColor ? "opacity-80" : "opacity-70"} ${titleColorClass}`}>{link.description}</span>
           </span>
           {badgeNode}
           <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />
@@ -2915,7 +2924,16 @@ export function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
-      const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
+      // Di atas tombol berwarna (accentColor), ikon ikut warna teks yg
+      // terbaca -- logo berwarna merek (hijau WhatsApp di tombol mint, dst)
+      // bisa lenyap menyatu dgn latarnya. Warna ikon pilihan kreator tetap
+      // menang (audit visual template 25 September 2026).
+      const effectiveIconColor =
+        link.accentColor && !link.iconColor
+          ? readableTextOn(link.accentColor)
+          : libraryIcon
+          ? libraryIconColor(link.iconKey, link.iconColor)
+          : link.iconColor;
       // accentColor/badgeText (migrasi 000109): tombol berwarna pilihan
       // kreator -- teks & panah ikut warna terbaca di atasnya (bukan warna
       // judul tema), chip harga di kanan. Panah kanan khusus layout
@@ -2937,7 +2955,7 @@ export function renderLinkOrBlock(
       ) : libraryIcon ? (
         <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
       ) : (
-        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor ? "" : iconColorClass}`} />
+        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor || link.accentColor ? "" : iconColorClass}`} />
       );
       return link.description ? (
         <a
@@ -2960,7 +2978,7 @@ export function renderLinkOrBlock(
                 terpotong "..." di 18 template (termasuk 9 Profil Kreator).
                 Dua baris cukup utk kalimat ajakan tanpa kartu jadi raksasa. */}
             <span className={`block line-clamp-2 break-words text-[12px] font-semibold leading-snug ${titleColorClass}`}>{link.title}</span>
-            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug opacity-70 ${titleColorClass}`}>{link.description}</span>
+            <span className={`mt-0.5 block line-clamp-2 break-words text-[10.5px] leading-snug ${link.accentColor ? "opacity-80" : "opacity-70"} ${titleColorClass}`}>{link.description}</span>
           </span>
           {badgeNode}
           <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />
