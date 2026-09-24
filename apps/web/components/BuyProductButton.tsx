@@ -358,7 +358,25 @@ export default function BuyProductButton({
                     required
                     min={pwywMinPriceIdr}
                     value={buyerAmount}
-                    onChange={(e) => setBuyerAmount(e.target.value)}
+                    // Reset voucher saat nominal berubah -- perbaikan 24
+                    // September 2026 (audit kualitas kode). voucherResult
+                    // SEBELUMNYA hanya direset saat KODE voucher diketik
+                    // (lihat input kode di bawah), tidak saat nominal PWYW
+                    // berubah, padahal diskonnya dihitung server TERHADAP
+                    // nominal itu. Akibatnya ringkasan jadi bertentangan
+                    // sendiri (harga coret ikut naik, angka final beku) dan
+                    // yang ditagih backend BEDA dari yang tertulis: backend
+                    // menghitung ulang voucher terhadap buyer_amount_idr yang
+                    // baru, jadi voucher 20% atas Rp100.000 menagih Rp80.000
+                    // walau UI masih bilang Rp40.000. Kalau nominalnya justru
+                    // diturunkan di bawah min_purchase_idr voucher, checkout
+                    // malah gagal 400 di klik terakhir sementara voucher
+                    // terlihat sukses terpasang.
+                    onChange={(e) => {
+                      setBuyerAmount(e.target.value);
+                      setVoucherResult(null);
+                      setVoucherMessage(null);
+                    }}
                     className="mt-1 w-full rounded-md border border-black/10 px-2.5 py-2 text-sm text-[#111111] focus:border-jeon-purple focus:outline-none"
                   />
                 </div>
