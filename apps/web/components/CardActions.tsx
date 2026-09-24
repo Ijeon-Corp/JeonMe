@@ -81,8 +81,10 @@ export default function CardActions({ card }: { card: PublicBusinessCard }) {
         Simpan ke Kontak
       </button>
 
+      {/* bg-app-surface (BUKAN bg-white) di kartu bawah -- perbaikan kontras
+          24 September 2026, lihat catatan lengkap di app/pembelian/page.tsx. */}
       {card.collect_contact_back && (
-        <div className="rounded-jmd border border-border bg-white p-4 shadow-card">
+        <div className="rounded-jmd border border-app-border bg-app-surface p-4 shadow-card">
           {done ? (
             <p className="text-sm font-semibold text-green-700">Terima kasih! Kontakmu sudah dibagikan.</p>
           ) : (

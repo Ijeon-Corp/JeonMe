@@ -165,7 +165,11 @@ export default function CheckoutStatusPage() {
         />
       )}
       <div
-        className={`w-full rounded-2xl border border-border bg-white p-8 text-center shadow-card ${
+        // bg-app-surface (BUKAN bg-white) -- perbaikan kontras 24 September
+        // 2026, lihat catatan lengkap di app/pembelian/page.tsx. Di dark
+        // mode, judul "Menunggu Pembayaran" hilang (1.16:1) persis di momen
+        // pembeli paling cemas.
+        className={`w-full rounded-2xl border border-app-border bg-app-surface p-8 text-center shadow-card ${
           status?.status === "paid" && status.is_course ? "max-w-xl" : "max-w-sm"
         }`}
       >
@@ -304,7 +308,7 @@ export default function CheckoutStatusPage() {
                   <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Kode Kamu</p>
                     {status.claimed_code ? (
-                      <p className="mt-1 select-all rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold text-app-ink">
+                      <p className="mt-1 select-all rounded-lg bg-app-surface px-3 py-2 text-center font-mono text-lg font-bold text-app-ink">
                         {status.claimed_code}
                       </p>
                     ) : (

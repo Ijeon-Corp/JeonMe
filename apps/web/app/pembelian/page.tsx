@@ -209,7 +209,14 @@ export default function OrderHistoryPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-jeon-purple/5 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-card">
+      {/* bg-app-surface (BUKAN bg-white) -- perbaikan kontras 24 September
+          2026. Halaman pembeli ini ada DI LUAR .app-shell, jadi tidak kena
+          jaring pengaman remap dark mode yang di-scope ke shell. Kartu
+          hardcode putih sementara teksnya pakai token text-app-ink yang IKUT
+          membalik jadi terang di dark mode -> rasio 1.16:1, judul & isi
+          praktis tidak terlihat. Token app-* sendiri didefinisikan global di
+          :root (lihat globals.css), jadi aman dipakai di luar shell. */}
+      <div className="w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-8 shadow-card">
         <p className="font-heading text-lg font-bold text-app-ink">Riwayat Pembelian</p>
         <p className="mt-1 text-sm text-muted">
           Lihat semua pesanan yang pernah kamu buat di Jeon.id, lintas semua toko kreator.
