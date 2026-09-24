@@ -1,0 +1,3 @@
+ALTER TABLE links DROP COLUMN IF EXISTS badge_text;
+ALTER TABLE links DROP COLUMN IF EXISTS accent_color;
+ALTER TABLE pages DROP COLUMN IF EXISTS profile_extras;

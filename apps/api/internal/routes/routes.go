@@ -337,6 +337,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// /page di atas, ganti array UTUH tiap simpan (lihat catatan di
 				// UpdateMyPageStickers).
 				designGroup.PUT("/page/stickers", page.UpdateMyPageStickers)
+				// Layout "Profil Kreator" (migrasi 000109): chip keahlian & baris
+				// statistik, diganti UTUH tiap simpan -- pola sama dgn stiker.
+				designGroup.PUT("/page/profile-extras", page.UpdateMyPageProfileExtras)
 
 				// No.98 (Sprint 14): halaman bio TAMBAHAN (bukan halaman utama
 				// di atas) -- lihat catatan lingkup di PageHandler.
@@ -345,6 +348,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				designGroup.GET("/pages/:id", page.GetPage)
 				designGroup.PATCH("/pages/:id", page.UpdatePage)
 				designGroup.PUT("/pages/:id/stickers", page.UpdatePageStickers)
+				designGroup.PUT("/pages/:id/profile-extras", page.UpdatePageProfileExtras)
 				designGroup.DELETE("/pages/:id", page.DeletePage)
 				// Modul Halaman Toko: panel desain penuh (Tema/Header/Tombol/
 				// Font) untuk halaman TAMBAHAN, analog /page/avatar & /page/background di atas.

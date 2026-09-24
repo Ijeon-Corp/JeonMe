@@ -225,6 +225,9 @@ type publicPageResponse struct {
 	// Lihat renderBioHeader di PagePreview.tsx untuk kelima belasnya, &
 	// quick-setup-templates.ts untuk pemetaan kategori->varian terbaru.
 	LayoutVariant string             `json:"layout_variant"`
+	// ProfileExtras -- chip keahlian & baris statistik layout "profile"
+	// (migrasi 000109), lihat profile_extras.go.
+	ProfileExtras ProfileExtras      `json:"profile_extras"`
 	Links         []publicLink       `json:"links"`
 	Products      []publicItem       `json:"products"`
 	Donation      *publicDonation    `json:"donation"`
@@ -398,6 +401,10 @@ type publicLink struct {
 	// IconColor -- permintaan langsung pengguna, 22 Agustus 2026, lihat
 	// catatan lengkap di linkItem.IconColor (links.go).
 	IconColor string `json:"icon_color"`
+	// AccentColor/BadgeText -- migrasi 000109, lihat linkItem.AccentColor
+	// (links.go).
+	AccentColor string `json:"accent_color"`
+	BadgeText   string `json:"badge_text"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): kalau true
 	// DAN ThumbnailURL terisi, tautan dirender sebagai kartu thumbnail 16:9
@@ -464,7 +471,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var resp publicPageResponse
 	var userID, pageID string
 	var emailVerified bool
-	var stickersRaw []byte
+	var stickersRaw, profileExtrasRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
@@ -473,7 +480,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant, p.builder_mode,
+			p.layout_variant, p.builder_mode, p.profile_extras,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -488,10 +495,11 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.BuilderMode,
+		&resp.LayoutVariant, &resp.BuilderMode, &profileExtrasRaw,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+		resp.ProfileExtras = decodeProfileExtras(profileExtrasRaw)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -569,7 +577,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	var resp publicPageResponse
 	var userID, pageID string
 	var emailVerified bool
-	var stickersRaw []byte
+	var stickersRaw, profileExtrasRaw []byte
 	// Bug ditemukan (8 Agustus 2026, sambil menambah kolom sticker): query
 	// ini SEBELUMNYA tidak pernah menyertakan custom_button_rounded/shadow/
 	// text_color, custom_page_text_color, custom_title_font/color, dan
@@ -587,7 +595,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.hide_watermark, p.show_profile_header,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant,
+			p.layout_variant, p.profile_extras,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE u.username = $1 AND p.slug = $2 AND p.is_published = true
@@ -601,7 +609,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant,
+		&resp.LayoutVariant, &profileExtrasRaw,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -612,6 +620,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		return
 	}
 	_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+	resp.ProfileExtras = decodeProfileExtras(profileExtrasRaw)
 	resp.ID = pageID
 
 	h.finishPublicPageResponse(c, ctx, cacheKey, userID, pageID, emailVerified, &resp)
@@ -728,7 +737,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		resp.Links = []publicLink{}
 		rows, err := h.DB.Query(gctx, `
 			SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
-				icon_key, icon_color, is_featured, thumbnail_url, description
+				icon_key, icon_color, is_featured, thumbnail_url, description, accent_color, badge_text
 			FROM links
 			WHERE page_id = $1
 			AND is_active = true
@@ -741,7 +750,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			for rows.Next() {
 				var l publicLink
 				if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
-					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL, &l.Description); err == nil {
+					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL, &l.Description, &l.AccentColor, &l.BadgeText); err == nil {
 					// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 					// komentar di definisi struct publicLink.
 					if l.LockType != "" {
@@ -1012,6 +1021,7 @@ type myPageResponse struct {
 	SocialGithub          string             `json:"social_github"`
 	SocialWebsite         string             `json:"social_website"`
 	LayoutVariant         string             `json:"layout_variant"`
+	ProfileExtras         ProfileExtras      `json:"profile_extras"`
 	// BuilderMode -- mode editor kedua bergaya Lynk.id (migrasi 000096,
 	// permintaan langsung pengguna, 7 September 2026), pola sama persis
 	// LayoutVariant di atas: "simple" (bawaan, editor daftar vertikal yang
@@ -1047,7 +1057,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 
 	var resp myPageResponse
 	var emailVerified bool
-	var stickersRaw []byte
+	var stickersRaw, profileExtrasRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
@@ -1056,7 +1066,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant, p.builder_mode,
+			p.layout_variant, p.builder_mode, p.profile_extras,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -1068,10 +1078,11 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.BuilderMode,
+		&resp.LayoutVariant, &resp.BuilderMode, &profileExtrasRaw,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+		resp.ProfileExtras = decodeProfileExtras(profileExtrasRaw)
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
@@ -1270,7 +1281,7 @@ type updatePageRequest struct {
 	SocialGithub  *string `json:"social_github" binding:"omitempty,max=255"`
 	SocialWebsite *string `json:"social_website" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse. Halaman utama
 	// SELALU page_type='bio' (tidak pernah 'produk'), jadi TIDAK perlu guard
 	// page_type di sini -- guard itu cuma relevan di UpdateExtraPage (Toko
@@ -2156,7 +2167,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 				custom_page_text_color, custom_title_font, custom_title_color, custom_style_override,
 				social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 				social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
-				layout_variant
+				layout_variant, profile_extras
 			)
 			SELECT $1, false, $2, $3, page_type, false,
 				display_name, bio, avatar_url, theme, stickers, hide_watermark, show_profile_header,
@@ -2166,7 +2177,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 				custom_page_text_color, custom_title_font, custom_title_color, custom_style_override,
 				social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 				social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
-				layout_variant
+				layout_variant, profile_extras
 			FROM pages WHERE id = $4
 			RETURNING id
 		`, userID, name, slug, duplicateFromPageID).Scan(&pageID)
@@ -2178,11 +2189,11 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 				INSERT INTO links (
 					page_id, title, url, position, is_active, starts_at, ends_at,
 					lock_type, lock_code, lock_min_age, block_type, block_data,
-					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
 				)
 				SELECT $1, title, url, position, is_active, starts_at, ends_at,
 					lock_type, lock_code, lock_min_age, block_type, block_data,
-					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
 				FROM links WHERE page_id = $2
 			`, pageID, duplicateFromPageID)
 		}
@@ -2267,7 +2278,8 @@ type extraPageDetailResponse struct {
 	SocialEmail       string `json:"social_email"`
 	SocialGithub      string `json:"social_github"`
 	SocialWebsite     string `json:"social_website"`
-	LayoutVariant string `json:"layout_variant"`
+	LayoutVariant string        `json:"layout_variant"`
+	ProfileExtras ProfileExtras `json:"profile_extras"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse (migrasi
 	// 000096). Berlaku utk SEMUA page_type termasuk "produk" (Toko) sejak
 	// 9 September 2026 -- lihat catatan lengkap di BuilderPagePreview,
@@ -2321,7 +2333,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 	defer cancel()
 
 	var resp extraPageDetailResponse
-	var stickersRaw []byte
+	var stickersRaw, profileExtrasRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT id, name, COALESCE(slug, ''), page_type, display_name, bio, avatar_url, theme, is_published,
 			seo_title, seo_description, noindex,
@@ -2331,7 +2343,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			hide_watermark, show_profile_header,
 			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 			social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
-			layout_variant, builder_mode
+			layout_variant, builder_mode, profile_extras
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
@@ -2341,9 +2353,10 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.BuilderMode)
+		&resp.LayoutVariant, &resp.BuilderMode, &profileExtrasRaw)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+		resp.ProfileExtras = decodeProfileExtras(profileExtrasRaw)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -2400,7 +2413,7 @@ type updateExtraPageRequest struct {
 	SocialEmail       *string `json:"social_email" binding:"omitempty,max=255"`
 	SocialGithub      *string `json:"social_github" binding:"omitempty,max=255"`
 	SocialWebsite     *string `json:"social_website" binding:"omitempty,max=255"`
-	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
+	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait profile"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
 	// (migrasi 000096). Halaman tambahan BISA page_type='produk' (Toko) --
 	// SEMPAT dikecualikan dari mode builder saat Fase 1-3 (produk/katalog
