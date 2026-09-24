@@ -580,7 +580,17 @@ func (h *AudienceHandler) CreateBroadcast(c *gin.Context) {
 
 	if h.Queue != nil {
 		if task, err := queue.NewAudienceBroadcastTask(broadcastID); err == nil {
-			_, _ = h.Queue.Enqueue(task)
+			// MaxRetry(0) -- perbaikan 24 September 2026 (audit backend),
+			// berpasangan dengan klaim atomik di HandleAudienceBroadcast.
+			// Broadcast BUKAN operasi yang aman diulang: tidak ada pelacakan
+			// per-penerima, jadi setiap percobaan ulang hanya bisa mulai dari
+			// subscriber pertama lagi. Dengan MaxRetry default 25, satu
+			// deploy yang memotong pengiriman di tengah bisa memicu belasan
+			// pengiriman ulang ke SELURUH daftar. Gagal sekali lalu berhenti
+			// (dan ditandai failed supaya kreator sadar) jauh lebih murah
+			// daripada membanjiri subscriber & merusak reputasi domain
+			// pengirim.
+			_, _ = h.Queue.Enqueue(task, asynq.MaxRetry(0))
 		}
 	}
 

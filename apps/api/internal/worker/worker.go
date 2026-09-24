@@ -360,8 +360,57 @@ func (h *Handler) HandleAudienceBroadcast(ctx context.Context, t *asynq.Task) er
 		return nil
 	}
 
-	if _, err := h.DB.Exec(ctx, `UPDATE audience_broadcasts SET status = 'sending' WHERE id = $1`, payload.BroadcastID); err != nil {
+	// KLAIM ATOMIK -- perbaikan 24 September 2026 (audit backend).
+	//
+	// Penjaga "sent" di atas SAJA tidak cukup, dan ini bukan kasus teoretis:
+	// state setelah worker diinterupsi di tengah pengiriman SELALU
+	// "sending", yang lolos penjaga itu dan memulai loop dari subscriber
+	// PERTAMA lagi. Pemicunya deploy biasa -- `docker compose up -d
+	// --force-recreate` mengirim SIGTERM, asynq cuma menunggu 8 detik
+	// (ShutdownTimeout default) lalu me-REQUEUE task, sementara satu
+	// broadcast ke 800 subscriber makan 15-40 menit karena mailer.Send
+	// membuka koneksi SMTP baru per email. Akibatnya semua penerima yang
+	// sudah dapat email menerimanya LAGI, dan karena MaxRetry default 25,
+	// pola itu bisa berulang. Kerusakannya bukan cuma UX: reputasi domain
+	// pengirim rusak, lalu email transaksional platform sendiri (konfirmasi
+	// order, reset password) mulai masuk spam.
+	//
+	// UPDATE berkondisi status='queued' membuat hanya SATU pemanggil yang
+	// bisa mengklaim -- sekaligus aman kalau worker suatu saat di-scale ke
+	// lebih dari satu replika.
+	claim, err := h.DB.Exec(ctx, `UPDATE audience_broadcasts SET status = 'sending' WHERE id = $1 AND status = 'queued'`, payload.BroadcastID)
+	if err != nil {
 		return fmt.Errorf("worker: gagal set status sending broadcast %s: %w", payload.BroadcastID, err)
+	}
+	if claim.RowsAffected() == 0 {
+		// Gagal klaim = ada yang sudah memegangnya. Dua kemungkinan, dan
+		// asynq.GetRetryCount membedakannya dengan tepat: kalau ini
+		// pengiriman ULANG dari task yang mati di tengah jalan (retry > 0),
+		// broadcast-nya memang tidak akan pernah selesai sendiri -- tandai
+		// "failed" supaya kreator melihat keadaan yang jujur dan bisa
+		// mengirim ulang secara sadar, alih-alih terpaku di "Mengirim..."
+		// selamanya. Kalau retry == 0, berarti pemanggil LAIN sedang
+		// mengerjakannya sekarang -- jangan disentuh.
+		//
+		// Yang SENGAJA TIDAK dilakukan: melanjutkan pengiriman. Tidak ada
+		// pelacakan per-penerima di skema ini (audience_broadcasts cuma
+		// punya sent_count agregat), jadi "melanjutkan" hanya bisa berarti
+		// mengulang dari awal -- persis kerusakan yang sedang ditutup.
+		// Resume yang benar butuh tabel broadcast_recipients tersendiri;
+		// itu pekerjaan terpisah, dan sampai ada, berhenti jauh lebih murah
+		// daripada mengirim ulang ke semua orang.
+		if retried, _ := asynq.GetRetryCount(ctx); retried > 0 {
+			if _, uErr := h.DB.Exec(ctx, `
+				UPDATE audience_broadcasts SET status = 'failed', completed_at = now()
+				WHERE id = $1 AND status = 'sending'
+			`, payload.BroadcastID); uErr != nil {
+				log.Printf("worker: gagal menandai broadcast %s failed: %v", payload.BroadcastID, uErr)
+			}
+			log.Printf("worker: broadcast %s diterima ulang setelah percobaan ke-%d gagal di tengah jalan -- ditandai failed, TIDAK dikirim ulang", payload.BroadcastID, retried)
+			return nil
+		}
+		log.Printf("worker: broadcast %s sedang dikerjakan pemanggil lain (status bukan queued), dilewati", payload.BroadcastID)
+		return nil
 	}
 
 	rows, err := h.DB.Query(ctx, `
