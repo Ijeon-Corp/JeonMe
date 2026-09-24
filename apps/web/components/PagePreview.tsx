@@ -3130,7 +3130,10 @@ export function CatalogTakeoverView({
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 py-8">
+      {/* key = kedalaman tumpukan -> animasi "masuk ke dalam" (.jeon-drill-in,
+          globals.css) diputar ulang setiap katalog/bersarang dibuka
+          (perapian pop-up blok 25 September 2026). */}
+      <div key={stack.length} className="jeon-drill-in relative mx-auto flex min-h-screen max-w-md flex-col px-6 py-8">
         <div className="mb-6 flex items-center gap-3">
           <button
             type="button"

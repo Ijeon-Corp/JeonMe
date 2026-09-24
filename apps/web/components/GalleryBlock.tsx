@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { IconChevronRight, IconClose } from "@/components/icons";
 import { Images, Share2 } from "lucide-react";
 import type { GalleryDisplay } from "@/lib/gallery-display";
+import { overlayClass, sheetPanelClass, usePresence, zoomPanelClass } from "@/lib/use-presence";
 
 // Blok "gallery" (hasil analisa galeri tema kompetitor, 17 Agustus 2026 --
 // template portofolio/wisata s.id memakai grid multi-foto yang belum ada
@@ -92,6 +93,20 @@ export default function GalleryBlock({
   const [nestedViewer, setNestedViewer] = useState<NestedViewerState | null>(null);
   const touchStartX = useRef<number | null>(null);
 
+  // Animasi buka/tutup (permintaan langsung pengguna, 25 September 2026:
+  // "blok blok yang akan memunculkan pop up perbaiki tampilan nya dan
+  // berikan animasi saat terbuka dan tertutup"). usePresence menahan
+  // overlay tetap ter-mount selama animasi tutup; shownIndex/shownNested
+  // menyimpan foto TERAKHIR yang tampil supaya isi overlay tidak kosong
+  // di tengah animasi tutup (saat openIndex/nestedViewer sudah null).
+  const lightbox = usePresence(openIndex !== null);
+  const sheet = usePresence(sheetOpen);
+  const nestedPresence = usePresence(nestedViewer !== null);
+  const [shownIndex, setShownIndex] = useState<number | null>(openIndex);
+  if (openIndex !== null && openIndex !== shownIndex) setShownIndex(openIndex);
+  const [shownNested, setShownNested] = useState<NestedViewerState | null>(nestedViewer);
+  if (nestedViewer !== null && nestedViewer !== shownNested) setShownNested(nestedViewer);
+
   const nestedFor = useCallback((src: string): string[] => nestedImages[src] ?? [], [nestedImages]);
 
   const close = useCallback(() => setOpenIndex(null), []);
@@ -130,8 +145,16 @@ export default function GalleryBlock({
         else next();
       }
     }
+    // Kunci scroll halaman di belakang lightbox (sebelumnya cuma lembar
+    // "stack" yang mengunci) -- tanpa ini swipe vertikal di ponsel ikut
+    // menggulir halaman di balik foto.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [openIndex, close, prev, next, nestedViewer, closeNested, prevNested, nextNested]);
 
   // Lembar "stack": Escape menutup, scroll body dikunci selama terbuka
@@ -251,13 +274,13 @@ export default function GalleryBlock({
   // membubble event lewat pohon React (bukan pohon DOM), jadi tanpa itu klik
   // di sini akan ikut menutup lembar/lightbox induk yang memanggilnya.
   function renderNestedViewer() {
-    if (!nestedViewer) return null;
-    const arr = nestedImages[nestedViewer.parentSrc] ?? [];
-    const src = arr[nestedViewer.index];
+    if (!nestedPresence.mounted || !shownNested) return null;
+    const arr = nestedImages[shownNested.parentSrc] ?? [];
+    const src = arr[shownNested.index];
     if (!src) return null;
     return createPortal(
       <div
-        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-4"
+        className={`fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm ${overlayClass(nestedPresence.visible)}`}
         onClick={(e) => {
           e.stopPropagation();
           closeNested();
@@ -273,7 +296,7 @@ export default function GalleryBlock({
             closeNested();
           }}
           aria-label="Kembali"
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25"
         >
           <IconClose className="h-5 w-5" />
         </button>
@@ -287,7 +310,7 @@ export default function GalleryBlock({
                 prevNested();
               }}
               aria-label="Foto terkait sebelumnya"
-              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-4"
+              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25 sm:left-4"
             >
               <IconChevronRight className="h-5 w-5 rotate-180" />
             </button>
@@ -298,7 +321,7 @@ export default function GalleryBlock({
                 nextNested();
               }}
               aria-label="Foto terkait berikutnya"
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-4"
+              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25 sm:right-4"
             >
               <IconChevronRight className="h-5 w-5" />
             </button>
@@ -316,14 +339,14 @@ export default function GalleryBlock({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
-          alt={`Foto terkait ${nestedViewer.index + 1}`}
-          className="max-h-[80vh] min-h-[40vh] max-w-full object-contain"
+          alt={`Foto terkait ${shownNested.index + 1}`}
+          className={`max-h-[80vh] min-h-[40vh] max-w-full object-contain ${zoomPanelClass(nestedPresence.visible)}`}
           onClick={(e) => e.stopPropagation()}
         />
 
         {arr.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white">
-            {nestedViewer.index + 1} / {arr.length}
+          <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tabular-nums text-white ring-1 ring-white/20 backdrop-blur-md">
+            {shownNested.index + 1} / {arr.length}
           </div>
         )}
       </div>,
@@ -413,13 +436,21 @@ export default function GalleryBlock({
           </div>
         </button>
 
-        {sheetOpen &&
+        {sheet.mounted &&
           createPortal(
-            <div className="fixed inset-0 z-[999] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6" onClick={() => setSheetOpen(false)} role="dialog" aria-modal="true" aria-label={title || "Galeri foto"}>
+            <div
+              className={`fixed inset-0 z-[999] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6 ${overlayClass(sheet.visible)}`}
+              onClick={() => setSheetOpen(false)}
+              role="dialog"
+              aria-modal="true"
+              aria-label={title || "Galeri foto"}
+            >
               <div
-                className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white text-[#111111] shadow-2xl sm:rounded-3xl"
+                className={`relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border-t-2 border-[#111111] bg-white text-[#111111] shadow-2xl sm:rounded-[28px] sm:border-2 ${sheetPanelClass(sheet.visible)}`}
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Handle geser -- penanda visual "lembar" di ponsel. */}
+                <div className="mx-auto mt-2.5 h-1.5 w-10 flex-shrink-0 rounded-full bg-black/15 sm:hidden" aria-hidden />
                 {title && (
                   <div className="flex-shrink-0 border-b border-black/5 px-6 py-4 text-center">
                     <h2 className="truncate text-base font-semibold">{title}</h2>
@@ -692,9 +723,9 @@ export default function GalleryBlock({
           default ssr:true) -- cabang ini HANYA pernah true setelah
           setOpenIndex dipanggil dari click handler, yang cuma bisa terjadi
           pasca-hidrasi di klien, jadi tidak perlu flag "mounted" terpisah. */}
-      {openIndex !== null && createPortal(
+      {lightbox.mounted && shownIndex !== null && createPortal(
         <div
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4"
+          className={`fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm ${overlayClass(lightbox.visible)}`}
           onClick={close}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
@@ -709,7 +740,7 @@ export default function GalleryBlock({
               close();
             }}
             aria-label="Tutup"
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25"
           >
             <IconClose className="h-5 w-5" />
           </button>
@@ -723,7 +754,7 @@ export default function GalleryBlock({
                   prev();
                 }}
                 aria-label="Sebelumnya"
-                className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-4"
+                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25 sm:left-4"
               >
                 <IconChevronRight className="h-5 w-5 rotate-180" />
               </button>
@@ -734,7 +765,7 @@ export default function GalleryBlock({
                   next();
                 }}
                 aria-label="Berikutnya"
-                className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-4"
+                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25 sm:right-4"
               >
                 <IconChevronRight className="h-5 w-5" />
               </button>
@@ -751,7 +782,7 @@ export default function GalleryBlock({
               absolut relatif ke pembungkus ini. Lagi pula di sinilah foto justru
               memang ingin dilihat pada resolusi penuh, jadi keuntungan srcset-nya
               paling kecil di seluruh komponen ini. */}
-          <div className="flex max-h-full max-w-full flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <div className={`flex max-h-full max-w-full flex-col items-center gap-3 ${zoomPanelClass(lightbox.visible)}`} onClick={(e) => e.stopPropagation()}>
             {/* <button> pembungkus (bukan onClick di <img> langsung) -- bug
                 aksesibilitas keyboard ditemukan 21 September 2026 (audit
                 menyeluruh): SEBELUMNYA reveal strip foto tambahan di sini
@@ -763,10 +794,10 @@ export default function GalleryBlock({
                 supaya tidak jadi target tab-stop yang tidak melakukan apa-apa. */}
             <button
               type="button"
-              disabled={nestedFor(images[openIndex]).length === 0}
-              onClick={() => setExpandedNestedFor((cur) => (cur === images[openIndex] ? null : images[openIndex]))}
-              aria-label={nestedFor(images[openIndex]).length > 0 ? `Lihat ${nestedFor(images[openIndex]).length} foto terkait` : undefined}
-              className={`relative block ${nestedFor(images[openIndex]).length > 0 ? "cursor-pointer" : "cursor-default"}`}
+              disabled={nestedFor(images[shownIndex]).length === 0}
+              onClick={() => setExpandedNestedFor((cur) => (cur === images[shownIndex] ? null : images[shownIndex]))}
+              aria-label={nestedFor(images[shownIndex]).length > 0 ? `Lihat ${nestedFor(images[shownIndex]).length} foto terkait` : undefined}
+              className={`relative block ${nestedFor(images[shownIndex]).length > 0 ? "cursor-pointer" : "cursor-default"}`}
             >
               {/* min-h -- bug UI/UX ditemukan 21 September 2026 (audit
                   menyeluruh), lihat catatan lengkap di renderNestedViewer:
@@ -774,29 +805,29 @@ export default function GalleryBlock({
                   tengah layar hitam kosong. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={images[openIndex]}
-                alt={captionFor(images[openIndex]).title || (title ? `${title} ${openIndex + 1}` : `Foto galeri ${openIndex + 1}`)}
+                src={images[shownIndex]}
+                alt={captionFor(images[shownIndex]).title || (title ? `${title} ${shownIndex + 1}` : `Foto galeri ${shownIndex + 1}`)}
                 className="max-h-[80vh] min-h-[40vh] max-w-full object-contain"
               />
-              {nestedFor(images[openIndex]).length > 0 && (
+              {nestedFor(images[shownIndex]).length > 0 && (
                 <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
                   <Images className="h-3 w-3" aria-hidden />
-                  {nestedFor(images[openIndex]).length}
+                  {nestedFor(images[shownIndex]).length}
                 </span>
               )}
             </button>
-            {renderNestedStrip(images[openIndex], "lightbox")}
-            {(captionFor(images[openIndex]).title || captionFor(images[openIndex]).description) && (
+            {renderNestedStrip(images[shownIndex], "lightbox")}
+            {(captionFor(images[shownIndex]).title || captionFor(images[shownIndex]).description) && (
               <div className="max-w-md text-center text-white">
-                {captionFor(images[openIndex]).title && <p className="text-sm font-bold">{captionFor(images[openIndex]).title}</p>}
-                {captionFor(images[openIndex]).description && <p className="mt-0.5 whitespace-pre-line text-xs text-white/70">{captionFor(images[openIndex]).description}</p>}
+                {captionFor(images[shownIndex]).title && <p className="text-sm font-bold">{captionFor(images[shownIndex]).title}</p>}
+                {captionFor(images[shownIndex]).description && <p className="mt-0.5 whitespace-pre-line text-xs text-white/70">{captionFor(images[shownIndex]).description}</p>}
               </div>
             )}
           </div>
 
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white">
-              {openIndex + 1} / {images.length}
+            <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tabular-nums text-white ring-1 ring-white/20 backdrop-blur-md">
+              {shownIndex + 1} / {images.length}
             </div>
           )}
           {renderNestedViewer()}

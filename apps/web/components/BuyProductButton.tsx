@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 import { IconClose } from "@/components/icons";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 import { getCategoryInstruction } from "@/lib/product-categories";
 
 // EMAIL_PATTERN -- validasi format ringan di sisi klien (permintaan
@@ -251,6 +252,19 @@ export default function BuyProductButton({
     setTimeout(() => setOpen(false), 200);
   }
 
+  // Escape, focus trap & fokus kembali ke tombol Beli (25 September 2026,
+  // perapian pop-up blok) -- sebelumnya modal ini cuma bisa ditutup lewat
+  // klik latar/tombol X. handleClose tetap menolak saat `loading`.
+  const modalRef = useModalA11y(open, handleClose);
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   return (
     <>
       <button
@@ -285,23 +299,32 @@ export default function BuyProductButton({
         // pada panel -- animasi buka/tutup, lihat catatan lengkap di
         // deklarasi state `entered`.
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 transition-opacity duration-200 ${entered ? "opacity-100" : "opacity-0"}`}
+          // Bottom sheet di ponsel (items-end, sudut atas membulat, handle)
+          // & kartu tengah di layar lebar -- samakan dgn PublicSheet.tsx
+          // (perapian pop-up blok 25 September 2026). Tinta #111 KONSTAN
+          // (border-[#111111], bukan border-jeon-ink yang ikut mode gelap).
+          className={`fixed inset-0 z-50 flex items-end justify-center bg-black/55 backdrop-blur-sm transition-opacity duration-200 sm:items-center sm:px-4 ${entered ? "opacity-100" : "opacity-0"}`}
           onClick={handleClose}
         >
           <div
-            className={`max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-white p-5 shadow-brutal transition-all duration-200 ${
-              entered ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-95 opacity-0"
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={openLabel}
+            className={`max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] border-t-2 border-[#111111] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2.5 shadow-2xl transition-[transform,opacity] duration-200 ease-out sm:max-w-md sm:rounded-[28px] sm:border-2 sm:pt-5 sm:shadow-[6px_6px_0_#111111] ${
+              entered ? "translate-y-0 opacity-100 sm:scale-100" : "translate-y-8 opacity-0 sm:translate-y-2 sm:scale-95"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="font-display text-sm font-bold text-[#111111]">{openLabel}</h2>
+            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-black/15 sm:hidden" aria-hidden />
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display text-base font-bold text-[#111111]">{openLabel}</h2>
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={loading}
                 aria-label="Tutup"
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-black/50 hover:bg-jeon-purple/10 disabled:opacity-40"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-white text-[#111111] transition-transform hover:-translate-y-0.5 disabled:opacity-40"
               >
                 <IconClose className="h-4 w-4" />
               </button>
