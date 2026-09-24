@@ -961,8 +961,9 @@ export default function DashboardLayout({
           </div>
 
           {/* Bottom navigation mobile -- lihat MobileBottomNav.tsx (redesain
-              25 September 2026: tombol tengah "Buat" + sheet aksi cepat). */}
-          <MobileBottomNav pathname={pathname} username={username} />
+              25 September 2026: 5 tujuan langsung, slot "Menu" dobel diganti
+              "Saldo"). */}
+          <MobileBottomNav pathname={pathname} />
 
           <SupportChatWidget />
         </div>

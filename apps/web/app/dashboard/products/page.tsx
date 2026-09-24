@@ -262,21 +262,6 @@ function DashboardProductsPageInner() {
   // buka/tutup, sisanya (mode 3-pilihan/field form) jadi state INTERNAL
   // komponen itu sendiri.
   const [addingProduct, setAddingProduct] = useState(false);
-  // ?new=<nonce> -- "Tambah Produk" dari sheet "Buat" bottom nav mobile
-  // (MobileBottomNav.tsx, 25 September 2026): buka tab Produk + form baru.
-  // Pola sama dgn ?add= di dashboard/links/page.tsx.
-  const newParam = searchParams.get("new");
-  const [prevNewParam, setPrevNewParam] = useState<string | null>(null);
-  if (newParam !== prevNewParam) {
-    setPrevNewParam(newParam);
-    if (newParam) {
-      setTab("manage");
-      setAddingProduct(true);
-    }
-  }
-  useEffect(() => {
-    if (newParam) router.replace("/dashboard/products?tab=items", { scroll: false });
-  }, [newParam, router]);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
 

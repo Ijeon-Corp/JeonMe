@@ -5,8 +5,8 @@ import Image from "next/image";
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useErrorToast } from "@/lib/use-error-toast";
 import {
   ApiError,
@@ -352,19 +352,8 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
 // -- Jeonme belum punya konsep grup tautan (carousel) atau arsip tautan
 // terhapus, membuat tombol untuk fitur yang tidak ada bukan tujuan
 // permintaan ini.
-// useSearchParams (param ?add= dari tombol "Buat" bottom nav mobile) butuh
-// Suspense boundary -- pola sama dgn dashboard/products/page.tsx.
 export default function DashboardLinksPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <DashboardLinksPageInner />
-    </Suspense>
-  );
-}
-
-function DashboardLinksPageInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useLocale();
   // useMemo -- audit performa 21 September 2026: kedua fungsi ini murni
   // (hasil hanya bergantung pada `t`/bahasa aktif), tapi sebelumnya
@@ -489,21 +478,6 @@ function DashboardLinksPageInner() {
   // LENGKAP & stabil di production sejak v0.37.0/v0.38.0, flag
   // "page_builder" dihapus dari file ini 8 September 2026.
   const [addModalOpen, setAddModalOpen] = useState(false);
-  // ?add=<nonce> -- sheet "Buat" di bottom nav mobile (MobileBottomNav.tsx,
-  // 25 September 2026) membuka modal Tambah langsung. Dibandingkan dgn
-  // nilai sebelumnya (adjust state during render) supaya nonce baru --
-  // ketukan ulang saat sudah di halaman ini -- tetap membuka modal; lalu
-  // parameternya dibersihkan (efek di bawah) supaya refresh tidak membuka
-  // modal lagi.
-  const addParam = searchParams.get("add");
-  const [prevAddParam, setPrevAddParam] = useState<string | null>(null);
-  if (addParam !== prevAddParam) {
-    setPrevAddParam(addParam);
-    if (addParam) setAddModalOpen(true);
-  }
-  useEffect(() => {
-    if (addParam) router.replace("/dashboard/links", { scroll: false });
-  }, [addParam, router]);
   const [addCategory, setAddCategory] = useState<AddCategory>("populer");
   const [addSearch, setAddSearch] = useState("");
 
