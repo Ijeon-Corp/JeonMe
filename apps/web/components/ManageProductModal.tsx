@@ -23,6 +23,7 @@ import {
 import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
 import { CollaboratorSplit, DashboardCollaborator, DashboardProduct } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // ManageProductModal -- diangkat keluar dari products/page.tsx (laporan
 // pengguna 3 September 2026: "sudah muncul tapi ke reload lagi... seperti
@@ -212,6 +213,13 @@ export default function ManageProductModal({
   onOpenSuccessMessageForm: (product: DashboardProduct) => void;
   onToggleShowSoldCount: (product: DashboardProduct) => void;
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -219,6 +227,10 @@ export default function ManageProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kelola produk"
         className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
         onClick={(e) => e.stopPropagation()}
       >

@@ -18,6 +18,7 @@ import {
 } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import type { AddCategory, ContentTile, PlatformQuickAdd } from "@/app/dashboard/links/page";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // AddLinkModal -- diangkat keluar dari links/page.tsx (laporan pengguna 3
 // September 2026: audit Lighthouse dashboard, "Reduce unused JavaScript
@@ -202,6 +203,13 @@ export default function AddLinkModal({
   onQuickPasteLink: (url: string) => void;
   contentTiles: ContentTile[];
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   // Kategori Populer/Sosial/Konten/Lanjutan + grid tile per kategori
   // (SPEC §10.5).
@@ -228,7 +236,11 @@ export default function AddLinkModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tambah blok" className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.links.addModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">

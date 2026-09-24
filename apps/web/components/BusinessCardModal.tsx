@@ -8,6 +8,7 @@ import { renderBusinessCardPNG } from "@/lib/business-card-png";
 import { IconClose, IconCopy, IconDownload, IconExternal } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // Pengganti QRCodeModal untuk Kartu Kontak (permintaan pengguna 3 September
 // 2026): yang tampil kartu nama UTUH bertema Jeonme, bukan QR saja. QR
@@ -26,6 +27,13 @@ export default function BusinessCardModal({
   url: string;
   onClose: () => void;
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const qrRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -106,7 +114,7 @@ export default function BusinessCardModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-label={t("dashboard.pages.businessCard.cardModalTitle")}>
+    <div ref={modalRef} className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-label={t("dashboard.pages.businessCard.cardModalTitle")}>
       <div className="relative w-full max-w-md rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal">
         <button type="button" onClick={onClose} className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-jeon-purple/10" aria-label={t("dashboard.components.qrCodeModal.closeAriaLabel")}>
           <IconClose className="h-4 w-4" />

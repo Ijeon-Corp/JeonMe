@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ICON_LIBRARY, LibraryIcon } from "@/lib/icon-library";
 import { IconClose, IconSearch } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // IconPickerModal -- permintaan langsung pengguna, 13 Agustus 2026: "saya
 // mau tambahkan untuk memilih icon untuk blok yang sudah disediakan dari
@@ -23,6 +24,13 @@ export default function IconPickerModal({
   onSelect: (icon: LibraryIcon) => void;
   onClose: () => void;
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const [search, setSearch] = useState("");
   const searchLower = search.trim().toLowerCase();
@@ -42,7 +50,11 @@ export default function IconPickerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pilih ikon" className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.iconPickerModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">

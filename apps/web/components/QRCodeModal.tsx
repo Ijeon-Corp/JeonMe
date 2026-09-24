@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { IconClose } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // No.82 (Sprint 9): kode QR per halaman kreator, untuk materi promosi
 // offline (banner event, kemasan produk, dsb). Murni sisi klien -- URL
@@ -27,6 +28,13 @@ export default function QRCodeModal({
   title?: string;
   description?: string;
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const resolvedTitle = title ?? t("dashboard.components.qrCodeModal.defaultTitle");
   const resolvedDescription = description ?? t("dashboard.components.qrCodeModal.defaultDescription");
@@ -43,7 +51,11 @@ export default function QRCodeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="relative w-full max-w-xs rounded-jmd border-2 border-jeon-ink bg-app-surface p-6 text-center shadow-brutal">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kode QR halaman" className="relative w-full max-w-xs rounded-jmd border-2 border-jeon-ink bg-app-surface p-6 text-center shadow-brutal">
         <button
           type="button"
           onClick={onClose}

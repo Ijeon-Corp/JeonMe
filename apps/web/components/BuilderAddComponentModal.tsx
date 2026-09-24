@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import type { EmbeddedBuilderBlock } from "@/lib/api-client";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // BuilderAddComponentModal -- Canvas Page Builder (migrasi 000096,
 // permintaan langsung pengguna 7 September 2026, dua screenshot Lynk.id):
@@ -193,6 +194,13 @@ export default function BuilderAddComponentModal({
   // tile supaya kreator tidak memilih tipe yang backend akan tolak.
   nested?: boolean;
 }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const [category, setCategory] = useState<BuilderComponentCategory>("general");
   const [search, setSearch] = useState("");
@@ -213,6 +221,10 @@ export default function BuilderAddComponentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tambah komponen"
         className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal"
         onClick={(e) => e.stopPropagation()}
       >

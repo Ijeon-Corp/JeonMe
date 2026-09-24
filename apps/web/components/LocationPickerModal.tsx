@@ -7,6 +7,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { IconClose, IconMapPin, IconSearch, IconTarget } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // "untuk blok maps user bisa memilih langsung lokasi dia saat ini lewat
@@ -59,6 +60,13 @@ function ClickToPick({ onPick }: { onPick: (lat: number, lng: number) => void })
 }
 
 export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  // useModalA11y -- 24 September 2026 (audit aksesibilitas): Escape
+  // sebelumnya tidak menutup modal ini, fokus tidak dikurung (lolos ke
+  // balik scrim setelah belasan Tab), dan fokus tidak kembali ke pemicu.
+  // Komponen ini hanya di-mount saat terbuka, jadi open cukup true --
+  // cleanup saat unmount yang mengembalikan fokus. Lihat
+  // lib/use-modal-a11y.ts.
+  const modalRef = useModalA11y(true, onClose);
   const { t } = useLocale();
   const [position, setPosition] = useState<[number, number]>(DEFAULT_CENTER);
   const [search, setSearch] = useState("");
@@ -131,7 +139,11 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pilih lokasi" className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div>
             <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.locationPickerModal.title")}</h2>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // useModalA11y -- perilaku keyboard standar untuk overlay/modal, dibuat 24
 // September 2026 dari temuan audit aksesibilitas.
@@ -47,9 +47,27 @@ export function useModalA11y(
   options?: { initialFocusRef?: React.RefObject<HTMLElement | null> }
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // Pemicu disimpan saat modal DIBUKA, bukan saat ditutup -- saat ditutup,
-  // fokus sudah berpindah ke dalam modal yang sedang dilepas dari DOM.
-  const triggerRef = useRef<HTMLElement | null>(null);
+  // Pemicu dicatat SELAMA RENDER di mana `open` berubah jadi true -- pola
+  // resmi React "adjust state during render" (lihat CLAUDE.md, pola #2),
+  // BUKAN di efek. Alasannya terbukti lewat Playwright 24 September 2026:
+  // versi pertama hook ini mencatatnya di dalam useEffect, dan untuk
+  // AddLinkModal fokus TIDAK kembali ke tombol pemicu. Modal itu punya
+  // autoFocus pada input-nya, dan React menjalankan autoFocus saat COMMIT --
+  // sebelum efek mana pun jalan -- jadi saat efek mencatat
+  // document.activeElement, yang tercatat adalah input milik modal itu
+  // sendiri. Saat modal ditutup, fokus "dikembalikan" ke input yang ikut
+  // lenyap, dan pengguna keyboard terlempar ke awal halaman. Di fase render,
+  // anak-anak modal belum ter-commit, jadi activeElement masih pemicunya.
+  // Hanya disimpan di state (tidak pernah dirender), jadi tidak ada risiko
+  // hydration mismatch; guard typeof document untuk render di server.
+  const [prevOpen, setPrevOpen] = useState(false);
+  const [trigger, setTrigger] = useState<HTMLElement | null>(null);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setTrigger(typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null);
+    }
+  }
   // onClose disimpan di ref supaya efek di bawah tidak perlu memasang ulang
   // listener setiap render hanya karena pemanggil mengoper arrow function
   // baru (pola paling umum di repo ini: onClose={() => setOpen(false)}).
@@ -65,8 +83,6 @@ export function useModalA11y(
 
   useEffect(() => {
     if (!open) return;
-
-    triggerRef.current = document.activeElement as HTMLElement | null;
 
     // Fokus awal ditunda satu tick: saat efek ini jalan, anak-anak modal
     // memang sudah ter-mount, tapi modal yang dirender lewat portal atau
@@ -119,14 +135,13 @@ export function useModalA11y(
       // Kembalikan fokus ke pemicu HANYA kalau elemennya masih ada di DOM;
       // modal yang menutup dirinya karena navigasi/penghapusan baris bisa
       // membuat pemicunya ikut hilang.
-      const trigger = triggerRef.current;
       if (trigger && document.contains(trigger)) trigger.focus();
     };
     // options.initialFocusRef sengaja TIDAK jadi dependency: isinya ref yang
     // identitasnya stabil, dan memasukkannya membuat efek ini pasang-lepas
     // listener tiap render kalau pemanggil membuat objek options inline.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, trigger]);
 
   return containerRef;
 }
