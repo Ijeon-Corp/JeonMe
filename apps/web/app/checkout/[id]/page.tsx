@@ -11,6 +11,7 @@ import {
   getBundleItems,
   getCheckoutStatus,
   getCourseChaptersForOrder,
+  orderDownloadURL,
   submitReview,
 } from "@/lib/api-client";
 import SocialProofToast from "@/components/SocialProofToast";
@@ -253,12 +254,36 @@ export default function CheckoutStatusPage() {
                   </div>
                 )}
 
-                {/* Modul Toko (Fase C): status penyerahan untuk produk digital
-                    biasa -- download_link TIDAK ditampilkan di sini (pola
-                    lama: tautan unduhan dikirim lewat email, lihat
-                    worker.HandleOrderPaidNotification), method lain
-                    (manual/random_code) diberi tampilan khusus karena
-                    pembeli butuh tahu APA yang terjadi selanjutnya. */}
+                {/* download_link -- DITAMBAHKAN 24 September 2026 (audit UX
+                    pembeli). SEBELUMNYA cabang ini sengaja TIDAK ada:
+                    tautan unduhan hanya dikirim lewat email (lihat
+                    worker.HandleOrderPaidNotification). Masalahnya, email di
+                    repo ini pola soft-fail -- kalau nyangkut di spam atau
+                    pembeli salah ketik alamatnya, produk yang SUDAH DIBAYAR
+                    tidak bisa diambil lewat UI mana pun (halaman /pembelian
+                    pun cuma menautkan balik ke halaman ini). Yang dilihat
+                    pembeli cuma "Pembayaran Berhasil" lalu form ulasan --
+                    diminta memberi bintang untuk barang yang belum dia
+                    terima. Endpoint unduhannya sendiri SUDAH ada & berfungsi
+                    sejak lama, jadi ini murni soal menampilkannya. */}
+                {status.delivery_method === "download_link" && !status.is_bundle && !status.is_course && (
+                  <div className="mt-4 flex flex-col gap-2 text-left">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Unduh Produkmu</p>
+                    <a
+                      href={orderDownloadURL(params.id)}
+                      className="btn-primary rounded-lg px-3.5 py-2.5 text-center text-sm font-bold text-white"
+                    >
+                      Unduh Sekarang
+                    </a>
+                    <p className="text-xs text-app-muted">
+                      Tautan unduhan juga sudah dikirim ke emailmu. Kalau tidak ada di kotak masuk, cek folder spam.
+                    </p>
+                  </div>
+                )}
+
+                {/* Modul Toko (Fase C): method lain (manual/random_code)
+                    diberi tampilan khusus karena pembeli butuh tahu APA yang
+                    terjadi selanjutnya. */}
                 {status.delivery_method === "manual" && (
                   <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Status Pesanan</p>

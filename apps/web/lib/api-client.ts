@@ -3334,6 +3334,25 @@ export function getBundleItems(orderId: string) {
   return apiFetch<{ items: BundleDownloadItem[] }>(`/checkout/${orderId}/bundle-items`, { method: "GET" });
 }
 
+// orderDownloadURL -- URL ABSOLUT (bukan pemanggilan fetch) ke endpoint
+// unduhan satu produk digital, dipakai langsung sebagai href <a>.
+// Endpoint-nya membalas 302 ke presigned URL S3, jadi browser cukup
+// mengikuti redirect-nya; melewatkannya lewat apiFetch justru salah karena
+// kita TIDAK mau membaca body-nya. Tidak butuh auth (pola sama dengan
+// bundle-items): backend hanya mensyaratkan order-nya sudah lunas, dan
+// rutenya dibatasi checkoutRateLimit.
+//
+// DIPAKAI sejak 24 September 2026 (audit UX pembeli): halaman status
+// checkout SEBELUMNYA tidak punya cabang untuk delivery_method
+// "download_link" sama sekali -- pembeli produk digital yang SUDAH BAYAR
+// cuma melihat "Pembayaran Berhasil" lalu form ulasan, tanpa tombol unduh
+// dan tanpa diberi tahu harus cek email. Karena email di repo ini
+// soft-fail, kalau email-nya nyangkut di spam produk yang sudah dibayar
+// tidak bisa diambil lewat UI mana pun.
+export function orderDownloadURL(orderId: string): string {
+  return `${API_BASE_URL}/checkout/${orderId}/download`;
+}
+
 // No.91 (Sprint 11): dipanggil dari halaman status checkout begitu order
 // kursus lunas -- video selalu tautan embed YouTube/TikTok, tidak perlu
 // presigned URL sama sekali (beda dari bundel yang filenya privat).
