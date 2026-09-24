@@ -259,30 +259,51 @@ func (h *AffiliateHandler) ListMine(c *gin.Context) {
 		}
 	}
 
+	ids := make([]string, len(items))
 	for i := range items {
-		items[i].Commissions = h.loadCommissions(ctx, items[i].ID)
+		ids[i] = items[i].ID
+	}
+	byAffiliate := h.loadCommissionsBatch(ctx, ids)
+	for i := range items {
+		items[i].Commissions = byAffiliate[items[i].ID]
+		if items[i].Commissions == nil {
+			items[i].Commissions = []affiliateProductCommission{}
+		}
 	}
 
 	c.JSON(http.StatusOK, items)
 }
 
-func (h *AffiliateHandler) loadCommissions(ctx context.Context, affiliateID string) []affiliateProductCommission {
+// loadCommissionsBatch -- komisi SEMUA afiliator sekaligus dalam SATU query
+// (= ANY), menggantikan loadCommissions per-afiliator. Perbaikan 24
+// September 2026 (audit backend): ListMine & ListPrograms sebelumnya
+// memanggil satu query per baris afiliator (N+1 asli -- makin banyak
+// afiliator, makin banyak round-trip DB), padahal semuanya bisa dijawab
+// satu query, pola yang sama sudah dipakai collaborator_split.go/bundle.go.
+// Urutan per afiliator tetap per nama produk. Pemanggil WAJIB mengganti
+// entri yang tidak ada di map dengan slice kosong: commissions tidak pernah
+// boleh ter-marshal jadi JSON null (diverifikasi audit cross-check tipe).
+// Soft-fail sama seperti versi lama: gagal query = semua kosong.
+func (h *AffiliateHandler) loadCommissionsBatch(ctx context.Context, affiliateIDs []string) map[string][]affiliateProductCommission {
+	out := map[string][]affiliateProductCommission{}
+	if len(affiliateIDs) == 0 {
+		return out
+	}
 	rows, err := h.DB.Query(ctx, `
-		SELECT p.id, p.name, ac.commission_percent
+		SELECT ac.affiliate_id, p.id, p.name, ac.commission_percent
 		FROM affiliate_commissions ac JOIN products p ON p.id = ac.product_id
-		WHERE ac.affiliate_id = $1
-		ORDER BY p.name
-	`, affiliateID)
+		WHERE ac.affiliate_id = ANY($1)
+		ORDER BY ac.affiliate_id, p.name
+	`, affiliateIDs)
 	if err != nil {
-		return []affiliateProductCommission{}
+		return out
 	}
 	defer rows.Close()
-
-	out := []affiliateProductCommission{}
 	for rows.Next() {
+		var affiliateID string
 		var it affiliateProductCommission
-		if err := rows.Scan(&it.ProductID, &it.ProductName, &it.CommissionPercent); err == nil {
-			out = append(out, it)
+		if err := rows.Scan(&affiliateID, &it.ProductID, &it.ProductName, &it.CommissionPercent); err == nil {
+			out[affiliateID] = append(out[affiliateID], it)
 		}
 	}
 	return out
@@ -326,8 +347,16 @@ func (h *AffiliateHandler) ListPrograms(c *gin.Context) {
 		}
 	}
 
+	ids := make([]string, len(items))
 	for i := range items {
-		items[i].Commissions = h.loadCommissions(ctx, items[i].ID)
+		ids[i] = items[i].ID
+	}
+	byAffiliate := h.loadCommissionsBatch(ctx, ids)
+	for i := range items {
+		items[i].Commissions = byAffiliate[items[i].ID]
+		if items[i].Commissions == nil {
+			items[i].Commissions = []affiliateProductCommission{}
+		}
 	}
 
 	c.JSON(http.StatusOK, items)
