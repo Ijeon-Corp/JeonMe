@@ -47,8 +47,8 @@ func TestCheckoutCreate_StoresBuyerNameAndNote(t *testing.T) {
 
 	// Mock Midtrans Snap -- CreateTransaction (dipanggil dari dalam
 	// checkout.Create) butuh respons sungguhan sebelum order benar-benar
-	// tersimpan (INSERT jalan SEBELUM panggilan Snap, tapi tx.Commit
-	// SETELAHNYA -- lihat CheckoutHandler.Create). checkout.Midtrans DAN
+	// tersimpan (order di-commit SEBELUM panggilan Snap, lalu DIHAPUS lagi
+	// kalau Snap gagal -- lihat CheckoutHandler.Create). checkout.Midtrans DAN
 	// checkout.PaymentGateway (MidtransGateway) membungkus *midtrans.Client
 	// yang SAMA (lihat newTestCheckoutHandler), jadi override BaseURL di
 	// sini otomatis berlaku ke keduanya.

@@ -333,10 +333,18 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		platformFeeIDR += flatTransactionFeeIDR
 	}
 
-	// Order disimpan dalam transaksi yang BELUM di-commit sampai Midtrans
-	// benar-benar berhasil membuat transaksi Snap -- kalau panggilan Midtrans
-	// gagal, transaksi di-rollback supaya tidak ada order "pending" yatim
-	// yang tidak pernah bisa dibayar sama sekali.
+	// Order + pemakaian voucher di-commit DULU (melepas kunci baris produk),
+	// BARU panggil gateway. Audit 24 September 2026 (P2#7): SEBELUMNYA
+	// CreateTransaction dipanggil dari DALAM transaksi ini, jadi kunci
+	// FOR UPDATE produk ditahan selama round-trip HTTP ke Midtrans/Duitku
+	// (ratusan ms s.d. timeout) -- saat launch/flash sale semua checkout
+	// produk yang SAMA mengantre di belakang panggilan gateway, plus satu
+	// koneksi pool tertahan per checkout. Kalau gateway gagal, order &
+	// voucher dikembalikan lewat compensateFailedCheckout (efeknya sama
+	// dengan rollback lama: tidak ada order "pending" yatim yang tidak
+	// pernah bisa dibayar). Kalau proses mati TEPAT di antara commit dan
+	// kompensasi, sisa order pending tanpa transaksi gateway aman --
+	// ReconcilePendingOrders melewatinya (gateway balas tidak ditemukan).
 	tx, err := h.DB.Begin(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
@@ -414,6 +422,11 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan order"})
+		return
+	}
+
 	txn, err := h.PaymentGateway.CreateTransaction(ctx, payment.CreateTransactionInput{
 		OrderID:           externalID,
 		GrossAmountIDR:    finalAmountIDR,
@@ -422,6 +435,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		FinishRedirectURL: h.PublicWebURL + "/checkout/" + orderID,
 	})
 	if err != nil {
+		h.compensateFailedCheckout(ctx, orderID, voucherID)
 		if errors.Is(err, midtrans.ErrNotConfigured) || errors.Is(err, duitku.ErrNotConfigured) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "pembayaran belum dikonfigurasi, hubungi admin"})
 			return
@@ -430,15 +444,45 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan order"})
-		return
-	}
-
 	c.JSON(http.StatusCreated, gin.H{
 		"order_id":    orderID,
 		"invoice_url": txn.PaymentURL,
 	})
+}
+
+// compensateFailedCheckout -- pengganti rollback utk order yang SUDAH
+// di-commit tapi gateway gagal membuat transaksinya (lihat komentar di
+// Create). Order DIHAPUS (bukan ditandai gagal) karena kuota event
+// menghitung SEMUA baris orders produk itu -- baris gagal yang tertinggal
+// akan memakan kuota selamanya. Pemakaian voucher cuma dikembalikan kalau
+// order-nya memang terhapus di sini (status masih 'pending'), jadi aman
+// terhadap pemanggilan ganda. Context terpisah dari request: kompensasi
+// tetap jalan walau request pembeli sudah timeout/putus.
+func (h *CheckoutHandler) compensateFailedCheckout(reqCtx context.Context, orderID string, voucherID *string) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(reqCtx), 5*time.Second)
+	defer cancel()
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		log.Printf("checkout: kompensasi order %s gagal dimulai: %v", orderID, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `DELETE FROM orders WHERE id = $1 AND status = 'pending'`, orderID)
+	if err != nil {
+		log.Printf("checkout: kompensasi order %s gagal menghapus order: %v", orderID, err)
+		return
+	}
+	if tag.RowsAffected() == 1 && voucherID != nil {
+		if _, err := tx.Exec(ctx, `UPDATE vouchers SET used_count = GREATEST(used_count - 1, 0) WHERE id = $1`, *voucherID); err != nil {
+			log.Printf("checkout: kompensasi order %s gagal mengembalikan voucher: %v", orderID, err)
+			return
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		log.Printf("checkout: kompensasi order %s gagal commit: %v", orderID, err)
+	}
 }
 
 type validateVoucherRequest struct {
