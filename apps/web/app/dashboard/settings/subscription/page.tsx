@@ -169,10 +169,38 @@ export default function SettingsSubscriptionPage() {
 
 
       {/* Keadaan yang butuh perhatian, di atas kartu supaya tidak terlewat. */}
+      {/* Tombol aksi di banner ini DITAMBAHKAN 24 September 2026 (audit
+          cross-check tipe API). Sebelumnya status past_due adalah BUNTU
+          TOTAL: is_premium dihitung dari EXISTS(active OR canceled-belum-
+          lewat) yang TIDAK memasukkan past_due, jadi halaman jatuh ke
+          tampilan non-pelanggan -- di mana tombol "Berlangganan" justru
+          di-disable oleh isLive (yang memasukkan past_due), sementara tombol
+          "Batalkan" cuma dirender di cabang is_premium yang tidak pernah
+          tercapai. Kreator yang penagihannya gagal tidak bisa membayar ulang
+          DAN tidak bisa berhenti. Padahal backend sudah menerima keduanya
+          untuk past_due (lihat SubscriptionHandler.Cancel). */}
       {pastDue && (
         <div role="alert" className="mt-5 rounded-jmd border-2 border-jeon-ink bg-jeon-coral px-4 py-3 text-sm text-[#111111]">
           <p className="font-bold">{k("pastDueTitle")}</p>
           <p className="mt-0.5 text-xs">{k("statusPastDue")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleCheckout}
+              disabled={checkingOut}
+              className="rounded-jmd border-2 border-[#111111] bg-white px-4 py-2 font-display text-sm font-bold text-[#111111] disabled:opacity-60"
+            >
+              {checkingOut ? k("preparingPayment") : k("pastDueRetryButton")}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={canceling}
+              className="rounded-jmd border-2 border-[#111111]/40 px-4 py-2 text-xs font-semibold text-[#111111] hover:border-[#111111] disabled:opacity-60"
+            >
+              {canceling ? k("canceling") : k("cancelSubscriptionButton")}
+            </button>
+          </div>
         </div>
       )}
       {pending && (

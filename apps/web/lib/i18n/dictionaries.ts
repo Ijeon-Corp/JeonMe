@@ -2242,6 +2242,10 @@ export const dictionaries = {
           refreshStatus: "Muat ulang status",
           refreshing: "Memuat...",
           pastDueTitle: "Penagihan terakhir gagal",
+          // pastDueRetryButton -- ditambahkan 24 September 2026, lihat catatan
+          // di banner past_due (settings/subscription/page.tsx): status ini
+          // sebelumnya buntu total, tanpa tombol bayar ulang maupun berhenti.
+          pastDueRetryButton: "Bayar Sekarang",
           faqHeading: "Yang sering ditanyakan",
           faq1q: "Kapan saya ditagih?",
           faq1a: "Saat mendaftar, lalu otomatis tiap awal siklus (bulanan atau tahunan) lewat kartu yang tersimpan di Midtrans.",
@@ -5505,6 +5509,7 @@ export const dictionaries = {
           refreshStatus: "Refresh status",
           refreshing: "Loading...",
           pastDueTitle: "Last charge failed",
+          pastDueRetryButton: "Pay Now",
           faqHeading: "Frequently asked",
           faq1q: "When am I charged?",
           faq1a: "When you subscribe, then automatically at the start of each cycle (monthly or yearly) via the card saved with Midtrans.",
