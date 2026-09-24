@@ -13,6 +13,7 @@ import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { MessageCircle, Send } from "lucide-react";
 import { useErrorToast } from "@/lib/use-error-toast";
 import { useToast } from "@/components/Toast";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 const PAGE_SIZE = 50;
 
@@ -35,6 +36,9 @@ export default function AdminSupportChatPage() {
 
   const [detail, setDetail] = useState<AdminSupportThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // Lihat catatan lengkap di lib/use-modal-a11y.ts -- modal ini sebelumnya
+  // memerangkap pengguna keyboard sama seperti modal KYC admin.
+  const detailModalRef = useModalA11y(detailLoading || detail !== null, () => setDetail(null));
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -224,8 +228,19 @@ export default function AdminSupportChatPage() {
       )}
 
       {(detailLoading || detail) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="flex h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setDetail(null)}
+        >
+          <div
+            ref={detailModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Percakapan dukungan"
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal"
+          >
             {detailLoading && <p className="p-6 text-sm text-app-muted">Memuat percakapan...</p>}
             {detail && (
               <>

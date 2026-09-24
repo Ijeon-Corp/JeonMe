@@ -15,6 +15,7 @@ import { IconShield } from "@/components/icons";
 import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import { useErrorToast } from "@/lib/use-error-toast";
 import { useToast } from "@/components/Toast";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
   unverified: "Belum diajukan",
@@ -45,6 +46,8 @@ export default function AdminKycPage() {
 
   const [detail, setDetail] = useState<AdminKycDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // Lihat catatan lengkap di markup modalnya & di lib/use-modal-a11y.ts.
+  const detailModalRef = useModalA11y(detailLoading || detail !== null, () => setDetail(null));
   const [rejectReason, setRejectReason] = useState("");
   const [revokeReason, setRevokeReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -230,12 +233,18 @@ export default function AdminKycPage() {
                 onClick={() => openDetail(it.user_id)}
                 className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface p-4 text-left shadow-card hover:border-jeon-purple/50"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                     <IconShield className="h-[18px] w-[18px]" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-app-ink">
+                  {/* min-w-0 + truncate -- perbaikan overflow 24 September
+                      2026 (audit admin): baris ini menolak menyusut sehingga
+                      di 390px /admin/kyc jadi 537px lebar (771px di 768px),
+                      mendorong badge status keluar layar -- email kreator bisa
+                      sangat panjang. Pola min-w-0 yang sama sudah dipakai di
+                      support-chat tapi tidak pernah dirambatkan ke sini. */}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-app-ink">
                       {it.full_name_ktp || "(nama belum diisi)"}
                       <span className="ml-2 font-normal text-app-muted">
                         @{it.username} ({it.email})
@@ -276,8 +285,28 @@ export default function AdminKycPage() {
       )}
 
       {(detailLoading || detail) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setDetail(null)}
+        >
+          {/* role/aria-modal/aria-label + useModalA11y -- perbaikan
+              aksesibilitas 24 September 2026. Modal ini memampang foto KTP,
+              foto selfie, dan alamat rumah pemohon; sebelumnya fokus tidak
+              pernah masuk ke sini, Escape tidak menutup, dan Tab bocor ke
+              halaman di balik scrim -- satu-satunya jalan keluar adalah
+              mengklik "Tutup" dengan mouse, sehingga staf yang refleks
+              menekan Escape meninggalkan PII terpampang di layar.
+              stopPropagation supaya klik DI DALAM kartu tidak ikut memicu
+              penutupan lewat backdrop. */}
+          <div
+            ref={detailModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detail pengajuan KYC"
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal"
+          >
             {detailLoading && <p className="text-sm text-app-muted">Memuat detail...</p>}
             {detail && (
               <>
