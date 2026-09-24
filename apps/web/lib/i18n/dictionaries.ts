@@ -1514,6 +1514,14 @@ export const dictionaries = {
           manageModal: {
             title: "Kelola: {name}",
             close: "Tutup",
+            // uploading -- HILANG dari kedua locale sampai 24 September 2026
+            // (audit kualitas kode). Dipanggil di products/page.tsx (tombol
+            // unggah file produk & sampul inline di tabel), dan karena
+            // resolveKey jatuh ke KUNCI MENTAH sebagai fallback terakhir,
+            // kreator benar-benar melihat tulisan
+            // "dashboard.pages.products.manageModal.uploading" di tombolnya
+            // selama unggahan berjalan.
+            uploading: "Mengunggah...",
             categoryPlaceholder: "Kategori",
             cancel: "Batal",
             save: "Simpan",
@@ -4788,6 +4796,7 @@ export const dictionaries = {
           manageModal: {
             title: "Manage: {name}",
             close: "Close",
+            uploading: "Uploading...",
             categoryPlaceholder: "Category",
             cancel: "Cancel",
             save: "Save",
