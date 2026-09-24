@@ -115,7 +115,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
-import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
+import { ListItemsEditor, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
+import { useContentEditBuffers } from "@/lib/use-content-edit-buffers";
+import { buildWhatsappButtonUrl } from "@/lib/whatsapp-url";
 import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import { isRichTextEmpty } from "@/lib/catalog-blocks";
 
@@ -154,29 +156,6 @@ const RichTextEditor = dynamic(() => import("@/components/dashboard/page/RichTex
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
 const PREMIUM_EXTRA_PAGE_LIMIT = 5;
-
-// buildWhatsappButtonUrl -- blok "button" mode WhatsApp (permintaan langsung
-// pengguna, 14 September 2026: "WA = kanal closing utama kebanyakan
-// kreator kita"). Belum ada normalizer nomor telepon di file ini sama
-// sekali (baris kontak WhatsApp yang sudah ada, social_whatsapp, dibiarkan
-// kreator ketik manual apa adanya) -- konvensi umum wa.me: nomor lokal
-// diawali "0" diganti "62" (kode negara Indonesia), selain itu dipakai apa
-// adanya setelah karakter non-digit dibuang. `url` hasil fungsi ini
-// disimpan APA ADANYA di kolom `url` blok (satu-satunya sumber kebenaran
-// tujuan klik, dipakai ulang oleh seluruh mekanisme render/lock/tracking
-// yang sudah ada) -- whatsapp_number/whatsapp_message TETAP disimpan
-// terpisah di block_data HANYA supaya kreator bisa membuka & mengedit
-// nomor/pesannya lagi nanti tanpa perlu mem-parse balik dari URL.
-function normalizeWhatsappNumber(input: string): string {
-  const digits = input.replace(/\D/g, "");
-  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
-}
-
-function buildWhatsappButtonUrl(number: string, message: string): string {
-  const normalized = normalizeWhatsappNumber(number);
-  const query = message.trim() ? `?text=${encodeURIComponent(message.trim())}` : "";
-  return `https://wa.me/${normalized}${query}`;
-}
 
 // IconComponent -- diperluas 17 September 2026 (permintaan langsung
 // pengguna: "ganti seperti icon icon seperti whatsapp instagram dll bukan
@@ -631,18 +610,6 @@ export default function DashboardLinksPage() {
   const [, setCatalogSavingId] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
-  // contentEditSnapshot -- bug UI/UX ditemukan 21 September 2026 (audit
-  // menyeluruh): tombol "Kembali"/"Batal" panel edit blok SEBELUMNYA
-  // langsung setContentEditId(null) tanpa cek sama sekali, membuang draft
-  // 10 tipe blok berbasis buffer (video/maps/text/accordion/
-  // project_showcase/button/countdown/embed/video_image/embed_link) diam-
-  // diam kalau kreator sempat mengetik lalu berubah pikiran/salah pencet.
-  // State (bukan ref) -- react-hooks/refs (React Compiler) melarang fungsi
-  // biasa membaca `.current` lalu dipanggil dari JSX (dianggap berpotensi
-  // "selama render"); state menghindarinya sepenuhnya. null = tidak ada
-  // blok berbasis-buffer yang sedang dibuka (10 tipe lain aman ditutup
-  // tanpa cek).
-  const [contentEditSnapshot, setContentEditSnapshot] = useState<string | null>(null);
   // drilldownBlockId -- id blok "catalog"/"faq" yang sedang dibuka lewat
   // BlockDrilldownEditor (redesain 6 September 2026, gaya Linktree: klik
   // blok -> masuk ke dalamnya). `drilldownBlock` LIVE (bukan snapshot) --
@@ -660,33 +627,22 @@ export default function DashboardLinksPage() {
   // (LivePreviewPanel, 360px) TETAP terlihat sepanjang waktu. LIVE (bukan
   // snapshot) dengan alasan sama seperti drilldownBlock.
   const contentEditingLink = links.find((l) => l.id === contentEditId) ?? null;
-  const [editVideoUrl, setEditVideoUrl] = useState("");
-  const [editMapsUrl, setEditMapsUrl] = useState("");
-  const [editMapsEmbed, setEditMapsEmbed] = useState(true);
-  const [editText, setEditText] = useState("");
-  const [editAccordionText, setEditAccordionText] = useState("");
-  // "project_showcase" -- 4 field sekaligus (beda dari tipe blok lain yang
-  // cuma butuh 1 textarea/URL), state sendiri-sendiri supaya tidak
-  // tercampur dengan editingField (mekanisme edit inline title/url khusus
-  // tautan biasa di kartu daftar).
-  const [editShowcaseUrl, setEditShowcaseUrl] = useState("");
-  const [editShowcaseDescription, setEditShowcaseDescription] = useState("");
-  const [editShowcaseBadge, setEditShowcaseBadge] = useState("");
-  const [editShowcaseCta, setEditShowcaseCta] = useState("");
-  // 9 tipe blok baru "full parity" -- mirror edit-in-place dari state
-  // create-form di atas, pola sama persis editVideoUrl/editShowcase*.
-  const [editButtonUrl, setEditButtonUrl] = useState("");
-  const [editButtonMode, setEditButtonMode] = useState<"url" | "whatsapp">("url");
-  const [editButtonWhatsappNumber, setEditButtonWhatsappNumber] = useState("");
-  const [editButtonWhatsappMessage, setEditButtonWhatsappMessage] = useState("");
-  const [editCountdownTargetAt, setEditCountdownTargetAt] = useState("");
-  const [editCountdownProductId, setEditCountdownProductId] = useState("");
-  const [editCountdownCtaLabel, setEditCountdownCtaLabel] = useState("");
-  const [editCountdownCtaUrl, setEditCountdownCtaUrl] = useState("");
-  const [editEmbedUrl, setEditEmbedUrl] = useState("");
-  const [editVideoImageVideoUrl, setEditVideoImageVideoUrl] = useState("");
-  const [editEmbedLinkUrl, setEditEmbedLinkUrl] = useState("");
-  const [editEmbedLinkDescription, setEditEmbedLinkDescription] = useState("");
+  // Buffer edit isi blok (10 tipe berbasis form) + snapshot cek draft
+  // belum-disimpan -- lihat lib/use-content-edit-buffers.ts (dipakai
+  // bersama halaman utama & Toko sejak audit P4 24 September 2026).
+  const {
+    editVideoUrl, setEditVideoUrl, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
+    editText, setEditText, editAccordionText, setEditAccordionText, editShowcaseUrl,
+    setEditShowcaseUrl, editShowcaseDescription, setEditShowcaseDescription, editShowcaseBadge,
+    setEditShowcaseBadge, editShowcaseCta, setEditShowcaseCta, editButtonUrl, setEditButtonUrl,
+    editButtonMode, setEditButtonMode, editButtonWhatsappNumber, setEditButtonWhatsappNumber,
+    editButtonWhatsappMessage, setEditButtonWhatsappMessage, editCountdownTargetAt,
+    setEditCountdownTargetAt, editCountdownProductId, setEditCountdownProductId,
+    editCountdownCtaLabel, setEditCountdownCtaLabel, editCountdownCtaUrl, setEditCountdownCtaUrl,
+    editEmbedUrl, setEditEmbedUrl, editVideoImageVideoUrl, setEditVideoImageVideoUrl,
+    editEmbedLinkUrl, setEditEmbedLinkUrl, editEmbedLinkDescription, setEditEmbedLinkDescription,
+    loadContentEditBuffers, isContentEditDirty, clearContentEditSnapshot,
+  } = useContentEditBuffers();
   const [savingContent, setSavingContent] = useState(false);
 
   // previewLinks -- uxd-8 (audit UI/UX 21 September 2026): 10 tipe blok
@@ -2018,153 +1974,9 @@ export default function DashboardLinksPage() {
     }
   }
 
-  // computeContentEditSnapshot -- lihat catatan panjang di
-  // contentEditSnapshot: bentuk objek PERSIS meniru cabang openContentEdit
-  // di bawah (satu per tipe blok berbasis buffer), dipakai DUA arah -- saat
-  // panel dibuka (dari nilai `link`, snapshot "bersih") dan saat
-  // Kembali/Batal diklik (dari state buffer LIVE saat itu, lihat
-  // closeContentEdit) -- null untuk tipe blok yang tidak punya buffer sama
-  // sekali (aman ditutup tanpa cek).
-  function computeContentEditSnapshot(
-    blockType: LinkItem["block_type"],
-    v: {
-      videoUrl: string;
-      mapsUrl: string;
-      mapsEmbed: boolean;
-      text: string;
-      accordionText: string;
-      showcaseUrl: string;
-      showcaseDescription: string;
-      showcaseBadge: string;
-      showcaseCta: string;
-      buttonUrl: string;
-      buttonMode: "url" | "whatsapp";
-      buttonWhatsappNumber: string;
-      buttonWhatsappMessage: string;
-      countdownTargetAt: string;
-      countdownProductId: string;
-      countdownCtaLabel: string;
-      countdownCtaUrl: string;
-      embedUrl: string;
-      videoImageVideoUrl: string;
-      embedLinkUrl: string;
-      embedLinkDescription: string;
-    }
-  ): Record<string, unknown> | null {
-    switch (blockType) {
-      case "video":
-        return { videoUrl: v.videoUrl };
-      case "maps":
-        return { mapsUrl: v.mapsUrl, mapsEmbed: v.mapsEmbed };
-      case "text":
-        return { text: v.text };
-      case "accordion":
-        return { accordionText: v.accordionText };
-      case "project_showcase":
-        return { showcaseUrl: v.showcaseUrl, showcaseDescription: v.showcaseDescription, showcaseBadge: v.showcaseBadge, showcaseCta: v.showcaseCta };
-      case "button":
-        return { buttonUrl: v.buttonUrl, buttonMode: v.buttonMode, buttonWhatsappNumber: v.buttonWhatsappNumber, buttonWhatsappMessage: v.buttonWhatsappMessage };
-      case "countdown":
-        return { countdownTargetAt: v.countdownTargetAt, countdownProductId: v.countdownProductId, countdownCtaLabel: v.countdownCtaLabel, countdownCtaUrl: v.countdownCtaUrl };
-      case "embed":
-        return { embedUrl: v.embedUrl };
-      case "video_image":
-        return { videoImageVideoUrl: v.videoImageVideoUrl };
-      case "embed_link":
-        return { embedLinkUrl: v.embedLinkUrl, embedLinkDescription: v.embedLinkDescription };
-      default:
-        return null;
-    }
-  }
-
-  // currentContentEditSnapshot -- versi "sekarang" dari fungsi di atas,
-  // membaca state buffer LIVE (bukan dari `link`) -- dipanggil saat
-  // Kembali/Batal diklik utk dibandingkan ke snapshot bersih yang disimpan
-  // openContentEdit.
-  function currentContentEditSnapshot(blockType: LinkItem["block_type"]) {
-    return computeContentEditSnapshot(blockType, {
-      videoUrl: editVideoUrl,
-      mapsUrl: editMapsUrl,
-      mapsEmbed: editMapsEmbed,
-      text: editText,
-      accordionText: editAccordionText,
-      showcaseUrl: editShowcaseUrl,
-      showcaseDescription: editShowcaseDescription,
-      showcaseBadge: editShowcaseBadge,
-      showcaseCta: editShowcaseCta,
-      buttonUrl: editButtonUrl,
-      buttonMode: editButtonMode,
-      buttonWhatsappNumber: editButtonWhatsappNumber,
-      buttonWhatsappMessage: editButtonWhatsappMessage,
-      countdownTargetAt: editCountdownTargetAt,
-      countdownProductId: editCountdownProductId,
-      countdownCtaLabel: editCountdownCtaLabel,
-      countdownCtaUrl: editCountdownCtaUrl,
-      embedUrl: editEmbedUrl,
-      videoImageVideoUrl: editVideoImageVideoUrl,
-      embedLinkUrl: editEmbedLinkUrl,
-      embedLinkDescription: editEmbedLinkDescription,
-    });
-  }
-
   function openContentEdit(link: LinkItem) {
     setContentEditId(link.id);
-    const v = {
-      videoUrl: (link.block_data?.video_url as string) ?? "",
-      mapsUrl: link.url ?? "",
-      mapsEmbed: Boolean(link.block_data?.embed),
-      text: (link.block_data?.text as string) ?? "",
-      accordionText: (link.block_data?.text as string) ?? "",
-      showcaseUrl: link.url ?? "",
-      showcaseDescription: link.description ?? "",
-      showcaseBadge: (link.block_data?.badge_text as string) ?? "",
-      showcaseCta: (link.block_data?.cta_text as string) ?? "",
-      buttonUrl: link.url ?? "",
-      buttonMode: ((link.block_data?.whatsapp_number as string) ? "whatsapp" : "url") as "url" | "whatsapp",
-      buttonWhatsappNumber: (link.block_data?.whatsapp_number as string) ?? "",
-      buttonWhatsappMessage: (link.block_data?.whatsapp_message as string) ?? "",
-      countdownTargetAt: toDatetimeLocalValue(link.block_data?.target_at as string | undefined),
-      countdownProductId: (link.block_data?.product_id as string) ?? "",
-      countdownCtaLabel: (link.block_data?.cta_label as string) ?? "",
-      countdownCtaUrl: (link.block_data?.cta_url as string) ?? "",
-      embedUrl: (link.block_data?.embed_url as string) ?? "",
-      videoImageVideoUrl: (link.block_data?.video_url as string) ?? "",
-      embedLinkUrl: link.url ?? "",
-      embedLinkDescription: link.description ?? "",
-    };
-    setContentEditSnapshot(JSON.stringify(computeContentEditSnapshot(link.block_type, v)));
-    if (link.block_type === "video") {
-      setEditVideoUrl(v.videoUrl);
-    } else if (link.block_type === "maps") {
-      setEditMapsUrl(v.mapsUrl);
-      setEditMapsEmbed(v.mapsEmbed);
-    } else if (link.block_type === "text") {
-      setEditText(v.text);
-    } else if (link.block_type === "accordion") {
-      setEditAccordionText(v.accordionText);
-    } else if (link.block_type === "project_showcase") {
-      setEditShowcaseUrl(v.showcaseUrl);
-      setEditShowcaseDescription(v.showcaseDescription);
-      setEditShowcaseBadge(v.showcaseBadge);
-      setEditShowcaseCta(v.showcaseCta);
-    } else if (link.block_type === "button") {
-      setEditButtonUrl(v.buttonUrl);
-      setEditButtonMode(v.buttonMode);
-      setEditButtonWhatsappNumber(v.buttonWhatsappNumber);
-      setEditButtonWhatsappMessage(v.buttonWhatsappMessage);
-    } else if (link.block_type === "countdown") {
-      setEditCountdownTargetAt(v.countdownTargetAt);
-      setEditCountdownProductId(v.countdownProductId);
-      setEditCountdownCtaLabel(v.countdownCtaLabel);
-      setEditCountdownCtaUrl(v.countdownCtaUrl);
-    } else if (link.block_type === "embed") {
-      setEditEmbedUrl(v.embedUrl);
-    } else if (link.block_type === "video_image") {
-      setEditVideoImageVideoUrl(v.videoImageVideoUrl);
-    } else if (link.block_type === "embed_link") {
-      setEditEmbedLinkUrl(v.embedLinkUrl);
-      setEditEmbedLinkDescription(v.embedLinkDescription);
-    }
+    loadContentEditBuffers(link);
   }
 
   // closeContentEdit -- bug UI/UX ditemukan 21 September 2026, lihat catatan
@@ -2173,14 +1985,14 @@ export default function DashboardLinksPage() {
   // "Batal" (baris aksi bawah form) -- keduanya efeknya identik (tutup
   // panel tanpa simpan), jadi keduanya butuh gerbang yang sama.
   async function closeContentEdit(link: LinkItem) {
-    if (contentEditSnapshot !== null && JSON.stringify(currentContentEditSnapshot(link.block_type)) !== contentEditSnapshot) {
+    if (isContentEditDirty(link.block_type)) {
       const ok = await confirmAction(t("dashboard.pages.links.contentEditorPage.discardDraftText"), {
         title: t("dashboard.pages.links.contentEditorPage.discardDraftTitle"),
         confirmButtonText: t("dashboard.pages.links.contentEditorPage.discardDraftConfirm"),
       });
       if (!ok) return;
     }
-    setContentEditSnapshot(null);
+    clearContentEditSnapshot();
     setContentEditId(null);
   }
 
@@ -2334,7 +2146,7 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
       const refreshed = await refreshLinks();
       setLinks(refreshed);
-      setContentEditSnapshot(null);
+      clearContentEditSnapshot();
       setContentEditId(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));

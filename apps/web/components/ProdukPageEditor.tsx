@@ -84,7 +84,9 @@ import {
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
-import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
+import { ListItemsEditor, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
+import { useContentEditBuffers } from "@/lib/use-content-edit-buffers";
+import { buildWhatsappButtonUrl } from "@/lib/whatsapp-url";
 import Toggle from "@/components/Toggle";
 import SectionCard from "@/components/dashboard/page/SectionCard";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
@@ -143,21 +145,6 @@ type BlockType =
   | "countdown"
   | "embed_link"
   | "embed";
-
-// normalizeWhatsappNumber/buildWhatsappButtonUrl -- disalin APA ADANYA dari
-// dashboard/links/page.tsx (fungsi murni, tanpa state) -- pola sama "dua
-// jalur kode berbeda" yang sudah dipakai proyek ini utk paritas halaman
-// utama/Toko (lihat catatan FormField di bawah).
-function normalizeWhatsappNumber(input: string): string {
-  const digits = input.replace(/\D/g, "");
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  return digits;
-}
-function buildWhatsappButtonUrl(number: string, message: string): string {
-  const normalized = normalizeWhatsappNumber(number);
-  const encoded = encodeURIComponent(message.trim());
-  return encoded ? `https://wa.me/${normalized}?text=${encoded}` : `https://wa.me/${normalized}`;
-}
 
 // getContentTiles/getBlockLabel -- FUNGSI (bukan konstanta modul lagi),
 // pola sama seperti buildNavItems/buildExtraPageLabels di dashboard/
@@ -737,37 +724,22 @@ function BlockSection({
   // dibuat (cuma bisa dihapus), lihat memori project_toko-missing-edit-
   // content -- gap itu ditutup di sini sekaligus dgn menambah 10 tipe baru.
   const [contentEditId, setContentEditId] = useState<string | null>(null);
-  // contentEditSnapshot -- audit bug 22 September 2026 (paritas dgn
-  // dashboard/links/page.tsx, ditemukan sejak 21 September di sana tapi
-  // TIDAK PERNAH ikut diporting ke Toko): menutup panel edit blok
-  // (chevron/baris header) SEBELUMNYA langsung setContentEditId(null)
-  // tanpa cek sama sekali -- draft 10 tipe blok berbasis buffer (video/
-  // maps/text/accordion/project_showcase/button/countdown/embed/
-  // video_image/embed_link) hilang senyap kalau kreator sempat mengetik
-  // lalu klik baris/blok lain tanpa Simpan. null = tidak ada blok
-  // berbasis-buffer yang sedang dibuka (tipe lain aman ditutup tanpa cek).
-  const [contentEditSnapshot, setContentEditSnapshot] = useState<string | null>(null);
-  const [editVideoUrl, setEditVideoUrl] = useState("");
-  const [editMapsUrl, setEditMapsUrl] = useState("");
-  const [editMapsEmbed, setEditMapsEmbed] = useState(true);
-  const [editText, setEditText] = useState("");
-  const [editAccordionText, setEditAccordionText] = useState("");
-  const [editShowcaseUrl, setEditShowcaseUrl] = useState("");
-  const [editShowcaseDescription, setEditShowcaseDescription] = useState("");
-  const [editShowcaseBadge, setEditShowcaseBadge] = useState("");
-  const [editShowcaseCta, setEditShowcaseCta] = useState("");
-  const [editButtonUrl, setEditButtonUrl] = useState("");
-  const [editButtonMode, setEditButtonMode] = useState<"url" | "whatsapp">("url");
-  const [editButtonWhatsappNumber, setEditButtonWhatsappNumber] = useState("");
-  const [editButtonWhatsappMessage, setEditButtonWhatsappMessage] = useState("");
-  const [editCountdownTargetAt, setEditCountdownTargetAt] = useState("");
-  const [editCountdownProductId, setEditCountdownProductId] = useState("");
-  const [editCountdownCtaLabel, setEditCountdownCtaLabel] = useState("");
-  const [editCountdownCtaUrl, setEditCountdownCtaUrl] = useState("");
-  const [editEmbedUrl, setEditEmbedUrl] = useState("");
-  const [editVideoImageVideoUrl, setEditVideoImageVideoUrl] = useState("");
-  const [editEmbedLinkUrl, setEditEmbedLinkUrl] = useState("");
-  const [editEmbedLinkDescription, setEditEmbedLinkDescription] = useState("");
+  // Buffer edit isi blok (10 tipe berbasis form) + snapshot cek draft
+  // belum-disimpan -- lihat lib/use-content-edit-buffers.ts (dipakai
+  // bersama halaman utama & Toko sejak audit P4 24 September 2026).
+  const {
+    editVideoUrl, setEditVideoUrl, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
+    editText, setEditText, editAccordionText, setEditAccordionText, editShowcaseUrl,
+    setEditShowcaseUrl, editShowcaseDescription, setEditShowcaseDescription, editShowcaseBadge,
+    setEditShowcaseBadge, editShowcaseCta, setEditShowcaseCta, editButtonUrl, setEditButtonUrl,
+    editButtonMode, setEditButtonMode, editButtonWhatsappNumber, setEditButtonWhatsappNumber,
+    editButtonWhatsappMessage, setEditButtonWhatsappMessage, editCountdownTargetAt,
+    setEditCountdownTargetAt, editCountdownProductId, setEditCountdownProductId,
+    editCountdownCtaLabel, setEditCountdownCtaLabel, editCountdownCtaUrl, setEditCountdownCtaUrl,
+    editEmbedUrl, setEditEmbedUrl, editVideoImageVideoUrl, setEditVideoImageVideoUrl,
+    editEmbedLinkUrl, setEditEmbedLinkUrl, editEmbedLinkDescription, setEditEmbedLinkDescription,
+    loadContentEditBuffers, isContentEditDirty, clearContentEditSnapshot,
+  } = useContentEditBuffers();
   const [savingContent, setSavingContent] = useState(false);
 
   // drilldownBlockId -- blok "catalog"/"faq" yang sedang dibuka lewat
@@ -1245,146 +1217,9 @@ function BlockSection({
     }
   }
 
-  // computeContentEditSnapshot/currentContentEditSnapshot -- paritas
-  // persis dengan dashboard/links/page.tsx (lihat catatan panjang di
-  // contentEditSnapshot), disalin APA ADANYA supaya kedua file gampang
-  // di-diff. null utk tipe blok yang tidak punya buffer sama sekali.
-  function computeContentEditSnapshot(
-    blockType: LinkItem["block_type"],
-    v: {
-      videoUrl: string;
-      mapsUrl: string;
-      mapsEmbed: boolean;
-      text: string;
-      accordionText: string;
-      showcaseUrl: string;
-      showcaseDescription: string;
-      showcaseBadge: string;
-      showcaseCta: string;
-      buttonUrl: string;
-      buttonMode: "url" | "whatsapp";
-      buttonWhatsappNumber: string;
-      buttonWhatsappMessage: string;
-      countdownTargetAt: string;
-      countdownProductId: string;
-      countdownCtaLabel: string;
-      countdownCtaUrl: string;
-      embedUrl: string;
-      videoImageVideoUrl: string;
-      embedLinkUrl: string;
-      embedLinkDescription: string;
-    }
-  ): Record<string, unknown> | null {
-    switch (blockType) {
-      case "video":
-        return { videoUrl: v.videoUrl };
-      case "maps":
-        return { mapsUrl: v.mapsUrl, mapsEmbed: v.mapsEmbed };
-      case "text":
-        return { text: v.text };
-      case "accordion":
-        return { accordionText: v.accordionText };
-      case "project_showcase":
-        return { showcaseUrl: v.showcaseUrl, showcaseDescription: v.showcaseDescription, showcaseBadge: v.showcaseBadge, showcaseCta: v.showcaseCta };
-      case "button":
-        return { buttonUrl: v.buttonUrl, buttonMode: v.buttonMode, buttonWhatsappNumber: v.buttonWhatsappNumber, buttonWhatsappMessage: v.buttonWhatsappMessage };
-      case "countdown":
-        return { countdownTargetAt: v.countdownTargetAt, countdownProductId: v.countdownProductId, countdownCtaLabel: v.countdownCtaLabel, countdownCtaUrl: v.countdownCtaUrl };
-      case "embed":
-        return { embedUrl: v.embedUrl };
-      case "video_image":
-        return { videoImageVideoUrl: v.videoImageVideoUrl };
-      case "embed_link":
-        return { embedLinkUrl: v.embedLinkUrl, embedLinkDescription: v.embedLinkDescription };
-      default:
-        return null;
-    }
-  }
-
-  function currentContentEditSnapshot(blockType: LinkItem["block_type"]) {
-    return computeContentEditSnapshot(blockType, {
-      videoUrl: editVideoUrl,
-      mapsUrl: editMapsUrl,
-      mapsEmbed: editMapsEmbed,
-      text: editText,
-      accordionText: editAccordionText,
-      showcaseUrl: editShowcaseUrl,
-      showcaseDescription: editShowcaseDescription,
-      showcaseBadge: editShowcaseBadge,
-      showcaseCta: editShowcaseCta,
-      buttonUrl: editButtonUrl,
-      buttonMode: editButtonMode,
-      buttonWhatsappNumber: editButtonWhatsappNumber,
-      buttonWhatsappMessage: editButtonWhatsappMessage,
-      countdownTargetAt: editCountdownTargetAt,
-      countdownProductId: editCountdownProductId,
-      countdownCtaLabel: editCountdownCtaLabel,
-      countdownCtaUrl: editCountdownCtaUrl,
-      embedUrl: editEmbedUrl,
-      videoImageVideoUrl: editVideoImageVideoUrl,
-      embedLinkUrl: editEmbedLinkUrl,
-      embedLinkDescription: editEmbedLinkDescription,
-    });
-  }
-
   function openContentEdit(link: LinkItem) {
     setContentEditId(link.id);
-    const v = {
-      videoUrl: (link.block_data?.video_url as string) ?? "",
-      mapsUrl: link.url ?? "",
-      mapsEmbed: Boolean(link.block_data?.embed),
-      text: (link.block_data?.text as string) ?? "",
-      accordionText: (link.block_data?.text as string) ?? "",
-      showcaseUrl: link.url ?? "",
-      showcaseDescription: link.description ?? "",
-      showcaseBadge: (link.block_data?.badge_text as string) ?? "",
-      showcaseCta: (link.block_data?.cta_text as string) ?? "",
-      buttonUrl: link.url ?? "",
-      buttonMode: ((link.block_data?.whatsapp_number as string) ? "whatsapp" : "url") as "url" | "whatsapp",
-      buttonWhatsappNumber: (link.block_data?.whatsapp_number as string) ?? "",
-      buttonWhatsappMessage: (link.block_data?.whatsapp_message as string) ?? "",
-      countdownTargetAt: toDatetimeLocalValue(link.block_data?.target_at as string | undefined),
-      countdownProductId: (link.block_data?.product_id as string) ?? "",
-      countdownCtaLabel: (link.block_data?.cta_label as string) ?? "",
-      countdownCtaUrl: (link.block_data?.cta_url as string) ?? "",
-      embedUrl: (link.block_data?.embed_url as string) ?? "",
-      videoImageVideoUrl: (link.block_data?.video_url as string) ?? "",
-      embedLinkUrl: link.url ?? "",
-      embedLinkDescription: link.description ?? "",
-    };
-    setContentEditSnapshot(JSON.stringify(computeContentEditSnapshot(link.block_type, v)));
-    if (link.block_type === "video") {
-      setEditVideoUrl(v.videoUrl);
-    } else if (link.block_type === "maps") {
-      setEditMapsUrl(v.mapsUrl);
-      setEditMapsEmbed(v.mapsEmbed);
-    } else if (link.block_type === "text") {
-      setEditText(v.text);
-    } else if (link.block_type === "accordion") {
-      setEditAccordionText(v.accordionText);
-    } else if (link.block_type === "project_showcase") {
-      setEditShowcaseUrl(v.showcaseUrl);
-      setEditShowcaseDescription(v.showcaseDescription);
-      setEditShowcaseBadge(v.showcaseBadge);
-      setEditShowcaseCta(v.showcaseCta);
-    } else if (link.block_type === "button") {
-      setEditButtonUrl(v.buttonUrl);
-      setEditButtonMode(v.buttonMode);
-      setEditButtonWhatsappNumber(v.buttonWhatsappNumber);
-      setEditButtonWhatsappMessage(v.buttonWhatsappMessage);
-    } else if (link.block_type === "countdown") {
-      setEditCountdownTargetAt(v.countdownTargetAt);
-      setEditCountdownProductId(v.countdownProductId);
-      setEditCountdownCtaLabel(v.countdownCtaLabel);
-      setEditCountdownCtaUrl(v.countdownCtaUrl);
-    } else if (link.block_type === "embed") {
-      setEditEmbedUrl(v.embedUrl);
-    } else if (link.block_type === "video_image") {
-      setEditVideoImageVideoUrl(v.videoImageVideoUrl);
-    } else if (link.block_type === "embed_link") {
-      setEditEmbedLinkUrl(v.embedLinkUrl);
-      setEditEmbedLinkDescription(v.embedLinkDescription);
-    }
+    loadContentEditBuffers(link);
   }
 
   // closeContentEdit -- audit bug 22 September 2026 (paritas dgn
@@ -1392,14 +1227,14 @@ function BlockSection({
   // contentEditSnapshot). Menggantikan setContentEditId(null) langsung
   // di toggleContentEdit di bawah.
   async function closeContentEdit(link: LinkItem) {
-    if (contentEditSnapshot !== null && JSON.stringify(currentContentEditSnapshot(link.block_type)) !== contentEditSnapshot) {
+    if (isContentEditDirty(link.block_type)) {
       const ok = await confirmAction(t("dashboard.pages.links.contentEditorPage.discardDraftText"), {
         title: t("dashboard.pages.links.contentEditorPage.discardDraftTitle"),
         confirmButtonText: t("dashboard.pages.links.contentEditorPage.discardDraftConfirm"),
       });
       if (!ok) return;
     }
-    setContentEditSnapshot(null);
+    clearContentEditSnapshot();
     setContentEditId(null);
   }
 
@@ -1522,7 +1357,7 @@ function BlockSection({
       await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
       const refreshed = await listExtraPageLinks(pageId);
       setLinks(() => refreshed);
-      setContentEditSnapshot(null);
+      clearContentEditSnapshot();
       setContentEditId(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
