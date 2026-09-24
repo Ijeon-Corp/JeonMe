@@ -45,6 +45,9 @@ import {
   IconYoutube,
 } from "@/components/icons";
 import type { LucideIcon } from "lucide-react";
+import { createElement } from "react";
+import dynamic from "next/dynamic";
+import type { Icon as PhosphorIcon, IconWeight } from "@phosphor-icons/react";
 import {
   MessageCircle,
   MessageSquare,
@@ -268,6 +271,94 @@ export interface LibraryIcon {
   Icon: LucideIcon | ComponentType<{ className?: string }>;
 }
 
+// phosphorIcon -- 24 September 2026 (permintaan pengguna: "Phosphor untuk
+// galeri"). Phosphor (MIT, phosphoricons.com) punya gaya ISI PENUH &
+// DUOTONE yang tidak dimiliki lucide-react (garis saja) -- lebih cocok
+// dengan tampilan playful halaman kreator.
+//
+// Dimuat LAZY per ikon (next/dynamic), BUKAN diimpor statis: file ini ikut
+// ter-bundle ke SETIAP halaman publik kreator (PagePreview ->
+// getLibraryIcon), dan tiap modul ikon Phosphor membawa keenam gayanya
+// sekaligus. Diukur saat implementasi: impor statis 57 ikon membuat chunk
+// galeri naik dari 27 KB -> 80 KB gzip di semua halaman publik; bahkan
+// data fill+duotone saja masih +15 KB. Dengan lazy, halaman yang tidak
+// memakai ikon Phosphor tidak membayar apa pun, yang memakai cuma memuat
+// chunk ikon itu sendiri (SSR tetap merender ikonnya di HTML awal).
+// Entri "/dist/ssr/*" (tanpa React context) supaya aman di server.
+// Factory mengunci `weight` supaya bentuknya sama dgn ikon galeri lain:
+// komponen yang cuma menerima `className`. createElement (bukan JSX)
+// karena file ini .ts.
+const PHOSPHOR_LOADERS = {
+  Heart: () => import("@phosphor-icons/react/dist/ssr/Heart"),
+  Star: () => import("@phosphor-icons/react/dist/ssr/Star"),
+  Sparkle: () => import("@phosphor-icons/react/dist/ssr/Sparkle"),
+  Fire: () => import("@phosphor-icons/react/dist/ssr/Fire"),
+  Crown: () => import("@phosphor-icons/react/dist/ssr/Crown"),
+  Trophy: () => import("@phosphor-icons/react/dist/ssr/Trophy"),
+  Lightning: () => import("@phosphor-icons/react/dist/ssr/Lightning"),
+  Diamond: () => import("@phosphor-icons/react/dist/ssr/Diamond"),
+  Confetti: () => import("@phosphor-icons/react/dist/ssr/Confetti"),
+  Smiley: () => import("@phosphor-icons/react/dist/ssr/Smiley"),
+  ShoppingBag: () => import("@phosphor-icons/react/dist/ssr/ShoppingBag"),
+  ShoppingCart: () => import("@phosphor-icons/react/dist/ssr/ShoppingCart"),
+  Storefront: () => import("@phosphor-icons/react/dist/ssr/Storefront"),
+  Gift: () => import("@phosphor-icons/react/dist/ssr/Gift"),
+  Tag: () => import("@phosphor-icons/react/dist/ssr/Tag"),
+  CreditCard: () => import("@phosphor-icons/react/dist/ssr/CreditCard"),
+  Wallet: () => import("@phosphor-icons/react/dist/ssr/Wallet"),
+  Money: () => import("@phosphor-icons/react/dist/ssr/Money"),
+  Package: () => import("@phosphor-icons/react/dist/ssr/Package"),
+  Ticket: () => import("@phosphor-icons/react/dist/ssr/Ticket"),
+  Coffee: () => import("@phosphor-icons/react/dist/ssr/Coffee"),
+  Hamburger: () => import("@phosphor-icons/react/dist/ssr/Hamburger"),
+  Pizza: () => import("@phosphor-icons/react/dist/ssr/Pizza"),
+  MusicNotes: () => import("@phosphor-icons/react/dist/ssr/MusicNotes"),
+  Headphones: () => import("@phosphor-icons/react/dist/ssr/Headphones"),
+  Microphone: () => import("@phosphor-icons/react/dist/ssr/Microphone"),
+  Camera: () => import("@phosphor-icons/react/dist/ssr/Camera"),
+  VideoCamera: () => import("@phosphor-icons/react/dist/ssr/VideoCamera"),
+  PlayCircle: () => import("@phosphor-icons/react/dist/ssr/PlayCircle"),
+  GameController: () => import("@phosphor-icons/react/dist/ssr/GameController"),
+  Palette: () => import("@phosphor-icons/react/dist/ssr/Palette"),
+  PaintBrush: () => import("@phosphor-icons/react/dist/ssr/PaintBrush"),
+  BookOpen: () => import("@phosphor-icons/react/dist/ssr/BookOpen"),
+  GraduationCap: () => import("@phosphor-icons/react/dist/ssr/GraduationCap"),
+  Lightbulb: () => import("@phosphor-icons/react/dist/ssr/Lightbulb"),
+  Rocket: () => import("@phosphor-icons/react/dist/ssr/Rocket"),
+  Code: () => import("@phosphor-icons/react/dist/ssr/Code"),
+  Briefcase: () => import("@phosphor-icons/react/dist/ssr/Briefcase"),
+  Handshake: () => import("@phosphor-icons/react/dist/ssr/Handshake"),
+  Globe: () => import("@phosphor-icons/react/dist/ssr/Globe"),
+  MapPin: () => import("@phosphor-icons/react/dist/ssr/MapPin"),
+  CalendarBlank: () => import("@phosphor-icons/react/dist/ssr/CalendarBlank"),
+  Clock: () => import("@phosphor-icons/react/dist/ssr/Clock"),
+  Envelope: () => import("@phosphor-icons/react/dist/ssr/Envelope"),
+  Phone: () => import("@phosphor-icons/react/dist/ssr/Phone"),
+  ChatCircle: () => import("@phosphor-icons/react/dist/ssr/ChatCircle"),
+  Users: () => import("@phosphor-icons/react/dist/ssr/Users"),
+  House: () => import("@phosphor-icons/react/dist/ssr/House"),
+  Leaf: () => import("@phosphor-icons/react/dist/ssr/Leaf"),
+  Flower: () => import("@phosphor-icons/react/dist/ssr/Flower"),
+  Sun: () => import("@phosphor-icons/react/dist/ssr/Sun"),
+  Moon: () => import("@phosphor-icons/react/dist/ssr/Moon"),
+  PawPrint: () => import("@phosphor-icons/react/dist/ssr/PawPrint"),
+  Airplane: () => import("@phosphor-icons/react/dist/ssr/Airplane"),
+  Car: () => import("@phosphor-icons/react/dist/ssr/Car"),
+  Barbell: () => import("@phosphor-icons/react/dist/ssr/Barbell"),
+  FirstAid: () => import("@phosphor-icons/react/dist/ssr/FirstAid"),
+} satisfies Record<string, () => Promise<Record<string, unknown>>>;
+
+function phosphorIcon(name: keyof typeof PHOSPHOR_LOADERS, weight: IconWeight): ComponentType<{ className?: string }> {
+  return dynamic(() =>
+    PHOSPHOR_LOADERS[name]().then((mod) => {
+      const Icon = (mod as unknown as Record<string, PhosphorIcon>)[name];
+      return function PhosphorLibraryIcon({ className }: { className?: string }) {
+        return createElement(Icon, { weight, className, "aria-hidden": true });
+      };
+    })
+  );
+}
+
 // Kategori disusun sesuai jenis konten yang biasa dipakai kreator link-in-
 // bio Indonesia (media sosial, toko, kuliner, kelas/edukasi, dst) --
 // urutan array = urutan tampil di IconPickerModal, "Semua" (pencarian
@@ -296,6 +387,126 @@ export const ICON_LIBRARY: LibraryIcon[] = [
   { key: "brand-apple-music", label: "Apple Music", category: "Media Sosial", Icon: IconAppleMusic },
   { key: "brand-apple-podcasts", label: "Apple Podcasts", category: "Media Sosial", Icon: IconApplePodcasts },
   { key: "brand-google-maps", label: "Google Maps", category: "Media Sosial", Icon: IconGoogleMaps },
+
+  // Isi Penuh & Duotone (Phosphor) -- lihat catatan phosphorIcon di atas.
+  // Key prefix "ph-fill-"/"ph-duotone-" + nama kebab-case asli Phosphor
+  // (tidak bentrok dgn key lucide yang polos). Label sengaja sama dgn
+  // padanan lucide-nya -- kategori yang membedakan gayanya.
+  { key: "ph-fill-heart", label: "Hati", category: "Isi Penuh", Icon: phosphorIcon("Heart", "fill") },
+  { key: "ph-fill-star", label: "Bintang", category: "Isi Penuh", Icon: phosphorIcon("Star", "fill") },
+  { key: "ph-fill-sparkle", label: "Kilau", category: "Isi Penuh", Icon: phosphorIcon("Sparkle", "fill") },
+  { key: "ph-fill-fire", label: "Api", category: "Isi Penuh", Icon: phosphorIcon("Fire", "fill") },
+  { key: "ph-fill-crown", label: "Mahkota", category: "Isi Penuh", Icon: phosphorIcon("Crown", "fill") },
+  { key: "ph-fill-trophy", label: "Piala", category: "Isi Penuh", Icon: phosphorIcon("Trophy", "fill") },
+  { key: "ph-fill-lightning", label: "Petir", category: "Isi Penuh", Icon: phosphorIcon("Lightning", "fill") },
+  { key: "ph-fill-diamond", label: "Berlian", category: "Isi Penuh", Icon: phosphorIcon("Diamond", "fill") },
+  { key: "ph-fill-confetti", label: "Konfeti", category: "Isi Penuh", Icon: phosphorIcon("Confetti", "fill") },
+  { key: "ph-fill-smiley", label: "Senyum", category: "Isi Penuh", Icon: phosphorIcon("Smiley", "fill") },
+  { key: "ph-fill-shopping-bag", label: "Tas Belanja", category: "Isi Penuh", Icon: phosphorIcon("ShoppingBag", "fill") },
+  { key: "ph-fill-shopping-cart", label: "Keranjang", category: "Isi Penuh", Icon: phosphorIcon("ShoppingCart", "fill") },
+  { key: "ph-fill-storefront", label: "Toko", category: "Isi Penuh", Icon: phosphorIcon("Storefront", "fill") },
+  { key: "ph-fill-gift", label: "Hadiah", category: "Isi Penuh", Icon: phosphorIcon("Gift", "fill") },
+  { key: "ph-fill-tag", label: "Label Harga", category: "Isi Penuh", Icon: phosphorIcon("Tag", "fill") },
+  { key: "ph-fill-credit-card", label: "Kartu Kredit", category: "Isi Penuh", Icon: phosphorIcon("CreditCard", "fill") },
+  { key: "ph-fill-wallet", label: "Dompet", category: "Isi Penuh", Icon: phosphorIcon("Wallet", "fill") },
+  { key: "ph-fill-money", label: "Uang", category: "Isi Penuh", Icon: phosphorIcon("Money", "fill") },
+  { key: "ph-fill-package", label: "Paket", category: "Isi Penuh", Icon: phosphorIcon("Package", "fill") },
+  { key: "ph-fill-ticket", label: "Tiket", category: "Isi Penuh", Icon: phosphorIcon("Ticket", "fill") },
+  { key: "ph-fill-coffee", label: "Kopi", category: "Isi Penuh", Icon: phosphorIcon("Coffee", "fill") },
+  { key: "ph-fill-hamburger", label: "Burger", category: "Isi Penuh", Icon: phosphorIcon("Hamburger", "fill") },
+  { key: "ph-fill-pizza", label: "Pizza", category: "Isi Penuh", Icon: phosphorIcon("Pizza", "fill") },
+  { key: "ph-fill-music-notes", label: "Musik", category: "Isi Penuh", Icon: phosphorIcon("MusicNotes", "fill") },
+  { key: "ph-fill-headphones", label: "Headphone", category: "Isi Penuh", Icon: phosphorIcon("Headphones", "fill") },
+  { key: "ph-fill-microphone", label: "Mikrofon", category: "Isi Penuh", Icon: phosphorIcon("Microphone", "fill") },
+  { key: "ph-fill-camera", label: "Kamera", category: "Isi Penuh", Icon: phosphorIcon("Camera", "fill") },
+  { key: "ph-fill-video-camera", label: "Kamera Video", category: "Isi Penuh", Icon: phosphorIcon("VideoCamera", "fill") },
+  { key: "ph-fill-play-circle", label: "Putar", category: "Isi Penuh", Icon: phosphorIcon("PlayCircle", "fill") },
+  { key: "ph-fill-game-controller", label: "Game", category: "Isi Penuh", Icon: phosphorIcon("GameController", "fill") },
+  { key: "ph-fill-palette", label: "Palet", category: "Isi Penuh", Icon: phosphorIcon("Palette", "fill") },
+  { key: "ph-fill-paint-brush", label: "Kuas", category: "Isi Penuh", Icon: phosphorIcon("PaintBrush", "fill") },
+  { key: "ph-fill-book-open", label: "Buku", category: "Isi Penuh", Icon: phosphorIcon("BookOpen", "fill") },
+  { key: "ph-fill-graduation-cap", label: "Wisuda", category: "Isi Penuh", Icon: phosphorIcon("GraduationCap", "fill") },
+  { key: "ph-fill-lightbulb", label: "Ide", category: "Isi Penuh", Icon: phosphorIcon("Lightbulb", "fill") },
+  { key: "ph-fill-rocket", label: "Roket", category: "Isi Penuh", Icon: phosphorIcon("Rocket", "fill") },
+  { key: "ph-fill-code", label: "Kode", category: "Isi Penuh", Icon: phosphorIcon("Code", "fill") },
+  { key: "ph-fill-briefcase", label: "Kerja", category: "Isi Penuh", Icon: phosphorIcon("Briefcase", "fill") },
+  { key: "ph-fill-handshake", label: "Kerja Sama", category: "Isi Penuh", Icon: phosphorIcon("Handshake", "fill") },
+  { key: "ph-fill-globe", label: "Situs Web", category: "Isi Penuh", Icon: phosphorIcon("Globe", "fill") },
+  { key: "ph-fill-map-pin", label: "Lokasi", category: "Isi Penuh", Icon: phosphorIcon("MapPin", "fill") },
+  { key: "ph-fill-calendar-blank", label: "Kalender", category: "Isi Penuh", Icon: phosphorIcon("CalendarBlank", "fill") },
+  { key: "ph-fill-clock", label: "Jam", category: "Isi Penuh", Icon: phosphorIcon("Clock", "fill") },
+  { key: "ph-fill-envelope", label: "Email", category: "Isi Penuh", Icon: phosphorIcon("Envelope", "fill") },
+  { key: "ph-fill-phone", label: "Telepon", category: "Isi Penuh", Icon: phosphorIcon("Phone", "fill") },
+  { key: "ph-fill-chat-circle", label: "Chat", category: "Isi Penuh", Icon: phosphorIcon("ChatCircle", "fill") },
+  { key: "ph-fill-users", label: "Komunitas", category: "Isi Penuh", Icon: phosphorIcon("Users", "fill") },
+  { key: "ph-fill-house", label: "Rumah", category: "Isi Penuh", Icon: phosphorIcon("House", "fill") },
+  { key: "ph-fill-leaf", label: "Daun", category: "Isi Penuh", Icon: phosphorIcon("Leaf", "fill") },
+  { key: "ph-fill-flower", label: "Bunga", category: "Isi Penuh", Icon: phosphorIcon("Flower", "fill") },
+  { key: "ph-fill-sun", label: "Matahari", category: "Isi Penuh", Icon: phosphorIcon("Sun", "fill") },
+  { key: "ph-fill-moon", label: "Bulan", category: "Isi Penuh", Icon: phosphorIcon("Moon", "fill") },
+  { key: "ph-fill-paw-print", label: "Hewan", category: "Isi Penuh", Icon: phosphorIcon("PawPrint", "fill") },
+  { key: "ph-fill-airplane", label: "Pesawat", category: "Isi Penuh", Icon: phosphorIcon("Airplane", "fill") },
+  { key: "ph-fill-car", label: "Mobil", category: "Isi Penuh", Icon: phosphorIcon("Car", "fill") },
+  { key: "ph-fill-barbell", label: "Olahraga", category: "Isi Penuh", Icon: phosphorIcon("Barbell", "fill") },
+  { key: "ph-fill-first-aid", label: "Kesehatan", category: "Isi Penuh", Icon: phosphorIcon("FirstAid", "fill") },
+
+  { key: "ph-duotone-heart", label: "Hati", category: "Duotone", Icon: phosphorIcon("Heart", "duotone") },
+  { key: "ph-duotone-star", label: "Bintang", category: "Duotone", Icon: phosphorIcon("Star", "duotone") },
+  { key: "ph-duotone-sparkle", label: "Kilau", category: "Duotone", Icon: phosphorIcon("Sparkle", "duotone") },
+  { key: "ph-duotone-fire", label: "Api", category: "Duotone", Icon: phosphorIcon("Fire", "duotone") },
+  { key: "ph-duotone-crown", label: "Mahkota", category: "Duotone", Icon: phosphorIcon("Crown", "duotone") },
+  { key: "ph-duotone-trophy", label: "Piala", category: "Duotone", Icon: phosphorIcon("Trophy", "duotone") },
+  { key: "ph-duotone-lightning", label: "Petir", category: "Duotone", Icon: phosphorIcon("Lightning", "duotone") },
+  { key: "ph-duotone-diamond", label: "Berlian", category: "Duotone", Icon: phosphorIcon("Diamond", "duotone") },
+  { key: "ph-duotone-confetti", label: "Konfeti", category: "Duotone", Icon: phosphorIcon("Confetti", "duotone") },
+  { key: "ph-duotone-smiley", label: "Senyum", category: "Duotone", Icon: phosphorIcon("Smiley", "duotone") },
+  { key: "ph-duotone-shopping-bag", label: "Tas Belanja", category: "Duotone", Icon: phosphorIcon("ShoppingBag", "duotone") },
+  { key: "ph-duotone-shopping-cart", label: "Keranjang", category: "Duotone", Icon: phosphorIcon("ShoppingCart", "duotone") },
+  { key: "ph-duotone-storefront", label: "Toko", category: "Duotone", Icon: phosphorIcon("Storefront", "duotone") },
+  { key: "ph-duotone-gift", label: "Hadiah", category: "Duotone", Icon: phosphorIcon("Gift", "duotone") },
+  { key: "ph-duotone-tag", label: "Label Harga", category: "Duotone", Icon: phosphorIcon("Tag", "duotone") },
+  { key: "ph-duotone-credit-card", label: "Kartu Kredit", category: "Duotone", Icon: phosphorIcon("CreditCard", "duotone") },
+  { key: "ph-duotone-wallet", label: "Dompet", category: "Duotone", Icon: phosphorIcon("Wallet", "duotone") },
+  { key: "ph-duotone-money", label: "Uang", category: "Duotone", Icon: phosphorIcon("Money", "duotone") },
+  { key: "ph-duotone-package", label: "Paket", category: "Duotone", Icon: phosphorIcon("Package", "duotone") },
+  { key: "ph-duotone-ticket", label: "Tiket", category: "Duotone", Icon: phosphorIcon("Ticket", "duotone") },
+  { key: "ph-duotone-coffee", label: "Kopi", category: "Duotone", Icon: phosphorIcon("Coffee", "duotone") },
+  { key: "ph-duotone-hamburger", label: "Burger", category: "Duotone", Icon: phosphorIcon("Hamburger", "duotone") },
+  { key: "ph-duotone-pizza", label: "Pizza", category: "Duotone", Icon: phosphorIcon("Pizza", "duotone") },
+  { key: "ph-duotone-music-notes", label: "Musik", category: "Duotone", Icon: phosphorIcon("MusicNotes", "duotone") },
+  { key: "ph-duotone-headphones", label: "Headphone", category: "Duotone", Icon: phosphorIcon("Headphones", "duotone") },
+  { key: "ph-duotone-microphone", label: "Mikrofon", category: "Duotone", Icon: phosphorIcon("Microphone", "duotone") },
+  { key: "ph-duotone-camera", label: "Kamera", category: "Duotone", Icon: phosphorIcon("Camera", "duotone") },
+  { key: "ph-duotone-video-camera", label: "Kamera Video", category: "Duotone", Icon: phosphorIcon("VideoCamera", "duotone") },
+  { key: "ph-duotone-play-circle", label: "Putar", category: "Duotone", Icon: phosphorIcon("PlayCircle", "duotone") },
+  { key: "ph-duotone-game-controller", label: "Game", category: "Duotone", Icon: phosphorIcon("GameController", "duotone") },
+  { key: "ph-duotone-palette", label: "Palet", category: "Duotone", Icon: phosphorIcon("Palette", "duotone") },
+  { key: "ph-duotone-paint-brush", label: "Kuas", category: "Duotone", Icon: phosphorIcon("PaintBrush", "duotone") },
+  { key: "ph-duotone-book-open", label: "Buku", category: "Duotone", Icon: phosphorIcon("BookOpen", "duotone") },
+  { key: "ph-duotone-graduation-cap", label: "Wisuda", category: "Duotone", Icon: phosphorIcon("GraduationCap", "duotone") },
+  { key: "ph-duotone-lightbulb", label: "Ide", category: "Duotone", Icon: phosphorIcon("Lightbulb", "duotone") },
+  { key: "ph-duotone-rocket", label: "Roket", category: "Duotone", Icon: phosphorIcon("Rocket", "duotone") },
+  { key: "ph-duotone-code", label: "Kode", category: "Duotone", Icon: phosphorIcon("Code", "duotone") },
+  { key: "ph-duotone-briefcase", label: "Kerja", category: "Duotone", Icon: phosphorIcon("Briefcase", "duotone") },
+  { key: "ph-duotone-handshake", label: "Kerja Sama", category: "Duotone", Icon: phosphorIcon("Handshake", "duotone") },
+  { key: "ph-duotone-globe", label: "Situs Web", category: "Duotone", Icon: phosphorIcon("Globe", "duotone") },
+  { key: "ph-duotone-map-pin", label: "Lokasi", category: "Duotone", Icon: phosphorIcon("MapPin", "duotone") },
+  { key: "ph-duotone-calendar-blank", label: "Kalender", category: "Duotone", Icon: phosphorIcon("CalendarBlank", "duotone") },
+  { key: "ph-duotone-clock", label: "Jam", category: "Duotone", Icon: phosphorIcon("Clock", "duotone") },
+  { key: "ph-duotone-envelope", label: "Email", category: "Duotone", Icon: phosphorIcon("Envelope", "duotone") },
+  { key: "ph-duotone-phone", label: "Telepon", category: "Duotone", Icon: phosphorIcon("Phone", "duotone") },
+  { key: "ph-duotone-chat-circle", label: "Chat", category: "Duotone", Icon: phosphorIcon("ChatCircle", "duotone") },
+  { key: "ph-duotone-users", label: "Komunitas", category: "Duotone", Icon: phosphorIcon("Users", "duotone") },
+  { key: "ph-duotone-house", label: "Rumah", category: "Duotone", Icon: phosphorIcon("House", "duotone") },
+  { key: "ph-duotone-leaf", label: "Daun", category: "Duotone", Icon: phosphorIcon("Leaf", "duotone") },
+  { key: "ph-duotone-flower", label: "Bunga", category: "Duotone", Icon: phosphorIcon("Flower", "duotone") },
+  { key: "ph-duotone-sun", label: "Matahari", category: "Duotone", Icon: phosphorIcon("Sun", "duotone") },
+  { key: "ph-duotone-moon", label: "Bulan", category: "Duotone", Icon: phosphorIcon("Moon", "duotone") },
+  { key: "ph-duotone-paw-print", label: "Hewan", category: "Duotone", Icon: phosphorIcon("PawPrint", "duotone") },
+  { key: "ph-duotone-airplane", label: "Pesawat", category: "Duotone", Icon: phosphorIcon("Airplane", "duotone") },
+  { key: "ph-duotone-car", label: "Mobil", category: "Duotone", Icon: phosphorIcon("Car", "duotone") },
+  { key: "ph-duotone-barbell", label: "Olahraga", category: "Duotone", Icon: phosphorIcon("Barbell", "duotone") },
+  { key: "ph-duotone-first-aid", label: "Kesehatan", category: "Duotone", Icon: phosphorIcon("FirstAid", "duotone") },
 
   // Komunikasi & Sosial
   { key: "message-circle", label: "Pesan", category: "Komunikasi & Sosial", Icon: MessageCircle },
