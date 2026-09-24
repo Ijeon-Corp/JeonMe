@@ -14,6 +14,23 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Kebijakan retry -- ditambahkan 24 September 2026 (audit backend). Tidak
+// satu pun task sebelumnya menyetel MaxRetry, jadi semuanya memakai default
+// asynq 25 kali dengan backoff eksponensial (bisa berhari-hari). Diterapkan
+// HANYA pada task yang punya alasan konkret; task yang retry-nya justru
+// berguna (notifikasi order lunas, webhook produk ke server kreator,
+// undangan tim, email status akun) sengaja dibiarkan default.
+var (
+	// codeEmailRetry -- email berisi kode verifikasi yang KEDALUWARSA dalam
+	// 10-15 menit. Mencoba mengirimnya berjam-jam kemudian cuma
+	// menghasilkan email berisi kode mati yang membingungkan penerimanya.
+	codeEmailRetry = asynq.MaxRetry(3)
+	// scheduledScanRetry -- scan berkala (auto-withdraw, purge akun,
+	// reconcile order) toh akan jalan lagi di jadwal berikutnya; retry
+	// panjang cuma menumpuk dan tumpang-tindih dengan run terjadwal.
+	scheduledScanRetry = asynq.MaxRetry(1)
+)
+
 // TypeOrderPaidNotification -- REQ-F-405: kirim email + link unduhan ke
 // pembeli setelah order berstatus "paid".
 const TypeOrderPaidNotification = "order:paid_notification"
@@ -93,7 +110,7 @@ const TypeAutoWithdrawScan = "payout:auto_withdraw_scan"
 // NewAutoWithdrawScanTask -- tidak ada payload, task ini scan SEMUA user
 // tiap kali jalan (lihat komentar handler).
 func NewAutoWithdrawScanTask() *asynq.Task {
-	return asynq.NewTask(TypeAutoWithdrawScan, nil)
+	return asynq.NewTask(TypeAutoWithdrawScan, nil, scheduledScanRetry)
 }
 
 // TypeAccountPurgeScan -- Modul Settings §6: purge akun yang masa tunggu
@@ -104,7 +121,7 @@ func NewAutoWithdrawScanTask() *asynq.Task {
 const TypeAccountPurgeScan = "account:purge_scan"
 
 func NewAccountPurgeScanTask() *asynq.Task {
-	return asynq.NewTask(TypeAccountPurgeScan, nil)
+	return asynq.NewTask(TypeAccountPurgeScan, nil, scheduledScanRetry)
 }
 
 // TypeOrderReconcile -- permintaan langsung pengguna, 10 September 2026
@@ -120,7 +137,7 @@ func NewAccountPurgeScanTask() *asynq.Task {
 const TypeOrderReconcile = "checkout:order_reconcile"
 
 func NewOrderReconcileTask() *asynq.Task {
-	return asynq.NewTask(TypeOrderReconcile, nil)
+	return asynq.NewTask(TypeOrderReconcile, nil, scheduledScanRetry)
 }
 
 // TypeTeamInviteNotification -- Modul Settings §4: kirim email undangan
@@ -207,7 +224,7 @@ func NewSignupVerificationTask(email, code string) (*asynq.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("queue: gagal encode payload verifikasi email %s: %w", email, err)
 	}
-	return asynq.NewTask(TypeSignupVerificationEmail, payload), nil
+	return asynq.NewTask(TypeSignupVerificationEmail, payload, codeEmailRetry), nil
 }
 
 // TypePasswordResetEmail -- perbaikan 20 Agustus 2026 (ditemukan lewat
@@ -234,7 +251,7 @@ func NewPasswordResetTask(email, resetURL string) (*asynq.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("queue: gagal encode payload reset password %s: %w", email, err)
 	}
-	return asynq.NewTask(TypePasswordResetEmail, payload), nil
+	return asynq.NewTask(TypePasswordResetEmail, payload, codeEmailRetry), nil
 }
 
 // TypeLoyaltyVerificationEmail -- audit OWASP A04 (4 September 2026):
@@ -258,7 +275,7 @@ func NewLoyaltyVerificationTask(email, code string) (*asynq.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("queue: gagal encode payload verifikasi loyalitas %s: %w", email, err)
 	}
-	return asynq.NewTask(TypeLoyaltyVerificationEmail, payload), nil
+	return asynq.NewTask(TypeLoyaltyVerificationEmail, payload, codeEmailRetry), nil
 }
 
 // TypeOrderHistoryVerificationEmail -- riwayat pembelian pembeli
@@ -278,7 +295,7 @@ func NewOrderHistoryVerificationTask(email, code string) (*asynq.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("queue: gagal encode payload verifikasi riwayat pembelian %s: %w", email, err)
 	}
-	return asynq.NewTask(TypeOrderHistoryVerificationEmail, payload), nil
+	return asynq.NewTask(TypeOrderHistoryVerificationEmail, payload, codeEmailRetry), nil
 }
 
 // TypePayoutMethodVerificationEmail -- kode OTP kepemilikan rekening
@@ -314,7 +331,7 @@ func NewPayoutMethodVerificationTask(email, code, label string) (*asynq.Task, er
 	if err != nil {
 		return nil, fmt.Errorf("queue: gagal encode payload verifikasi rekening pencairan %s: %w", email, err)
 	}
-	return asynq.NewTask(TypePayoutMethodVerificationEmail, payload), nil
+	return asynq.NewTask(TypePayoutMethodVerificationEmail, payload, codeEmailRetry), nil
 }
 
 // AccountStatusEmailPayload -- dipakai bersama oleh

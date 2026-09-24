@@ -1717,6 +1717,16 @@ func (h *CheckoutHandler) PrewarmWatermark(ctx context.Context, orderID string) 
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
 	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &watermarkEnabled, &bundleProductID)
+	if err == pgx.ErrNoRows {
+		// Pesanan tidak ada = tidak ada yang perlu disiapkan, dan tidak akan
+		// pernah ada -- BUKAN kegagalan sementara. Perbaikan 24 September
+		// 2026 (audit backend): sebelumnya ErrNoRows ikut dibungkus jadi error
+		// biasa di bawah, sehingga asynq mengulang task ini sampai 25 kali
+		// dengan backoff yang terus membesar -- berjam-jam mencoba memuat
+		// pesanan yang mustahil muncul.
+		log.Printf("checkout: prewarm watermark dilewati, pesanan %s tidak ditemukan", orderID)
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("gagal memuat pesanan: %w", err)
 	}
