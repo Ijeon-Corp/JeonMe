@@ -93,9 +93,14 @@ function simpleIconComponent(icon: SimpleIcon): LinkIconComponent {
 // lingkaran/latar warna disediakan EKSTERNAL oleh badgeClass (baris
 // dashboard) atau iconColorClass langsung (halaman publik), bukan
 // dibakar ke dalam komponen ikonnya sendiri.
-function rawPathIconComponent(path: string, viewBox: string): LinkIconComponent {
+//
+// `transform` (opsional, 24 September 2026) -- utk sumber yang digambar
+// dgn sumbu-y terbalik (ekspor Inkscape/PDF, mis. QRIS): path tetap
+// PERSIS aslinya, cukup dibalik lewat scale(1,-1) + viewBox di koordinat
+// yang sudah dibalik, alih-alih menulis ulang koordinat secara manual.
+function rawPathIconComponent(path: string, viewBox: string, transform?: string): LinkIconComponent {
   return function RawPathIconGlyph({ className }: { className?: string }) {
-    return createElement("svg", { viewBox, fill: "currentColor", className, "aria-hidden": true }, createElement("path", { d: path }));
+    return createElement("svg", { viewBox, fill: "currentColor", className, "aria-hidden": true }, createElement("path", { d: path, transform }));
   };
 }
 
@@ -264,6 +269,39 @@ const PATTERNS: { test: RegExp; Icon: LinkIconComponent; label: string; badgeCla
     label: "GoPay",
     badgeClass: "bg-[#00AED6] text-white",
     iconColorClass: "text-[#00AED6]",
+  },
+
+  // OVO & QRIS -- 24 September 2026 (permintaan pengguna: "OVO + QRIS
+  // untuk deteksi ikon tautan"). Sumber: Wikimedia Commons --
+  // Logo_ovo_purple.svg (CC BY-SA 4.0, wordmark "OVO" satu path, warna
+  // resmi #4b2489) dan Logo_QRIS.svg (domain publik, karya pemerintah RI).
+  // Keduanya WORDMARK (tidak ada simbol terpisah seperti bendera DANA),
+  // jadi yang dipakai tulisannya utuh -- OVO cukup pendek utk badge bulat.
+  // QRIS: 9 path sumber digabung jadi satu (subpath awal 'm' diubah ke
+  // 'M' -- aman karena tiap path aslinya mulai dari titik (0,0)), sumbu-y
+  // dibalik via transform, viewBox dari getBBox() browser sungguhan.
+  // Domain QRIS: qris.id & qris.online sama-sama dialihkan ke
+  // qris.interactive.co.id (layanan pendaftaran merchant QRIS).
+  {
+    test: /(^|[/.])ovo\.id/i,
+    Icon: rawPathIconComponent(
+      "M21.19,20.24a12.54,12.54,0,0,1-8.8,3.45,12.59,12.59,0,0,1-8.85-3.45,11.68,11.68,0,0,1,0-16.77A12.55,12.55,0,0,1,12.4,0a12.54,12.54,0,0,1,8.8,3.45,11.67,11.67,0,0,1,0,16.77M12.4,3.86a7.73,7.73,0,0,0-7.8,8,7.78,7.78,0,1,0,15.56,0,7.73,7.73,0,0,0-7.76-8m38-1.07L40.89,24l-.54-.1c-2.72-.49-3.27-1.17-4.54-3.93L28.68,4.44H26V.67H36.13V4.44H33.71l5.73,12.85L45,4.44H42V.67h8.4Zm23,17.45a13,13,0,0,1-17.64,0,11.68,11.68,0,0,1,0-16.77,13,13,0,0,1,17.64,0,11.65,11.65,0,0,1,0,16.77M64.65,3.86a7.74,7.74,0,0,0-7.81,8,7.78,7.78,0,1,0,15.56,0,7.72,7.72,0,0,0-7.75-8",
+      "0 0 77 24"
+    ),
+    label: "OVO",
+    badgeClass: "bg-[#4b2489] text-white",
+    iconColorClass: "text-[#4b2489]",
+  },
+  {
+    test: /(qris\.id|qris\.online|qris\.interactive\.co\.id)/i,
+    Icon: rawPathIconComponent(
+      "M 18.813,19.108 H 32.767 V 10.622 H 26.913 L 32.767,5.1912 H 27.794 L 22.053,10.622 V 5.1912 h -3.24 v 8.6268 h 10.231 v 2.065 H 18.813 Z M 34.216,5.1912 h 3.4103 v 13.945 H 34.216 Z M 6.9058,8.5572 V 19.108 H 4.2344 c -0.4831,0 -0.8526,-0.368 -0.8526,-0.82 0,-2.49 -0.0284,-9.8157 -0.0284,-12.2482 0,-0.4526 0.3695,-0.8486 0.8242,-0.8486 1.8472,0 7.1614,0 7.9284,0 v 3.366 z M 13.868,1.712 c 0.313,0 2.7,0 3.496,0 0,0 0,6.8735 0,6.9866 -1.137,0 -2.33,0 -3.496,0 0,-2.3194 0,-4.6388 0,-6.9866 z M 8.6109,19.108 c 0,-0.057 0,-3.479 0,-3.479 1.5631,0 3.5521,0 5.2571,0 0,-2.405 0,-5.205 0,-5.205 0.796,0 3.183,0 3.496,0 v 7.835 c 0,0.453 -0.37,0.821 -0.824,0.849 -1.705,0 -5.741,0 -7.9291,0 z M 8.6109,13.932 c 0,-1.16 0,-2.32 0,-3.536 0.2842,0 0.5968,0 0.881,0 0.7961,0 1.7901,0 2.5861,0 0,0 0,3.479 0,3.536 -1.137,0 -2.3019,0 -3.4671,0 z m 2.4441,-2.461 v 0 c -0.341,0 -0.739,0 -1.052,0 -0.1132,0 -0.2269,0 -0.369,0 0,0.481 0,0.933 0,1.414 0.483,0 0.938,0 1.421,0 0,-0.028 0,-1.414 0,-1.414 z M 54.365,8.6986 V 3.494 c 0,-0.4525 -0.398,-0.8203 -0.852,-0.8203 H 48.284 V 1.8252 h 6.081 0.029 c 0.426,0 0.795,0.3677 0.795,0.8203 v 0.0282 6.0249 z M 1.9325,15.657 v 5.205 c 0,0.452 0.341,0.792 0.7957,0.792 h 5.2291 c 0.0284,0 0.0284,0.028 0.0284,0.028 v 0.792 c 0,0 0,0.028 -0.0284,0.028 H 1.9325 c -0.4831,0 -0.8526,-0.368 -0.8526,-0.848 v -5.997 c 0,-0.028 0.0284,-0.028 0.0284,-0.028 h 0.7958 c 0,0 0.0284,0 0.0284,0.028 z M 52.887,15.657 v 3.451 H 39.104 v -5.176 -3.48 h 9.18 V 8.7269 h -9.18 V 5.2478 h 13.783 v 8.6552 h -9.179 v 1.754 z",
+      "1.08 -22.502 54.109 20.79",
+      "scale(1,-1)"
+    ),
+    label: "QRIS",
+    badgeClass: "bg-black text-white",
+    iconColorClass: "text-black",
   },
 ];
 
