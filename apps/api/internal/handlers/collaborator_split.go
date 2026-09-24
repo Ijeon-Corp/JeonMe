@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,6 +44,32 @@ func blockMoneyRoutingByCollaborator(c *gin.Context) bool {
 		"error": "hanya pemilik akun yang bisa mengatur bagi hasil & komisi afiliasi -- minta pemilik akun yang mengubahnya",
 	})
 	return true
+}
+
+// maskEmailForCollaborator — menyamarkan alamat email (mis.
+// "budi@example.com" -> "b***@example.com") KHUSUS saat request datang lewat
+// impersonasi X-Act-As-Owner. Ditambahkan 24 September 2026 (audit backend):
+// menu Audiens -- tempat daftar kontak pembeli -- SENGAJA dikecualikan dari
+// ActAsOwner supaya kolaborator tidak pernah memegang data pribadi pembeli
+// milik pemilik. Tapi tiga rute lain yang MEMANG ber-ActAsOwner tetap
+// mengirim email mentah: daftar ulasan (email pembeli), daftar kode produk
+// yang sudah diklaim (email pembeli), dan daftar afiliator (email mitra
+// afiliasi pemilik). Jadi batas yang dijaga di satu menu bocor lewat tiga
+// menu lain.
+//
+// Disamarkan, BUKAN dihapus: kolaborator tetap bisa membedakan satu entri
+// dari entri lain (huruf depan + domain), yang memang dibutuhkan untuk
+// memoderasi ulasan atau melacak kode -- cukup tanpa bisa menghubungi atau
+// mengumpulkan alamatnya. Pemilik sendiri tetap melihat alamat utuh.
+func maskEmailForCollaborator(c *gin.Context, email string) string {
+	if !c.GetBool("actingAsOwner") || email == "" {
+		return email
+	}
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return "***"
+	}
+	return email[:1] + "***" + email[at:]
 }
 
 // CollaboratorSplit — Modul Settings §3 (diferensiasi dari Lynk.id):

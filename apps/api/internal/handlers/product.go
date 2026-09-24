@@ -1061,6 +1061,8 @@ func (h *ProductHandler) ListCodes(c *gin.Context) {
 	for rows.Next() {
 		var it productCodeItem
 		if err := rows.Scan(&it.ID, &it.Code, &it.ClaimedAt, &it.BuyerEmail); err == nil {
+			// Disamarkan untuk kolaborator -- lihat maskEmailForCollaborator.
+			it.BuyerEmail = maskEmailForCollaborator(c, it.BuyerEmail)
 			items = append(items, it)
 		}
 	}

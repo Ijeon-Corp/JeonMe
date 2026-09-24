@@ -108,6 +108,8 @@ func (h *ReviewHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var it reviewItem
 		if err := rows.Scan(&it.ID, &it.ProductID, &it.ProductName, &it.BuyerEmail, &it.Rating, &it.Comment, &it.IsHidden, &it.CreatedAt); err == nil {
+			// Disamarkan untuk kolaborator -- lihat maskEmailForCollaborator.
+			it.BuyerEmail = maskEmailForCollaborator(c, it.BuyerEmail)
 			items = append(items, it)
 		}
 	}

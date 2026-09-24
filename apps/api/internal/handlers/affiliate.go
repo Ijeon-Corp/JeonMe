@@ -251,6 +251,9 @@ func (h *AffiliateHandler) ListMine(c *gin.Context) {
 	for rows.Next() {
 		var it myAffiliateItem
 		if err := rows.Scan(&it.ID, &it.AffiliateEmail, &it.ReferralCode); err == nil {
+			// Email mitra afiliasi pemilik disamarkan untuk kolaborator --
+			// lihat maskEmailForCollaborator (collaborator_split.go).
+			it.AffiliateEmail = maskEmailForCollaborator(c, it.AffiliateEmail)
 			it.ReferralBaseURL = h.PublicWebURL + "/" + username
 			items = append(items, it)
 		}
