@@ -601,8 +601,13 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
     theme: t.theme,
     layoutVariant: t.layoutVariant ?? "centered",
     profileExtras: t.profileExtras,
-    links: orderedTemplateItems(t).map((item) => ({
-      id: item.title,
+    // id = indeks + judul, BUKAN judul saja -- audit visual template 25
+    // September 2026: "Tempat Hiburan Malam" punya tautan DAN formulir
+    // sama-sama berjudul "Reservasi Meja"; id kembar = key React kembar,
+    // dan satu kartu basi ikut "nyangkut" di pratinjau 6 template
+    // berikutnya sampai halaman dimuat ulang.
+    links: orderedTemplateItems(t).map((item, i) => ({
+      id: `${i}:${item.title}`,
       title: item.title,
       url: item.url,
       blockType: item.blockType,
@@ -624,7 +629,7 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
       accentColor: item.accentColor,
       badgeText: item.linkBadgeText,
     })),
-    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
+    products: (t.products ?? []).map((p, i) => ({ id: `${i}:${p.name}`, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
     social: t.social,
   };
 }
