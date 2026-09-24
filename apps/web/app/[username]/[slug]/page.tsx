@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicPageBySlug } from "@/lib/api-client";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
+import JsonLd from "@/components/JsonLd";
 import CookieConsent from "@/components/CookieConsent";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
 import { SITE_URL } from "@/lib/site";
+import { creatorSubpageSchema } from "@/lib/structured-data";
 
 type PageParams = {
   params: Promise<{ username: string; slug: string }>;
@@ -40,6 +42,15 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
       siteName: "Jeon.id",
       images: page.avatar_url ? [{ url: page.avatar_url }] : undefined,
       type: "profile",
+    },
+    // twitter -- 24 September 2026 (audit UX pembeli): halaman utama sudah
+    // punya, rute ini belum, jadi pratinjau tautan Toko di X jatuh ke
+    // default. Isinya disamakan persis dengan app/[username]/page.tsx.
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: page.avatar_url ? [page.avatar_url] : undefined,
     },
   };
 }
@@ -92,6 +103,15 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
         styleOverride: page.custom_style_override,
       }}
     >
+      <JsonLd
+        data={creatorSubpageSchema({
+          username: page.username,
+          displayName: page.display_name || `@${page.username}`,
+          slug,
+          title: page.seo_title || page.display_name || `@${page.username}`,
+          description: page.seo_description || page.bio,
+        })}
+      />
       <AnalyticsScripts analytics={page.analytics} />
       <CookieConsent hasAnalytics={!!page.analytics?.ga_measurement_id} hasMarketing={!!page.analytics?.fb_pixel_id} />
       <PageAnalytics username={page.username} slug={slug} />

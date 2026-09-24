@@ -66,3 +66,35 @@ export function creatorProfileSchema(page: {
     },
   };
 }
+
+// creatorSubpageSchema -- halaman TAMBAHAN kreator (Toko, bio ekstra),
+// ditambahkan 24 September 2026 (audit UX pembeli): rute
+// app/[username]/[slug] sudah punya canonical sejak 22 Sept tapi tanpa
+// structured data sama sekali, padahal halaman jualan justru yang paling
+// butuh dikenali mesin pencari. SENGAJA WebPage + author Person, BUKAN
+// ProfilePage: ProfilePage menurut Google hanya untuk halaman profil utama
+// seseorang (itu sudah dipakai app/[username]). Menautkan author ke URL
+// halaman utama kreator membuat Google menghubungkan halaman ini dengan
+// entitas Person yang sama. (Product/ItemList yang lebih kaya butuh data
+// produk yang diratakan dari blok "produk" -- sengaja belum.)
+export function creatorSubpageSchema(page: {
+  username: string;
+  displayName: string;
+  slug: string;
+  title: string;
+  description: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: page.title,
+    description: page.description || undefined,
+    url: `${SITE_URL}/${page.username}/${page.slug}`,
+    author: {
+      "@type": "Person",
+      name: page.displayName,
+      alternateName: `@${page.username}`,
+      url: `${SITE_URL}/${page.username}`,
+    },
+  };
+}
