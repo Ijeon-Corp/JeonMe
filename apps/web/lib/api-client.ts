@@ -2224,7 +2224,10 @@ export function getProductWebhookSecret(productId: string) {
 }
 
 // markOrderFulfilled -- metode "manual": kreator menandai pesanan sudah
-// diproses/dikirim lewat kanal lain.
+// diproses/dikirim lewat kanal lain. Sampai 24 September 2026 fungsi ini
+// TIDAK PERNAH dipanggil dari mana pun (audit menandainya "kode mati"),
+// padahal backend-nya ada dan halaman status pembeli bergantung padanya --
+// sekarang dipakai tombol "Tandai sudah dikirim" di TransactionPanel.
 export function markOrderFulfilled(orderId: string) {
   return apiFetch<{ message: string }>(`/dashboard/orders/${orderId}/fulfill`, { method: "POST" }, { auth: true });
 }
@@ -2286,6 +2289,9 @@ export interface OrderDetail {
   payment_method: string;
   created_at: string;
   fulfilled_at: string | null;
+  // delivery_method -- dikirim GetOrderDetail sejak 24 September 2026.
+  // Opsional di sini utk jendela rolling deploy (web baru + api lama).
+  delivery_method?: string;
   refunded_at: string | null;
   refund_amount_idr: number | null;
   refund_reason: string;

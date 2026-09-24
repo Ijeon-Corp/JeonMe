@@ -2,7 +2,8 @@
 
 import { FormSkeleton, TableSkeleton } from "@/components/dashboard/feedback/Skeletons";
 import { useEffect, useState } from "react";
-import { ApiError, OrderDetail, OrderListItem, getOrderDetail, listOrders, refundOrder } from "@/lib/api-client";
+import { ApiError, OrderDetail, OrderListItem, getOrderDetail, listOrders, markOrderFulfilled, refundOrder } from "@/lib/api-client";
+import { confirmAction } from "@/lib/confirm";
 import { IconClose, IconInbox } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
@@ -231,6 +232,35 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
   const [reason, setReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [markingFulfilled, setMarkingFulfilled] = useState(false);
+
+  // handleMarkFulfilled -- DITAMBAHKAN 24 September 2026. Untuk produk
+  // dengan metode pengiriman "manual", halaman status pembeli menampilkan
+  // "Pesananmu akan diproses & dikirim langsung oleh penjual. Mohon tunggu"
+  // sampai fulfilled_at terisi, lalu berganti "Sudah diproses penjual pada
+  // ...". Backend-nya (POST /dashboard/orders/:id/fulfill) sudah lama ada,
+  // tapi TIDAK ADA satu pun UI untuk memanggilnya -- jadi pembeli melihat
+  // "Mohon tunggu" SELAMANYA walau kreator sudah benar-benar mengirim.
+  // Audit kode mati menandai markOrderFulfilled sebagai tak terpakai; yang
+  // hilang sebenarnya tombolnya, bukan fungsinya.
+  async function handleMarkFulfilled() {
+    if (!detail) return;
+    const ok = await confirmAction(t("dashboard.components.transactionPanel.markFulfilledConfirm"), {
+      title: t("dashboard.components.transactionPanel.markFulfilledButton"),
+      confirmButtonText: t("dashboard.components.transactionPanel.markFulfilledButton"),
+    });
+    if (!ok) return;
+    setMarkingFulfilled(true);
+    try {
+      await markOrderFulfilled(detail.order_id);
+      const refreshed = await getOrderDetail(detail.order_id);
+      setDetail(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.markFulfilledError"));
+    } finally {
+      setMarkingFulfilled(false);
+    }
+  }
 
   useEffect(() => {
     getOrderDetail(orderId)
@@ -305,6 +335,18 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
               <Row label={t("dashboard.components.transactionPanel.rowTime")} value={formatDateTime(detail.created_at)} />
               {detail.fulfilled_at && (
                 <Row label={t("dashboard.components.transactionPanel.rowFulfilledAt")} value={formatDateTime(detail.fulfilled_at)} />
+              )}
+              {/* Syaratnya sama persis dengan WHERE di MarkFulfilled (backend):
+                  metode manual, sudah lunas, belum pernah ditandai. */}
+              {detail.delivery_method === "manual" && detail.status === "paid" && !detail.fulfilled_at && (
+                <button
+                  type="button"
+                  onClick={handleMarkFulfilled}
+                  disabled={markingFulfilled}
+                  className="btn-primary mt-2 w-full rounded-lg py-2 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {markingFulfilled ? "..." : t("dashboard.components.transactionPanel.markFulfilledButton")}
+                </button>
               )}
               {detail.refunded_at && (
                 <>

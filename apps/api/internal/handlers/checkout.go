@@ -798,9 +798,14 @@ type orderDetailResponse struct {
 	PaymentMethod          string  `json:"payment_method"`
 	CreatedAt              string  `json:"created_at"`
 	FulfilledAt            *string `json:"fulfilled_at"`
-	RefundedAt             *string `json:"refunded_at"`
-	RefundAmountIDR        *int64  `json:"refund_amount_idr"`
-	RefundReason           string  `json:"refund_reason"`
+	// DeliveryMethod -- DITAMBAHKAN 24 September 2026, supaya panel
+	// transaksi bisa menampilkan tombol "Tandai sudah dikirim" HANYA untuk
+	// order yang memang memenuhi syarat MarkFulfilled (metode manual, lunas,
+	// belum ditandai). Lihat catatan di TransactionPanel.tsx.
+	DeliveryMethod  string  `json:"delivery_method"`
+	RefundedAt      *string `json:"refunded_at"`
+	RefundAmountIDR *int64  `json:"refund_amount_idr"`
+	RefundReason    string  `json:"refund_reason"`
 	// LedgerEntries -- HANYA baris ledger_entries milik KREATOR yang login
 	// (bukan afiliator/kolaborator lain yang mungkin juga dapat bagian dari
 	// order yang sama) -- konsisten dengan balance.go yang juga selalu
@@ -824,12 +829,12 @@ func (h *CheckoutHandler) GetOrderDetail(c *gin.Context) {
 	err := h.DB.QueryRow(ctx, `
 		SELECT o.id, p.name, o.buyer_email, o.buyer_name, o.buyer_note, o.buyer_contact, o.amount_idr, o.platform_fee_idr, o.discount_idr,
 			o.affiliate_commission_idr, o.status, o.psp_reference, o.created_at, o.fulfilled_at,
-			o.refunded_at, o.refund_amount_idr, o.refund_reason
+			o.refunded_at, o.refund_amount_idr, o.refund_reason, p.delivery_method
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1 AND p.user_id = $2
 	`, orderID, userID).Scan(&resp.OrderID, &resp.ProductName, &resp.BuyerEmail, &resp.BuyerName, &resp.BuyerNote, &resp.BuyerContact, &resp.AmountIDR,
 		&resp.PlatformFeeIDR, &resp.DiscountIDR, &resp.AffiliateCommissionIDR, &resp.Status, &resp.PspReference,
-		&createdAt, &fulfilledAt, &refundedAt, &resp.RefundAmountIDR, &resp.RefundReason)
+		&createdAt, &fulfilledAt, &refundedAt, &resp.RefundAmountIDR, &resp.RefundReason, &resp.DeliveryMethod)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
