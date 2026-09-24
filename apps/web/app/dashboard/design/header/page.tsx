@@ -66,7 +66,13 @@ export default function DesignHeaderPage() {
     setAvatarUploading(true);
     try {
       const { avatar_url } = await uploadAvatar(file);
-      setPage({ ...page, avatar_url });
+      // Updater, BUKAN { ...page } -- perbaikan 24 September 2026 (audit
+      // kualitas kode). `page` di sini snapshot dari SEBELUM await, padahal
+      // input Nama & Bio di halaman yang sama TIDAK dikunci selama unggahan
+      // (konversi WebP foto besar bisa beberapa detik). Kreator yang
+      // mengetik nama/bio baru sambil menunggu melihat ketikannya kembali
+      // ke nilai lama begitu unggahan selesai.
+      setPage((prev) => (prev ? { ...prev, avatar_url } : prev));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.designHeader.uploadError"));
     } finally {

@@ -955,12 +955,14 @@ export default function DashboardLinksPage() {
   async function handleToggleShowProfileHeader() {
     if (!activePage || !page) return;
     const next = !(page.show_profile_header ?? true);
-    const previous = page;
-    setPage({ ...page, show_profile_header: next });
+    // Updater + rollback per-field -- lihat catatan lengkap di
+    // lib/useDesignData.ts handlePageSettingChange (24 September 2026).
+    const previousShow = page.show_profile_header;
+    setPage((prev) => (prev ? { ...prev, show_profile_header: next } : prev));
     try {
       await updateExtraPage(activePage.id, { show_profile_header: next });
     } catch (err) {
-      setPage(previous);
+      setPage((prev) => (prev ? { ...prev, show_profile_header: previousShow } : prev));
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.toggleProfileHeaderFailed"));
     }
   }
@@ -977,13 +979,15 @@ export default function DashboardLinksPage() {
     const value = profileEditValue.trim();
     setEditingProfileField(null);
 
-    const previous = page;
+    // Updater + rollback per-field -- lihat catatan di handleToggleShowProfileHeader.
+    const previousValue = field === "name" ? page.display_name : page.bio;
     const patch = field === "name" ? { display_name: value } : { bio: value };
-    setPage({ ...page, ...patch });
+    setPage((prev) => (prev ? { ...prev, ...patch } : prev));
     try {
       await currentPagePatch(patch);
     } catch (err) {
-      setPage(previous);
+      const revert = field === "name" ? { display_name: previousValue } : { bio: previousValue };
+      setPage((prev) => (prev ? { ...prev, ...revert } : prev));
       setError(
         err instanceof ApiError
           ? err.message
@@ -1031,7 +1035,8 @@ export default function DashboardLinksPage() {
     };
     try {
       await currentPagePatch(patch);
-      setPage({ ...page, ...patch });
+      // Updater -- `page` di sini snapshot dari SEBELUM await.
+      setPage((prev) => (prev ? { ...prev, ...patch } : prev));
       setSocialOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveSocialFailed"));
@@ -1048,7 +1053,9 @@ export default function DashboardLinksPage() {
     setAvatarUploading(true);
     try {
       const { avatar_url } = await currentUploadAvatar(file);
-      setPage({ ...page, avatar_url });
+      // Updater -- `page` di sini snapshot dari SEBELUM await, lihat catatan
+      // sama di app/dashboard/design/header/page.tsx.
+      setPage((prev) => (prev ? { ...prev, avatar_url } : prev));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadAvatarFailed"));
     } finally {
