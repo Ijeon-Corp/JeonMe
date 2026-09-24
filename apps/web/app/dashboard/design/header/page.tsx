@@ -6,7 +6,8 @@ import PageSkeleton from "@/components/Skeleton";
 import { useState } from "react";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
-import { ApiError, MyPage, uploadAvatar } from "@/lib/api-client";
+import { ApiError, EMPTY_PROFILE_EXTRAS, MyPage, updateMyPageProfileExtras, uploadAvatar } from "@/lib/api-client";
+import ProfileExtrasEditor from "@/components/dashboard/page/ProfileExtrasEditor";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
 
@@ -50,6 +51,7 @@ const LAYOUT_VALUES: MyPage["layout_variant"][] = [
   "duo",
   "masthead",
   "portrait",
+  "profile",
 ];
 
 export default function DesignHeaderPage() {
@@ -166,6 +168,20 @@ export default function DesignHeaderPage() {
           ))}
         </div>
       </section>
+
+      {/* Chip & statistik layout "Profil" (24 Sept 2026) -- cuma relevan
+          saat layout itu dipilih, jadi disembunyikan di layout lain. */}
+      {page.layout_variant === "profile" && (
+        <section className="glass mt-4 rounded-jlg p-5 shadow-card">
+          <ProfileExtrasEditor
+            value={page.profile_extras ?? EMPTY_PROFILE_EXTRAS}
+            onSave={async (next) => {
+              const res = await updateMyPageProfileExtras(next);
+              setPage((prev) => (prev ? { ...prev, profile_extras: res.profile_extras } : prev));
+            }}
+          />
+        </section>
+      )}
     </DesignPageShell>
   );
 }

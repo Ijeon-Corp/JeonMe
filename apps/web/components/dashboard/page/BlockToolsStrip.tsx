@@ -7,6 +7,7 @@ import { IconClock, IconCopy, IconLock, IconStar, IconTrash } from "@/components
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { useLocale } from "@/lib/locale-context";
 import type { LinkItem } from "@/lib/api-client";
+import ButtonStyleMenu, { type ButtonStylePatch } from "@/components/dashboard/page/ButtonStyleMenu";
 
 // BlockToolsStrip -- alat kelola per blok (jadwal/kunci/sensitif/ikon/
 // featured/urutan/duplikat/hapus), dipakai bersama dashboard/links/page.tsx
@@ -154,6 +155,7 @@ export default function BlockToolsStrip({
   hideFeaturedToggle = false,
   onDuplicate,
   onDelete,
+  onButtonStyleChange,
 }: {
   link: LinkItem;
   iconUploading: boolean;
@@ -180,6 +182,9 @@ export default function BlockToolsStrip({
   hideFeaturedToggle?: boolean;
   onDuplicate: () => void;
   onDelete: () => void;
+  // onButtonStyleChange -- warna tombol & label harga per tautan (migrasi
+  // 000109). Opsional; menu cuma tampil utk block_type "link".
+  onButtonStyleChange?: (patch: ButtonStylePatch) => void;
 }) {
   const { t } = useLocale();
   const L = (key: string) => t(`dashboard.pages.links.linkCard.toolLabels.${key}`);
@@ -342,6 +347,9 @@ export default function BlockToolsStrip({
             </div>
           )}
         </div>
+        {onButtonStyleChange && link.block_type === "link" && (
+          <ButtonStyleMenu link={link} chipClassName={CHIP_BASE} activeClassName={CHIP_ACTIVE} idleClassName={CHIP_IDLE} onChange={onButtonStyleChange} />
+        )}
       </div>
 
       <div className="flex items-center gap-1 max-sm:w-full max-sm:justify-between max-sm:border-t max-sm:border-app-border max-sm:pt-2 sm:ml-auto">

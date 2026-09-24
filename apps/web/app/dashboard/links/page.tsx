@@ -1244,6 +1244,23 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // handleButtonStyleChange -- warna tombol / label harga per tautan
+  // (migrasi 000109, ButtonStyleMenu). Rollback per-field (hanya field yang
+  // diubah dikembalikan), bukan snapshot seluruh `links`, supaya perubahan
+  // lain yang terjadi selama request berjalan tidak ikut tertimpa.
+  async function handleButtonStyleChange(link: LinkItem, patch: { accent_color?: string; badge_text?: string }) {
+    const revert: { accent_color?: string; badge_text?: string } = {};
+    if (patch.accent_color !== undefined) revert.accent_color = link.accent_color;
+    if (patch.badge_text !== undefined) revert.badge_text = link.badge_text;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, ...patch } : l)));
+    try {
+      await updateLink(link.id, patch);
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, ...revert } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeButtonStyleFailed"));
+    }
+  }
+
   async function handleClearIconColor(link: LinkItem) {
     const previous = links;
     setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_color: "" } : l)));
@@ -3461,6 +3478,7 @@ export default function DashboardLinksPage() {
                 onOpenIconGallery={() => setIconPickerLinkId(link.id)}
                 onIconColorChange={(color) => handleIconColorChange(link, color)}
                 onClearIconColor={() => handleClearIconColor(link)}
+                onButtonStyleChange={(patch) => handleButtonStyleChange(link, patch)}
                 onRemoveIcon={() => handleRemoveIcon(link)}
                 onToggleFeatured={() => handleToggleFeatured(link)}
                 hideFeaturedToggle

@@ -28,6 +28,7 @@ import {
   listExtraPageLinks,
   reorderExtraPageLinks,
   updateExtraPage,
+  updateExtraPageProfileExtras,
   updateLink,
   uploadAudioBlock,
   uploadBuilderMediaImage,
@@ -557,7 +558,17 @@ export default function ProdukPageEditor({
           <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} onUploadBackground={handleUploadBackground} />
         )}
         {section === "header" && (
-          <HeaderSection page={page} onLocalChange={handleDesignLocalChange} onPatch={handlePatch} onError={setError} onUploadAvatar={handleUploadAvatar} />
+          <HeaderSection
+            page={page}
+            onLocalChange={handleDesignLocalChange}
+            onPatch={handlePatch}
+            onError={setError}
+            onUploadAvatar={handleUploadAvatar}
+            onSaveProfileExtras={async (next) => {
+              const res = await updateExtraPageProfileExtras(page.id, next);
+              handleDesignLocalChange({ profile_extras: res.profile_extras });
+            }}
+          />
         )}
         {section === "tombol" && <TombolSection page={page} onLocalChange={handleDesignLocalChange} onStyleOverride={handleStyleOverride} />}
         {section === "font" && <FontSection page={page} onLocalChange={handleDesignLocalChange} onStyleOverride={handleStyleOverride} />}
@@ -1494,6 +1505,23 @@ function BlockSection({
     } catch (err) {
       setLinks(() => previous);
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeIconColorFailed"));
+    }
+  }
+
+  // handleButtonStyleChange -- warna tombol / label harga per tautan
+  // (migrasi 000109, ButtonStyleMenu). Rollback per-field (hanya field yang
+  // diubah dikembalikan), bukan snapshot seluruh `links`, supaya perubahan
+  // lain yang terjadi selama request berjalan tidak ikut tertimpa.
+  async function handleButtonStyleChange(link: LinkItem, patch: { accent_color?: string; badge_text?: string }) {
+    const revert: { accent_color?: string; badge_text?: string } = {};
+    if (patch.accent_color !== undefined) revert.accent_color = link.accent_color;
+    if (patch.badge_text !== undefined) revert.badge_text = link.badge_text;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, ...patch } : l)));
+    try {
+      await updateLink(link.id, patch);
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, ...revert } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeButtonStyleFailed"));
     }
   }
 
@@ -2441,6 +2469,7 @@ function BlockSection({
                 onOpenIconGallery={() => setIconPickerLinkId(link.id)}
                 onIconColorChange={(color) => handleIconColorChange(link, color)}
                 onClearIconColor={() => handleClearIconColor(link)}
+                onButtonStyleChange={(patch) => handleButtonStyleChange(link, patch)}
                 onRemoveIcon={() => handleRemoveIcon(link)}
                 onToggleFeatured={() => handleToggleFeatured(link)}
                 onDuplicate={() => handleDuplicate(link)}

@@ -3,7 +3,8 @@
 import Image from "next/image";
 
 import { useState } from "react";
-import { ApiError, MyPage, PageLayoutVariant } from "@/lib/api-client";
+import { ApiError, EMPTY_PROFILE_EXTRAS, MyPage, PageLayoutVariant, ProfileExtras } from "@/lib/api-client";
+import ProfileExtrasEditor from "@/components/dashboard/page/ProfileExtrasEditor";
 import {
   CUSTOM_BUTTON_ROUNDED_OPTIONS,
   CUSTOM_BUTTON_SHADOW_OPTIONS,
@@ -53,6 +54,10 @@ export interface DesignSectionPage {
   custom_title_color: string;
   custom_style_override: boolean;
   layout_variant: PageLayoutVariant;
+  // profile_extras -- chip & statistik layout "profile" (migrasi 000109).
+  // Disimpan lewat endpoint TERPISAH (onSaveProfileExtras), BUKAN onPatch
+  // -- updateExtraPage tidak menerima field ini.
+  profile_extras?: ProfileExtras;
   social_instagram: string;
   social_tiktok: string;
   social_facebook: string;
@@ -92,6 +97,7 @@ function getLayoutOptions(t: (key: string) => string): { value: PageLayoutVarian
     { value: "duo", label: "Duo", description: t("dashboard.components.produkPageEditor.layoutOptions.duo") },
     { value: "masthead", label: "Masthead", description: t("dashboard.components.produkPageEditor.layoutOptions.masthead") },
     { value: "portrait", label: "Portrait", description: t("dashboard.components.produkPageEditor.layoutOptions.portrait") },
+    { value: "profile", label: t("dashboard.pages.designHeader.layouts.profile.label"), description: t("dashboard.components.produkPageEditor.layoutOptions.profile") },
   ];
 }
 
@@ -227,12 +233,16 @@ export function HeaderSection({
   onError,
   // onUploadAvatar -- lihat catatan lengkap di onUploadBackground (TemaSection).
   onUploadAvatar,
+  // onSaveProfileExtras -- simpan chip & statistik layout "profile" lewat
+  // endpoint halaman tambahan; editor hanya tampil kalau prop ini diisi.
+  onSaveProfileExtras,
 }: {
   page: DesignSectionPage;
   onLocalChange: (patch: DesignSectionPatch) => void;
   onPatch: (patch: DesignSectionPatch) => void;
   onError: (msg: string | null) => void;
   onUploadAvatar: (file: File) => Promise<{ avatar_url: string }>;
+  onSaveProfileExtras?: (next: ProfileExtras) => Promise<void>;
 }) {
   const { t } = useLocale();
   const LAYOUT_OPTIONS = getLayoutOptions(t);
@@ -362,6 +372,12 @@ export function HeaderSection({
           ))}
         </div>
       </div>
+
+      {page.layout_variant === "profile" && onSaveProfileExtras && (
+        <div className="rounded-xl border border-app-border p-4">
+          <ProfileExtrasEditor value={page.profile_extras ?? EMPTY_PROFILE_EXTRAS} onSave={onSaveProfileExtras} />
+        </div>
+      )}
 
       {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026,
           paritas penuh dengan halaman utama (lihat catatan lengkap di
