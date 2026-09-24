@@ -88,7 +88,7 @@ func Create(ctx context.Context, db *pgxpool.Pool, userID string, amountIDR int6
 	newBalance := total - amountIDR
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO ledger_entries (id, user_id, type, amount_idr, balance_after, source, created_at)
-		VALUES ($1, $2, 'debit', $3, $4, 'payout', now())
+		VALUES ($1, $2, 'debit', $3, $4, 'payout', clock_timestamp())
 	`, uuid.NewString(), userID, -amountIDR, newBalance); err != nil {
 		return "", fmt.Errorf("payout: gagal mencatat ledger penarikan: %w", err)
 	}

@@ -895,6 +895,29 @@ func (h *CheckoutHandler) GetOrderDetail(c *gin.Context) {
 // (mengunci baca MAUPUN tulis berikutnya utk user yang sama sampai
 // transaksi pemanggil commit/rollback) -- caller TIDAK berubah sama
 // sekali, cuma query di dalamnya yang diganti.
+// Perbaikan 24 September 2026 (audit backend): pengurutan di bawah bertumpu
+// pada created_at, dan SELURUH penulis ledger dulu mengisinya dengan now().
+// Di Postgres now() = transaction_timestamp(), DIBEKUKAN saat BEGIN -- bukan
+// saat baris ditulis. Itu bisa membalik urutan terhadap urutan COMMIT, tepat
+// pada transaksi yang diserialkan pg_advisory_xact_lock: Tx B ber-BEGIN
+// lebih dulu (now() beku di T0) lalu MEMBLOK menunggu lock; Tx A ber-BEGIN
+// sesudahnya (now()=T1>T0), menulis, commit; Tx B baru dapat lock, membaca
+// saldo dengan benar, lalu menulis barisnya dengan created_at T0 -- LEBIH
+// AWAL dari baris A. Kredit berikutnya membaca baris A sebagai "terbaru" dan
+// mengambil balance_after yang basi, jadi kredit B hilang dari rantai
+// running balance selamanya. Dibuktikan agen lewat dua sesi psql
+// bersamaan: now() tidak maju sedetik pun walau transaksi menunggu lock 1
+// detik, sementara clock_timestamp() maju.
+//
+// Semua penulis kini memakai clock_timestamp() (waktu SAAT baris ditulis),
+// yang karena advisory lock pasti jatuh SETELAH pemegang lock sebelumnya
+// commit -- jadi urutan created_at konsisten dengan urutan commit.
+//
+// Dampaknya terbatas pada jejak audit, bukan uang: saldo yang bisa ditarik
+// dibaca lewat SUM(amount_idr) (balanceFor & payout.Create), bukan dari
+// balance_after. Tapi balance_after inilah yang jadi sumber kebenaran
+// "saldo O(1)" hasil perbaikan 15 September 2026, dan angka yang salah di
+// sana tidak bisa direkonsiliasi belakangan.
 func latestLedgerBalance(ctx context.Context, tx pgx.Tx, userID string) (int64, error) {
 	var balance int64
 	err := tx.QueryRow(ctx, `
@@ -1028,7 +1051,7 @@ func (h *CheckoutHandler) RefundOrder(c *gin.Context) {
 		refundLedgerID := uuid.NewString()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
-			VALUES ($1, $2, $3, 'refund_debit', $4, $5, 'refund', now())
+			VALUES ($1, $2, $3, 'refund_debit', $4, $5, 'refund', clock_timestamp())
 		`, refundLedgerID, cr.UserID, orderID, -cr.AmountIDR, newBalance); err != nil {
 			log.Printf("checkout: refund order %s gagal menulis ledger pembalik untuk user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
@@ -1312,7 +1335,7 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 			ledgerID := uuid.NewString()
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
-				VALUES ($1, $2, $3, 'credit', $4, $5, ledger_source_for_product($6), now())
+				VALUES ($1, $2, $3, 'credit', $4, $5, ledger_source_for_product($6), clock_timestamp())
 			`, ledgerID, productUserID, orderID, netAmount, newBalance, productID); err != nil {
 				return fmt.Errorf("gagal mencatat ledger")
 			}
@@ -1340,7 +1363,7 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 				affiliateLedgerID := uuid.NewString()
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
-					VALUES ($1, $2, $3, 'credit', $4, $5, 'affiliate_commission', now())
+					VALUES ($1, $2, $3, 'credit', $4, $5, 'affiliate_commission', clock_timestamp())
 				`, affiliateLedgerID, affiliateUserID, orderID, affiliateCommissionIDR, affiliateNewBalance); err != nil {
 					return fmt.Errorf("gagal mencatat ledger afiliator")
 				}
@@ -1370,7 +1393,7 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 				collabLedgerID := uuid.NewString()
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
-					VALUES ($1, $2, $3, 'credit', $4, $5, 'collaborator_split', now())
+					VALUES ($1, $2, $3, 'credit', $4, $5, 'collaborator_split', clock_timestamp())
 				`, collabLedgerID, split.UserID, orderID, split.AmountIDR, collabNewBalance); err != nil {
 					return fmt.Errorf("gagal mencatat ledger kolaborator")
 				}

@@ -1,0 +1,25 @@
+-- Perbaikan performa (audit menyeluruh 24 September 2026), berpasangan
+-- dengan perbaikan clock_timestamp() di latestLedgerBalance.
+--
+-- latestLedgerBalance dijalankan pada SETIAP penulisan ledger (webhook
+-- pembayaran lunas, komisi afiliasi, split tiap kolaborator, refund,
+-- payout, pembalikan payout) dengan pola
+-- `WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1` -- yaitu di jalur
+-- paling kritis dan paling sering dipakai di seluruh sistem, di dalam
+-- transaksi yang sudah memegang pg_advisory_xact_lock per-user (jadi
+-- lambatnya query ini langsung memperpanjang waktu kunci).
+--
+-- Index yang ada TIDAK melayani pola itu: idx_ledger_entries_user_id cuma
+-- (user_id), sehingga Postgres masih harus Sort untuk mengambil baris
+-- terbaru; dan idx_ledger_entries_user_source_created menaruh `source` di
+-- TENGAH (user_id, source, created_at), padahal query ini tidak memfilter
+-- source sama sekali -- dibuktikan lewat EXPLAIN dengan enable_seqscan=off:
+-- muncul node Sort di atas Index Scan.
+--
+-- (user_id, created_at DESC) membuat baris terbaru terambil langsung dari
+-- ujung index tanpa Sort sama sekali.
+--
+-- Murni ADDITIVE: tidak ada kolom yang dihapus/diubah, tidak ada kode yang
+-- perlu berubah bersamaan, jadi tidak ada jendela bahaya deploy (lihat
+-- catatan DROP COLUMN di CLAUDE.md).
+CREATE INDEX idx_ledger_entries_user_created ON ledger_entries(user_id, created_at DESC);
