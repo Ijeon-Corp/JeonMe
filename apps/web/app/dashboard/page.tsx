@@ -33,6 +33,7 @@ import KpiCard from "@/components/dashboard/data/KpiCard";
 import RangeControl from "@/components/dashboard/data/RangeControl";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { KpiSkeleton, ChartSkeleton } from "@/components/dashboard/feedback/Skeletons";
+import { copyText } from "@/lib/copy-text";
 
 function formatRupiah(n: number): string {
   return "Rp" + n.toLocaleString("id-ID");
@@ -160,7 +161,7 @@ export default function DashboardHomePage() {
 
   function handleShareCopy() {
     if (!creator) return;
-    navigator.clipboard.writeText(`${SITE_URL}/${creator.username}`).then(() => {
+    copyText(`${SITE_URL}/${creator.username}`).then((ok) => { if (!ok) return;
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 1800);
     });

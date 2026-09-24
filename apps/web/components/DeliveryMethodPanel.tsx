@@ -13,6 +13,7 @@ import {
 } from "@/lib/api-client";
 import { IconCheck, IconCopy, IconTrash } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { copyText } from "@/lib/copy-text";
 
 // Modul Toko (Fase C): 4 metode penyerahan produk digital -- lihat catatan
 // lingkup lengkap di migrasi 000047 & product.go. Komponen ini SENGAJA
@@ -113,7 +114,7 @@ export default function DeliveryMethodPanel({
 
   function handleCopySecret() {
     if (!webhookSecret) return;
-    navigator.clipboard.writeText(webhookSecret).then(() => {
+    copyText(webhookSecret).then((ok) => { if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });

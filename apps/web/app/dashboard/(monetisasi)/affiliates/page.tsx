@@ -29,6 +29,7 @@ import { IconUsers,
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { copyText } from "@/lib/copy-text";
 
 export default function DashboardAffiliatesPage() {
   const { t } = useLocale();
@@ -82,7 +83,7 @@ export default function DashboardAffiliatesPage() {
   }, []);
 
   function handleCopy(url: string, code: string) {
-    navigator.clipboard.writeText(url).then(() => {
+    copyText(url).then((ok) => { if (!ok) return;
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 1800);
     });

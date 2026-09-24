@@ -31,6 +31,7 @@ import {
   type MyPage,
 } from "@/lib/api-client";
 import { DashboardMyPageContext } from "@/lib/dashboard-page-context";
+import { copyText } from "@/lib/copy-text";
 import {
   IconBell,
   IconBook,
@@ -478,7 +479,7 @@ export default function DashboardLayout({
 
   function handleCopyLink() {
     if (!username) return;
-    navigator.clipboard.writeText(`${SITE_URL}/${username}`).then(() => {
+    copyText(`${SITE_URL}/${username}`).then((ok) => { if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });

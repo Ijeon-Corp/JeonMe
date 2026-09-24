@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { IconCheck, IconCopy } from "@/components/icons";
+import { copyText } from "@/lib/copy-text";
 
 const INPUT = "w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
 
@@ -53,7 +54,7 @@ export default function UtmLinkBuilder({ defaultUrl }: { defaultUrl: string }) {
 
   function handleCopy() {
     if (!generatedUrl) return;
-    navigator.clipboard.writeText(generatedUrl).then(() => {
+    copyText(generatedUrl).then((ok) => { if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });

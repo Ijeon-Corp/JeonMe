@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ApiError, SubscribeLeadResult, subscribeLead } from "@/lib/api-client";
+import { copyText } from "@/lib/copy-text";
 
 // No.73 (Sprint 8): form pengumpulan email/WhatsApp pengunjung. Berbeda
 // dari BuyProductButton -- tidak ada langkah "buka dulu", submit langsung
@@ -63,7 +64,7 @@ export default function LeadCaptureForm({
   }
 
   function copyVoucher(code: string) {
-    navigator.clipboard?.writeText(code).then(() => {
+    copyText(code).then((ok) => { if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });

@@ -9,6 +9,7 @@ import { IconClose, IconCopy, IconDownload, IconExternal } from "@/components/ic
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
 import { useModalA11y } from "@/lib/use-modal-a11y";
+import { copyText } from "@/lib/copy-text";
 
 // Pengganti QRCodeModal untuk Kartu Kontak (permintaan pengguna 3 September
 // 2026): yang tampil kartu nama UTUH bertema Jeonme, bukan QR saja. QR
@@ -107,7 +108,7 @@ export default function BusinessCardModal({
   }
 
   function handleCopy() {
-    navigator.clipboard?.writeText(url).then(() => {
+    copyText(url).then((ok) => { if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
