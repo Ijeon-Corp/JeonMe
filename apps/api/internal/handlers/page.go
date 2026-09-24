@@ -2262,6 +2262,34 @@ type extraPageDetailResponse struct {
 	// PagePreview.tsx.
 	BuilderMode string `json:"builder_mode"`
 	IsPremium   bool   `json:"is_premium"`
+	// Verification -- DITAMBAHKAN 24 September 2026 (audit cross-check tipe
+	// API). Tipe TS ExtraPageDetail mewarisi `verification` WAJIB dari MyPage
+	// (Omit<MyPage, "username">), tapi struct ini tidak pernah mengirimnya --
+	// cuma myPageResponse yang punya. Tiga tempat di frontend (links, products,
+	// builder) terpaksa menambal dengan is_verified:false hardcode, sehingga
+	// pratinjau Toko kreator yang SUDAH terverifikasi tidak pernah
+	// menampilkan lencananya; dan 13 titik lain yang mengakses
+	// detail.verification tanpa guard akan crash begitu tambalan itu dicabut.
+	Verification verificationStatus `json:"verification"`
+}
+
+// loadVerificationStatus -- status terverifikasi adalah atribut AKUN, bukan
+// per halaman: lencananya harus sama di halaman utama maupun Toko/halaman
+// tambahan milik kreator yang sama. Jadi selalu dihitung dari halaman UTAMA
+// (bio + avatar) + email akun + ada tidaknya order lunas -- rumus yang sama
+// persis dengan GetMyPage. Soft-fail: gagal query berarti semua false
+// (lencana tidak tampil), tidak menggagalkan respons.
+func loadVerificationStatus(ctx context.Context, db *pgxpool.Pool, userID string) verificationStatus {
+	var v verificationStatus
+	_ = db.QueryRow(ctx, `
+		SELECT u.email_verified_at IS NOT NULL,
+			(p.bio <> '' AND p.avatar_url <> ''),
+			EXISTS(SELECT 1 FROM orders o JOIN products pr ON pr.id = o.product_id WHERE pr.user_id = u.id AND o.status = 'paid')
+		FROM users u JOIN pages p ON p.user_id = u.id AND p.is_primary = true
+		WHERE u.id = $1
+	`, userID).Scan(&v.EmailVerified, &v.ProfileComplete, &v.HasPaidOrder)
+	v.IsVerified = v.EmailVerified && v.ProfileComplete && v.HasPaidOrder
+	return v
 }
 
 // GetPage — Modul Halaman Toko (permintaan langsung pengguna, 7 Agustus
@@ -2314,6 +2342,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		return
 	}
 	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
+	resp.Verification = loadVerificationStatus(ctx, h.DB, userID)
 
 	c.JSON(http.StatusOK, resp)
 }

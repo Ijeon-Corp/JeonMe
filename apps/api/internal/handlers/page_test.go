@@ -674,3 +674,73 @@ func TestGetPublicPage_NewlyRegisteredUser_VisibleImmediatelyWithoutManualPublis
 		t.Errorf("username respons = %q, ekspektasi %q", resp.Username, username)
 	}
 }
+
+// Halaman tambahan harus membawa status verifikasi AKUN yang sama dengan
+// halaman utama (audit cross-check tipe API, 24 September 2026). Sebelumnya
+// extraPageDetailResponse tidak punya field `verification` sama sekali,
+// padahal tipe TS ExtraPageDetail mewajibkannya -- frontend menambalnya
+// dengan is_verified:false hardcode di 3 tempat, jadi lencana kreator yang
+// SUDAH terverifikasi tidak pernah tampil di pratinjau Toko.
+func TestExtraPage_GetPage_IncludesAccountVerification(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	// Penuhi ketiga syarat verifikasi: email terverifikasi, bio+avatar halaman
+	// UTAMA terisi, dan ada satu order lunas.
+	if _, err := page.DB.Exec(t.Context(), `UPDATE users SET email_verified_at = now() WHERE id = $1`, userID); err != nil {
+		t.Fatalf("gagal set email_verified_at: %v", err)
+	}
+	if _, err := page.DB.Exec(t.Context(), `UPDATE pages SET bio = 'Bio uji', avatar_url = 'https://example.com/a.webp' WHERE user_id = $1 AND is_primary = true`, userID); err != nil {
+		t.Fatalf("gagal isi profil utama: %v", err)
+	}
+	productID := uuid.NewString()
+	if _, err := page.DB.Exec(t.Context(), `INSERT INTO products (id, user_id, name, price_idr) VALUES ($1, $2, 'Produk Verifikasi', 10000)`, productID, userID); err != nil {
+		t.Fatalf("gagal buat produk: %v", err)
+	}
+	if _, err := page.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, buyer_name)
+		VALUES ($1, $2, 'pembeli@example.com', 10000, 'paid', 'Pembeli')
+	`, uuid.NewString(), productID); err != nil {
+		t.Fatalf("gagal buat order lunas: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+	g.GET("/pages/:id", page.GetPage)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko", "slug": "toko-" + uuid.NewString()[:8], "page_type": "landing"}, headers)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create halaman: status = %d, body %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode create: %v", err)
+	}
+
+	getRec := doJSON(t, router, http.MethodGet, "/pages/"+created.ID, nil, headers)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("get halaman: status = %d, body %s", getRec.Code, getRec.Body.String())
+	}
+	// Pastikan key-nya benar-benar ADA di JSON (bukan sekadar zero-value
+	// hasil decode struct yang kebetulan cocok).
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(getRec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("gagal decode mentah: %v", err)
+	}
+	if _, ok := raw["verification"]; !ok {
+		t.Fatalf("respons halaman tambahan TIDAK punya key verification: %s", getRec.Body.String())
+	}
+	var detail extraPageDetailResponse
+	if err := json.Unmarshal(getRec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("gagal decode get: %v", err)
+	}
+	if !detail.Verification.IsVerified {
+		t.Fatalf("verification = %+v, ekspektasi is_verified=true (email+profil utama+order lunas terpenuhi)", detail.Verification)
+	}
+}

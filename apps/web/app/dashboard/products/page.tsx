@@ -591,7 +591,12 @@ function DashboardProductsPageInner() {
     ? {
         ...tokoPage,
         username: tokoUsername,
-        verification: { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
+        // verification dari API sejak 24 September 2026 (extraPageDetailResponse
+        // kini mengirimnya, dihitung account-wide) -- sebelumnya di-hardcode
+        // false di sini, jadi lencana terverifikasi tak pernah tampil di pratinjau
+        // halaman tambahan. Fallback tetap ada utk jendela rolling deploy (web
+        // baru + api lama).
+        verification: tokoPage.verification ?? { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
       }
     : null;
 
