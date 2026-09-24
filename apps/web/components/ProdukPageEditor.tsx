@@ -1082,9 +1082,26 @@ function BlockSection({
   // (Instagram/TikTok/dll) -- buka form "link" terisi label+template URL
   // platform itu, kreator tinggal lengkapi username/tautannya.
   function handleSelectPlatform(platform: PlatformQuickAdd) {
-    setBlockType("link");
-    setTitle(platform.label);
-    setLinkUrl(platform.urlTemplate);
+    // Cabang platform.kind -- drift diperbaiki 24 September 2026 (audit
+    // kualitas kode). Versi Toko ini SEBELUMNYA selalu setBlockType("link")
+    // dan mengabaikan kind, padahal YouTube & TikTok di AddLinkModal (yang
+    // dipakai BERSAMA oleh Simple Mode & Toko) ber-kind "video" dengan
+    // urlTemplate kosong. Akibatnya klik YouTube/TikTok di Toko membuka form
+    // LINK dengan URL kosong -- submit langsung error "URL wajib diisi", dan
+    // kalaupun URL YouTube ditempel, hasilnya baris tautan biasa, bukan
+    // pemutar video tertanam. Klik yang sama di halaman utama
+    // (links/page.tsx handleSelectPlatform) memberi blok video yang benar;
+    // jalur video Toko sendiri sudah lengkap & berfungsi, cuma jalan pintas
+    // platform yang tidak pernah mengarah ke sana.
+    if (platform.kind === "video") {
+      setBlockType("video");
+      setTitle(t("dashboard.pages.links.videoTitleTemplate").replace("{platform}", platform.label));
+      setVideoUrl("");
+    } else {
+      setBlockType("link");
+      setTitle(platform.label);
+      setLinkUrl(platform.urlTemplate);
+    }
     setAdding(true);
     setAddModalOpen(false);
   }
@@ -1587,9 +1604,13 @@ function BlockSection({
   // BlockSection), jadi rollback ditulis setLinks(() => previous). Semua
   // endpoint (updateLink/uploadLinkIcon/duplicateLink/dst) generik per id
   // blok, tidak peduli blok itu milik halaman utama atau Toko.
+  // Mengembalikan daftar terbaru (sejak 24 September 2026) supaya pemanggil
+  // seperti handleDuplicate bisa langsung mencari blok barunya tanpa fetch
+  // ulang. Pemanggil lama yang mengabaikan nilai kembaliannya tidak berubah.
   async function refreshLinks() {
     const refreshed = await listExtraPageLinks(pageId);
     setLinks(() => refreshed);
+    return refreshed;
   }
 
   async function handleToggleActive(link: LinkItem) {
@@ -1841,8 +1862,19 @@ function BlockSection({
   async function handleDuplicate(link: LinkItem) {
     setError(null);
     try {
-      await duplicateLink(link.id);
-      await refreshLinks();
+      const { id: newId } = await duplicateLink(link.id);
+      const refreshed = await refreshLinks();
+      // Buka panel hasil duplikatnya -- drift diperbaiki 24 September 2026
+      // (audit kualitas kode). Simple Mode (links/page.tsx handleDuplicate)
+      // sudah melakukan ini sejak perbaikan 21 September ("SEBELUMNYA
+      // pengguna harus kembali ke daftar & cari sendiri salinannya, tanpa
+      // penanda pembeda"), tapi perbaikan itu tidak pernah diport ke sini:
+      // di Toko salinannya muncul di daftar tanpa panel terbuka dan tanpa
+      // penanda mana yang baru -- kreator harus menyisir dua baris berjudul
+      // sama sendiri. openContentEdit sudah ada di file ini (identik dengan
+      // versi Simple Mode), jadi ini murni port.
+      const duplicated = refreshed.find((l) => l.id === newId);
+      if (duplicated) openContentEdit(duplicated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.duplicateFailed"));
     }
