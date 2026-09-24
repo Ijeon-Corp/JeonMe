@@ -314,6 +314,11 @@ export interface PublicLink {
   // seperti sebelumnya. Cuma berlaku untuk icon_key/deteksi otomatis --
   // custom_icon_url (gambar unggahan) tidak bisa diberi warna ulang.
   icon_color: string;
+  // accent_color/badge_text -- migrasi 000109 (layout "Profil Kreator"):
+  // warna latar tombol per tautan ("#rrggbb", kosong = ikut tema) & chip
+  // harga/label kecil di kanan kartu ("Mulai Rp3jt", "Gratis").
+  accent_color: string;
+  badge_text: string;
   // is_featured/thumbnail_url -- Modul "Featured Link" (permintaan langsung
   // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
   // is_featured true DAN thumbnail_url terisi, tautan dirender sebagai
@@ -477,7 +482,32 @@ export type PageLayoutVariant =
   | "ribbon"
   | "duo"
   | "masthead"
-  | "portrait";
+  | "portrait"
+  // "profile" -- layout "Profil Kreator" (24 September 2026, gambar kartu
+  // Full-Stack Developer/Penulis Buku/Guru/Freelancer/Toko Online):
+  // @username, chip keahlian, ikon sosial outline, baris statistik. Data
+  // chip & statistik di profile_extras (lihat ProfileExtras).
+  | "profile";
+
+// ProfileExtras -- pages.profile_extras (migrasi 000109): chip keahlian
+// berikon & baris statistik 3 angka, dipakai layout "profile". Disimpan
+// UTUH lewat updateMyPageProfileExtras/updateExtraPageProfileExtras (pola
+// sama dgn stiker). `icon` = key galeri ikon (lib/icon-library.ts), boleh
+// kosong. Batas backend: 5 chip (label <=24), 3 statistik (angka <=8,
+// keterangan <=16).
+export interface ProfileChip {
+  label: string;
+  icon: string;
+}
+export interface ProfileStat {
+  value: string;
+  label: string;
+}
+export interface ProfileExtras {
+  chips: ProfileChip[];
+  stats: ProfileStat[];
+}
+export const EMPTY_PROFILE_EXTRAS: ProfileExtras = { chips: [], stats: [] };
 
 // PublicPageSite -- satu entri di PublicPage.site_pages. name/slug kosong
 // untuk halaman utama (is_primary true) -- frontend memakai label tetap
@@ -612,6 +642,7 @@ export interface PublicPage {
   // langsung pengguna: "tambahkan jadi total 15 layout"). Lihat
   // renderBioHeader di PagePreview.tsx.
   layout_variant: PageLayoutVariant;
+  profile_extras: ProfileExtras;
   // builder_mode -- Canvas Page Builder (migrasi 000096, permintaan
   // langsung pengguna 7 September 2026, dua screenshot Lynk.id): mode
   // edit KEDUA bergaya kanvas Section/Column freeform, hidup berdampingan
@@ -923,6 +954,7 @@ export interface MyPage {
   social_github: string;
   social_website: string;
   layout_variant: PageLayoutVariant;
+  profile_extras: ProfileExtras;
   // builder_mode -- lihat catatan lengkap di PublicPage. Halaman utama
   // SELALU page_type "bio", jadi tidak pernah dikecualikan Toko seperti
   // ExtraPageDetail.
@@ -1130,6 +1162,14 @@ export function updateMyPage(
 // updateMyPageStickers -- Modul Desain: endpoint TERPISAH dari updateMyPage,
 // ganti array stiker UTUH tiap simpan (drag/resize kirim seluruh daftar
 // terbaru sekaligus, bukan di-patch per field seperti tema/warna/dst).
+export function updateMyPageProfileExtras(profileExtras: ProfileExtras) {
+  return apiFetch<{ profile_extras: ProfileExtras }>(
+    "/dashboard/page/profile-extras",
+    { method: "PUT", body: JSON.stringify({ profile_extras: profileExtras }) },
+    { auth: true }
+  );
+}
+
 export function updateMyPageStickers(stickers: PageStickerData[]) {
   return apiFetch<{ message: string }>(
     "/dashboard/page/stickers",
@@ -1211,6 +1251,9 @@ export interface LinkItem {
   // icon_color -- permintaan langsung pengguna, 22 Agustus 2026: warna
   // kustom ikon (hex "#rrggbb"), lihat catatan lengkap di PublicLink.
   icon_color: string;
+  // accent_color/badge_text -- lihat catatan di PublicLink.
+  accent_color: string;
+  badge_text: string;
   // is_featured/thumbnail_url -- Modul "Featured Link", lihat catatan
   // lengkap di PublicLink.
   is_featured: boolean;
@@ -1261,6 +1304,8 @@ export function updateLink(
     icon_key: string;
     icon_color: string;
     description: string;
+    accent_color: string;
+    badge_text: string;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -1897,6 +1942,14 @@ export function updateExtraPage(
 
 // updateExtraPageStickers -- analog updateMyPageStickers untuk halaman
 // TAMBAHAN (Toko/Landing/Bio kedua).
+export function updateExtraPageProfileExtras(id: string, profileExtras: ProfileExtras) {
+  return apiFetch<{ profile_extras: ProfileExtras }>(
+    `/dashboard/pages/${id}/profile-extras`,
+    { method: "PUT", body: JSON.stringify({ profile_extras: profileExtras }) },
+    { auth: true }
+  );
+}
+
 export function updateExtraPageStickers(id: string, stickers: PageStickerData[]) {
   return apiFetch<{ message: string }>(
     `/dashboard/pages/${id}/stickers`,
@@ -4532,6 +4585,7 @@ export interface ImportCustomTheme {
 export interface ImportThemeResult {
   theme: string;
   layout_variant: PageLayoutVariant;
+  profile_extras: ProfileExtras;
   custom?: ImportCustomTheme;
   confidence: "high" | "medium" | "low";
   notes: string;

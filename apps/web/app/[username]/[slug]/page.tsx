@@ -165,6 +165,8 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             isFeatured: l.is_featured,
             thumbnailUrl: l.thumbnail_url || undefined,
             description: l.description || undefined,
+            accentColor: l.accent_color || undefined,
+            badgeText: l.badge_text || undefined,
           })),
           events: page.events.map((e) => ({
             productId: e.product_id,
@@ -271,6 +273,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             website: page.social_website,
           },
           layoutVariant: page.layout_variant,
+          profileExtras: page.profile_extras,
           builderMode: page.builder_mode,
           utmEnabled: page.analytics?.utm_enabled ?? false,
         }}

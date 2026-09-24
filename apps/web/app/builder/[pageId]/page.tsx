@@ -343,6 +343,8 @@ function makeTempLinkItem(type: LinkItem["block_type"], title: string, url: stri
     custom_icon_url: "",
     icon_key: "",
     icon_color: "",
+    accent_color: "",
+    badge_text: "",
     is_featured: false,
     thumbnail_url: "",
     description: "",

@@ -15,11 +15,12 @@ import TrackedLink from "@/components/TrackedLink";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
-import { CatalogItem, EmbeddedCatalogBlock, PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
+import { CatalogItem, EmbeddedCatalogBlock, PageStickerData, ProfileExtras, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
 import {
   IconBadgeCheck,
   IconBox,
   IconCalendar,
+  IconCheck,
   IconChevronRight,
   IconHeart,
   IconInstagram,
@@ -131,6 +132,10 @@ export interface PagePreviewLink {
   // merendernya redup berlabel "Nonaktif". Halaman publik tidak pernah
   // menerima blok nonaktif sama sekali (disaring server), jadi undefined.
   isActive?: boolean;
+  // accentColor/badgeText -- migrasi 000109 (layout "Profil Kreator"):
+  // warna latar tombol per tautan & chip harga/label di kanan kartu.
+  accentColor?: string;
+  badgeText?: string;
 }
 
 export interface PagePreviewProduct {
@@ -389,7 +394,11 @@ export interface PagePreviewData {
     | "ribbon"
     | "duo"
     | "masthead"
-    | "portrait";
+    | "portrait"
+    | "profile";
+  // profileExtras -- chip keahlian & statistik layout "profile" (lihat
+  // ProfileExtras, api-client.ts).
+  profileExtras?: ProfileExtras;
   // utmEnabled -- Modul Analitik Pihak Ketiga (permintaan langsung
   // pengguna, 12 Agustus 2026): kalau true, SETIAP tautan keluar
   // (TrackedLink) ditandai utm_source=jeonme&utm_medium=social&
@@ -543,7 +552,9 @@ export interface PreviewSourcePage {
     | "ribbon"
     | "duo"
     | "masthead"
-    | "portrait";
+    | "portrait"
+    | "profile";
+  profile_extras?: ProfileExtras;
   // builder_mode -- lihat catatan lengkap di PagePreviewData.builderMode.
   builder_mode?: "simple" | "builder";
 }
@@ -563,6 +574,8 @@ export interface PreviewSourceLink {
   is_featured?: boolean;
   thumbnail_url?: string;
   description?: string;
+  accent_color?: string;
+  badge_text?: string;
 }
 
 export interface PreviewSourceProduct {
@@ -1361,6 +1374,31 @@ function renderSocialRow(social: PagePreviewData["social"], align: "center" | "l
   );
 }
 
+// renderSocialRowOutline -- varian ikon sosial layout "profile": lingkaran
+// putih ber-border tebal #111 (bahasa visual jeon.id), ikon hitam -- beda
+// dari renderSocialRow yang berlatar warna brand. Mandiri warnanya (tidak
+// ikut tema) supaya tetap terbaca di tema terang maupun gelap.
+function renderSocialRowOutline(social: PagePreviewData["social"]) {
+  const items = buildFilledSocialLinks(social ?? {});
+  if (items.length === 0) return null;
+  return (
+    <div className="relative mt-3 flex flex-wrap items-center justify-center gap-2">
+      {items.map((item) => (
+        <a
+          key={item.key}
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={item.label}
+          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111111] bg-white text-[#111111] transition-transform hover:-translate-y-0.5"
+        >
+          <item.Icon className="h-4 w-4" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 // renderBioHeader -- permintaan langsung pengguna, 11 Agustus 2026
 // (susulan Quick Setup, "layouting nya juga berbeda"): dua susunan
 // avatar+nama+bio -- "centered" (bawaan, TIDAK BERUBAH dari sebelumnya,
@@ -1371,7 +1409,7 @@ function renderSocialRow(social: PagePreviewData["social"], align: "center" | "l
 // banner tanpa implementasi ganda -- konsisten dengan prinsip paritas
 // halaman utama/Toko di proyek ini.
 export function renderBioHeader(
-  data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
+  data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant" | "profileExtras">,
   theme: PageTheme
 ) {
   // Lima belas varian (permintaan langsung pengguna, 12 Agustus 2026,
@@ -1512,6 +1550,74 @@ export function renderBioHeader(
         </div>
         {data.bio && <p className={`text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
         {renderSocialRow(data.social, "left")}
+      </div>
+    );
+  }
+
+  // "profile" -- layout "Profil Kreator" (permintaan langsung pengguna, 24
+  // September 2026, gambar kartu Full-Stack Developer/Penulis Buku/Guru/
+  // Freelancer/Toko Online): avatar dgn lencana centang lime di pojok,
+  // nama, @username, bio sbg baris peran, chip keahlian berikon, ikon
+  // sosial outline, garis titik-titik, lalu baris statistik. Chip & ikon
+  // sosial bergaya mandiri (putih + border #111, bahasa visual jeon.id)
+  // supaya terbaca di tema apa pun; garis & statistik ikut warna tema.
+  if (variant === "profile") {
+    const chips = data.profileExtras?.chips ?? [];
+    const stats = data.profileExtras?.stats ?? [];
+    return (
+      <div className="relative flex w-full flex-col items-center text-center">
+        <div className="relative">
+          {avatar}
+          {data.isVerified && (
+            <span
+              title="Kreator terverifikasi"
+              className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#111111] bg-[#d7ff60]"
+            >
+              <IconCheck className="h-3.5 w-3.5 text-[#111111]" />
+            </span>
+          )}
+        </div>
+        <h1 className={`mt-3 font-heading text-xl font-extrabold leading-tight ${theme.name}`} style={theme.nameStyle}>
+          {data.displayName || data.username}
+        </h1>
+        <p className={`text-[11px] ${theme.bio}`}>@{data.username}</p>
+        {data.bio && <p className={`mt-1 max-w-xs text-xs font-medium leading-relaxed ${theme.name}`}>{data.bio}</p>}
+        {chips.length > 0 && (
+          <div className="relative mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            {chips.map((chip, i) => {
+              const chipIcon = getLibraryIcon(chip.icon);
+              const chipColor = libraryIconColor(chip.icon);
+              return (
+                <span
+                  key={`${chip.label}-${i}`}
+                  className="inline-flex items-center gap-1 rounded-full border-2 border-[#111111] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#111111]"
+                >
+                  {chipIcon && (
+                    <span className="contents" style={chipColor ? { color: chipColor } : undefined}>
+                      <chipIcon.Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                    </span>
+                  )}
+                  {chip.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+        {renderSocialRowOutline(data.social)}
+        {stats.length > 0 && (
+          <div className={`relative mt-4 w-full ${theme.name}`}>
+            <div className="w-full border-t-2 border-dotted border-current opacity-25" />
+            <div className="mt-3 grid w-full" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+              {stats.map((stat, i) => (
+                <div key={`${stat.label}-${i}`} className="relative flex min-w-0 flex-col items-center px-1">
+                  {i > 0 && <span className="absolute bottom-1 left-0 top-1 border-l border-current opacity-20" aria-hidden />}
+                  <span className="font-heading text-lg font-bold leading-tight">{stat.value}</span>
+                  <span className={`truncate text-[10px] ${theme.bio}`}>{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1931,6 +2037,20 @@ function ColoredIcon({ color, children }: { color?: string; children: React.Reac
   );
 }
 
+// readableTextOn -- warna teks yang terbaca di atas warna tombol pilihan
+// kreator (accentColor): gelap utk latar terang (lime/pink/lavender khas
+// jeon.id), putih utk latar gelap. Luminans sRGB berbobot sederhana,
+// cukup utk memilih salah satu dari dua warna.
+function readableTextOn(hex: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return "#111111";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
+}
+
 function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentType<{ className?: string }>, sizeClass: string) {
   if (link.customIconUrl) {
     return (
@@ -2011,7 +2131,7 @@ function SensitiveContentGate({ theme, renderContent }: { theme: PageTheme; rend
 export function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
-  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused">,
+  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused" | "layoutVariant">,
   interactive: boolean,
   // canBuy -- permintaan langsung pengguna 12 September 2026 ("full
   // parity" mode Simple vs Builder): blok "produk" BARU sekarang bisa
@@ -2227,7 +2347,31 @@ export function renderLinkOrBlock(
     const badgeText = (link.blockData?.badge_text as string) ?? "";
     const imageUrl = (link.blockData?.image_url as string) ?? "";
     const ctaText = (link.blockData?.cta_text as string) || "Lihat detail";
-    const cardInner = (
+    // Layout "profile" + gambar -> kartu HORIZONTAL (gambar kiri, label
+    // ungu, judul, deskripsi 3 baris, panah) sesuai gambar referensi
+    // "Proyek Unggulan"/"Buku Terbaru" (24 September 2026). Tanpa gambar,
+    // atau di layout lain, tetap kartu vertikal lama.
+    const isProfileRow = data.layoutVariant === "profile" && Boolean(imageUrl);
+    const cardInner = isProfileRow ? (
+      <span className="flex items-center gap-3">
+        <Image src={imageUrl} alt="" width={180} height={135} className="aspect-[4/3] h-auto w-[42%] flex-shrink-0 rounded-lg object-cover" />
+        <span className="min-w-0 flex-1">
+          {badgeText && (
+            <span className="mb-1.5 inline-block rounded-full bg-[#7657ff] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+              {badgeText}
+            </span>
+          )}
+          {link.title && <span className={`block text-[13px] font-bold leading-snug ${theme.cardTitle}`}>{link.title}</span>}
+          {link.description && (
+            <span
+              className={`jeon-rich-text-content mt-1 line-clamp-3 block text-[10.5px] leading-snug opacity-75 ${theme.cardTitle}`}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(link.description) }}
+            />
+          )}
+        </span>
+        <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+      </span>
+    ) : (
       <>
         {badgeText && (
           <span className={`mb-3 inline-block rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${theme.buyButton}`}>
@@ -2263,7 +2407,7 @@ export function renderLinkOrBlock(
         </span>
       </>
     );
-    const cardClassName = `block w-full ${theme.cardRounded ?? "rounded-2xl"} p-4 text-left transition-all duration-300 ${theme.card}`;
+    const cardClassName = `block w-full ${theme.cardRounded ?? "rounded-2xl"} ${isProfileRow ? "p-2.5" : "p-4"} text-left transition-all duration-300 ${theme.card}`;
     return interactive ? (
       <TrackedLink
         key={link.id}
@@ -2642,6 +2786,19 @@ export function renderLinkOrBlock(
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
       const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
+      // accentColor/badgeText (migrasi 000109): tombol berwarna pilihan
+      // kreator -- teks & panah ikut warna terbaca di atasnya (bukan warna
+      // judul tema), chip harga di kanan. Panah kanan khusus layout
+      // "profile" (sesuai gambar referensi), layout lain tidak berubah.
+      const accentStyle = link.accentColor ? { backgroundColor: link.accentColor, color: readableTextOn(link.accentColor) } : undefined;
+      const titleColorClass = link.accentColor ? "" : theme.cardTitle;
+      const chevronColorClass = link.accentColor ? "opacity-70" : theme.chevron;
+      const badgeNode = link.badgeText ? (
+        <span className="flex-shrink-0 rounded-full border-2 border-[#111111] bg-[#d7ff60] px-2 py-0.5 text-[10px] font-bold text-[#111111]">
+          {link.badgeText}
+        </span>
+      ) : null;
+      const showRowArrow = data.layoutVariant === "profile";
       const iconNode = link.customIconUrl ? (
         // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
         // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
@@ -2664,6 +2821,7 @@ export function renderLinkOrBlock(
           linkId={link.id}
           href={buildUtmHref(link.url, link.title, data.utmEnabled)}
           className={`group flex w-full items-center gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3 text-left transition-all duration-300 ${theme.card}`}
+          style={accentStyle}
         >
           <span
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
@@ -2672,10 +2830,11 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-[12px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
-            <span className={`block truncate text-[10.5px] opacity-70 ${theme.cardTitle}`}>{link.description}</span>
+            <span className={`block truncate text-[12px] font-semibold ${titleColorClass}`}>{link.title}</span>
+            <span className={`block truncate text-[10.5px] opacity-70 ${titleColorClass}`}>{link.description}</span>
           </span>
-          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+          {badgeNode}
+          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />
         </TrackedLink>
       ) : (
         <TrackedLink
@@ -2684,7 +2843,8 @@ export function renderLinkOrBlock(
           pageSlug={data.pageSlug}
           linkId={link.id}
           href={buildUtmHref(link.url, link.title, data.utmEnabled)}
-          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${titleColorClass}`}
+          style={accentStyle}
         >
           <span
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
@@ -2693,6 +2853,12 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>
+          {(badgeNode || showRowArrow) && (
+            <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+              {badgeNode}
+              {showRowArrow && <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />}
+            </span>
+          )}
         </TrackedLink>
       );
     })()
@@ -2701,6 +2867,19 @@ export function renderLinkOrBlock(
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
       const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
+      // accentColor/badgeText (migrasi 000109): tombol berwarna pilihan
+      // kreator -- teks & panah ikut warna terbaca di atasnya (bukan warna
+      // judul tema), chip harga di kanan. Panah kanan khusus layout
+      // "profile" (sesuai gambar referensi), layout lain tidak berubah.
+      const accentStyle = link.accentColor ? { backgroundColor: link.accentColor, color: readableTextOn(link.accentColor) } : undefined;
+      const titleColorClass = link.accentColor ? "" : theme.cardTitle;
+      const chevronColorClass = link.accentColor ? "opacity-70" : theme.chevron;
+      const badgeNode = link.badgeText ? (
+        <span className="flex-shrink-0 rounded-full border-2 border-[#111111] bg-[#d7ff60] px-2 py-0.5 text-[10px] font-bold text-[#111111]">
+          {link.badgeText}
+        </span>
+      ) : null;
+      const showRowArrow = data.layoutVariant === "profile";
       const iconNode = link.customIconUrl ? (
         // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
         // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
@@ -2718,6 +2897,7 @@ export function renderLinkOrBlock(
           target="_blank"
           rel="noopener noreferrer"
           className={`group flex w-full items-center gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3 text-left transition-all duration-300 ${theme.card}`}
+          style={accentStyle}
         >
           <span
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
@@ -2726,10 +2906,11 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-[12px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
-            <span className={`block truncate text-[10.5px] opacity-70 ${theme.cardTitle}`}>{link.description}</span>
+            <span className={`block truncate text-[12px] font-semibold ${titleColorClass}`}>{link.title}</span>
+            <span className={`block truncate text-[10.5px] opacity-70 ${titleColorClass}`}>{link.description}</span>
           </span>
-          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+          {badgeNode}
+          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />
         </a>
       ) : (
         <a
@@ -2737,7 +2918,8 @@ export function renderLinkOrBlock(
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${titleColorClass}`}
+          style={accentStyle}
         >
           <span
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
@@ -2746,6 +2928,12 @@ export function renderLinkOrBlock(
             {iconNode}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>
+          {(badgeNode || showRowArrow) && (
+            <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+              {badgeNode}
+              {showRowArrow && <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${chevronColorClass}`} />}
+            </span>
+          )}
         </a>
       );
     })()

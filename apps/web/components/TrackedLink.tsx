@@ -14,6 +14,7 @@ export default function TrackedLink({
   href,
   children,
   className,
+  style,
 }: {
   username: string;
   pageSlug?: string;
@@ -21,6 +22,8 @@ export default function TrackedLink({
   href: string;
   children: React.ReactNode;
   className?: string;
+  // style -- warna tombol per tautan (accentColor, migrasi 000109).
+  style?: React.CSSProperties;
 }) {
   return (
     <a
@@ -28,6 +31,7 @@ export default function TrackedLink({
       target="_blank"
       rel="noopener noreferrer"
       className={className}
+      style={style}
       onClick={() =>
         pageSlug
           ? trackEventBySlug(username, pageSlug, { event_type: "click", link_id: linkId })

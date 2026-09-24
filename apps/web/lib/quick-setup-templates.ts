@@ -403,7 +403,8 @@ export interface QuickSetupTemplate {
     | "ribbon"
     | "duo"
     | "masthead"
-    | "portrait";
+    | "portrait"
+    | "profile";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi

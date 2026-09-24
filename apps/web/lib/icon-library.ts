@@ -367,6 +367,21 @@ function phosphorIcon(name: keyof typeof PHOSPHOR_LOADERS, weight: IconWeight): 
   );
 }
 
+// techBrandIcon -- logo teknologi & platform (kategori "Teknologi &
+// Platform"), dimuat lazy dari lib/tech-brand-icons.ts dgn alasan ukuran
+// yang sama seperti phosphorIcon di atas. Satu chunk bersama utk ke-33
+// logo (bukan per ikon) karena tiap path kecil.
+function techBrandIcon(slug: string): ComponentType<{ className?: string }> {
+  return dynamic(() =>
+    import("@/lib/tech-brand-icons").then((mod) => {
+      const d = mod.TECH_BRAND_PATHS[slug];
+      return function TechBrandLibraryIcon({ className }: { className?: string }) {
+        return createElement("svg", { viewBox: "0 0 24 24", fill: "currentColor", className, "aria-hidden": true }, createElement("path", { d }));
+      };
+    })
+  );
+}
+
 // Kategori disusun sesuai jenis konten yang biasa dipakai kreator link-in-
 // bio Indonesia (media sosial, toko, kuliner, kelas/edukasi, dst) --
 // urutan array = urutan tampil di IconPickerModal, "Semua" (pencarian
@@ -395,6 +410,44 @@ export const ICON_LIBRARY: LibraryIcon[] = [
   { key: "brand-apple-music", label: "Apple Music", category: "Media Sosial", Icon: IconAppleMusic, color: "#FA243C" },
   { key: "brand-apple-podcasts", label: "Apple Podcasts", category: "Media Sosial", Icon: IconApplePodcasts, color: "#9933CC" },
   { key: "brand-google-maps", label: "Google Maps", category: "Media Sosial", Icon: IconGoogleMaps, color: "#EA4335" },
+
+  // Teknologi & Platform -- 24 September 2026 (chip keahlian layout
+  // "Profil Kreator"). Key "brand-<slug>" pola sama dgn Media Sosial;
+  // warna = warna logo asli, logo monokrom (Next.js/Notion/GitHub/Medium/
+  // Goodreads/Threads) tanpa warna supaya tetap terlihat di tema gelap.
+  { key: "brand-react", label: "React", category: "Teknologi & Platform", Icon: techBrandIcon("react"), color: "#61DAFB" },
+  { key: "brand-laravel", label: "Laravel", category: "Teknologi & Platform", Icon: techBrandIcon("laravel"), color: "#FF2D20" },
+  { key: "brand-go", label: "Go", category: "Teknologi & Platform", Icon: techBrandIcon("go"), color: "#00ADD8" },
+  { key: "brand-javascript", label: "JavaScript", category: "Teknologi & Platform", Icon: techBrandIcon("javascript"), color: "#F7DF1E" },
+  { key: "brand-typescript", label: "TypeScript", category: "Teknologi & Platform", Icon: techBrandIcon("typescript"), color: "#3178C6" },
+  { key: "brand-python", label: "Python", category: "Teknologi & Platform", Icon: techBrandIcon("python"), color: "#3776AB" },
+  { key: "brand-php", label: "PHP", category: "Teknologi & Platform", Icon: techBrandIcon("php"), color: "#777BB4" },
+  { key: "brand-kotlin", label: "Kotlin", category: "Teknologi & Platform", Icon: techBrandIcon("kotlin"), color: "#7F52FF" },
+  { key: "brand-swift", label: "Swift", category: "Teknologi & Platform", Icon: techBrandIcon("swift"), color: "#F05138" },
+  { key: "brand-flutter", label: "Flutter", category: "Teknologi & Platform", Icon: techBrandIcon("flutter"), color: "#02569B" },
+  { key: "brand-nodedotjs", label: "Node.js", category: "Teknologi & Platform", Icon: techBrandIcon("nodedotjs"), color: "#5FA04E" },
+  { key: "brand-nextdotjs", label: "Next.js", category: "Teknologi & Platform", Icon: techBrandIcon("nextdotjs") },
+  { key: "brand-vuedotjs", label: "Vue.js", category: "Teknologi & Platform", Icon: techBrandIcon("vuedotjs"), color: "#4FC08D" },
+  { key: "brand-tailwindcss", label: "Tailwind CSS", category: "Teknologi & Platform", Icon: techBrandIcon("tailwindcss"), color: "#06B6D4" },
+  { key: "brand-docker", label: "Docker", category: "Teknologi & Platform", Icon: techBrandIcon("docker"), color: "#2496ED" },
+  { key: "brand-figma", label: "Figma", category: "Teknologi & Platform", Icon: techBrandIcon("figma"), color: "#F24E1E" },
+  { key: "brand-wordpress", label: "WordPress", category: "Teknologi & Platform", Icon: techBrandIcon("wordpress"), color: "#21759B" },
+  { key: "brand-notion", label: "Notion", category: "Teknologi & Platform", Icon: techBrandIcon("notion") },
+  { key: "brand-github", label: "GitHub", category: "Teknologi & Platform", Icon: techBrandIcon("github") },
+  { key: "brand-blender", label: "Blender", category: "Teknologi & Platform", Icon: techBrandIcon("blender"), color: "#E87D0D" },
+  { key: "brand-behance", label: "Behance", category: "Teknologi & Platform", Icon: techBrandIcon("behance"), color: "#1769FF" },
+  { key: "brand-dribbble", label: "Dribbble", category: "Teknologi & Platform", Icon: techBrandIcon("dribbble"), color: "#EA4C89" },
+  { key: "brand-medium", label: "Medium", category: "Teknologi & Platform", Icon: techBrandIcon("medium") },
+  { key: "brand-substack", label: "Substack", category: "Teknologi & Platform", Icon: techBrandIcon("substack"), color: "#FF6719" },
+  { key: "brand-goodreads", label: "Goodreads", category: "Teknologi & Platform", Icon: techBrandIcon("goodreads") },
+  { key: "brand-wattpad", label: "Wattpad", category: "Teknologi & Platform", Icon: techBrandIcon("wattpad"), color: "#FF500A" },
+  { key: "brand-soundcloud", label: "SoundCloud", category: "Teknologi & Platform", Icon: techBrandIcon("soundcloud"), color: "#FF5500" },
+  { key: "brand-zoom", label: "Zoom", category: "Teknologi & Platform", Icon: techBrandIcon("zoom"), color: "#0B5CFF" },
+  { key: "brand-googlemeet", label: "Google Meet", category: "Teknologi & Platform", Icon: techBrandIcon("googlemeet"), color: "#00897B" },
+  { key: "brand-googleclassroom", label: "Google Classroom", category: "Teknologi & Platform", Icon: techBrandIcon("googleclassroom"), color: "#0F9D58" },
+  { key: "brand-grab", label: "Grab", category: "Teknologi & Platform", Icon: techBrandIcon("grab"), color: "#00B14F" },
+  { key: "brand-gojek", label: "Gojek", category: "Teknologi & Platform", Icon: techBrandIcon("gojek"), color: "#00AA13" },
+  { key: "brand-threads", label: "Threads", category: "Teknologi & Platform", Icon: techBrandIcon("threads") },
 
   // Isi Penuh & Duotone (Phosphor) -- lihat catatan phosphorIcon di atas.
   // Key prefix "ph-fill-"/"ph-duotone-" + nama kebab-case asli Phosphor

@@ -57,6 +57,7 @@ export function toPreviewData(
       website: page.social_website,
     },
     layoutVariant: page.layout_variant,
+    profileExtras: page.profile_extras,
     builderMode: page.builder_mode,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
@@ -92,6 +93,8 @@ export function toPreviewData(
         isFeatured: l.is_featured,
         thumbnailUrl: l.thumbnail_url || undefined,
         description: l.description || undefined,
+        accentColor: l.accent_color || undefined,
+        badgeText: l.badge_text || undefined,
       })),
     products: products
       .filter((p) => p.is_active || includeInactiveProducts)
