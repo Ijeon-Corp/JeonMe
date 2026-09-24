@@ -464,6 +464,15 @@
      text-blue-700 -- kontras berkurang di dark mode. */
   :root:not([data-theme="light"]) .app-shell .text-blue-600,
   :root:not([data-theme="light"]) .app-shell .text-blue-700 { color: #60a5fa; }
+  /* bg-gray-100 -- audit 24 September 2026. Dipasangkan dengan text-app-muted
+     di 10 tempat (badge status KYC/rekening/penyimpanan, tombol mode di editor
+     blok Bio & Toko, tab kategori Builder, dst). Tidak pernah di-remap di sini,
+     jadi di dark mode latarnya tetap rgb(243,244,246) nyaris putih sementara
+     text-app-muted IKUT membalik jadi terang -> terukur 2.34:1, teks nyaris
+     hilang. Audit awalnya cuma menemukan 2 di panel admin; sisanya ketahuan
+     saat mencari seluruh pemakaian sebelum memperbaikinya. */
+  :root:not([data-theme="light"]) .app-shell .bg-gray-100 { background-color: var(--app-surface-2); }
+  :root:not([data-theme="light"]) .app-shell .hover\:bg-gray-200:hover { background-color: var(--app-border); }
 }
 [data-theme="dark"] .app-shell .bg-red-50,
 [data-theme="dark"] .app-shell .bg-red-100 { background-color: rgba(153, 27, 27, 0.22); }
@@ -492,6 +501,8 @@
 [data-theme="dark"] .app-shell .bg-blue-50 { background-color: rgba(30, 58, 138, 0.22); }
 [data-theme="dark"] .app-shell .text-blue-600,
 [data-theme="dark"] .app-shell .text-blue-700 { color: #60a5fa; }
+[data-theme="dark"] .app-shell .bg-gray-100 { background-color: var(--app-surface-2); }
+[data-theme="dark"] .app-shell .hover\:bg-gray-200:hover { background-color: var(--app-border); }
 
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
