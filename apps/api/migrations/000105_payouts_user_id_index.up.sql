@@ -1,0 +1,27 @@
+-- Perbaikan performa (audit menyeluruh 24 September 2026): tabel payouts
+-- TIDAK punya index apa pun selain primary key (dibuktikan langsung: \d
+-- payouts cuma menampilkan payouts_pkey, dan `grep -i index` atas seluruh
+-- migrations/*.sql untuk tabel ini mengembalikan NOL hasil -- foreign key
+-- di Postgres TIDAK membuat index otomatis).
+--
+-- Akibatnya BalanceHandler.ListPayouts (`SELECT ... FROM payouts WHERE
+-- user_id = $1 ORDER BY requested_at DESC`, juga tanpa LIMIT) men-Seq-Scan
+-- SELURUH tabel payouts se-platform hanya untuk mengambil beberapa baris
+-- milik satu kreator. /dashboard/balance adalah halaman rutin, dan ctx
+-- timeout-nya cuma 5 detik: dengan 50.000 baris payout platform-wide,
+-- setiap pembukaan halaman men-scan penuh 50.000 baris lalu Sort. Biaya
+-- O(total platform) untuk satu pembacaan milik satu user -- persis pola bug
+-- Critical yang diperbaiki 15 September 2026 di product.go tapi terlewat di
+-- tabel ini. EXPLAIN dengan enable_seqscan=off pun tetap memilih Seq Scan
+-- meski dikenai penalti biaya besar, karena memang tidak ada alternatif.
+--
+-- Kolom kedua (requested_at DESC) sekalian menghapus node Sort dari rencana
+-- eksekusi, bukan cuma mempercepat pencariannya. Index ini juga dipakai
+-- AdminHandler saat melihat riwayat payout per user, dan mempercepat
+-- pengecekan foreign key saat penghapusan/purge akun (DELETE FROM users)
+-- yang sebelumnya juga harus Seq Scan payouts.
+--
+-- Murni ADDITIVE: tidak ada kode yang perlu berubah, dan tidak ada jendela
+-- bahaya deploy (lihat catatan DROP COLUMN di CLAUDE.md) karena tidak ada
+-- kolom yang dihapus/diubah.
+CREATE INDEX idx_payouts_user_requested ON payouts(user_id, requested_at DESC);
