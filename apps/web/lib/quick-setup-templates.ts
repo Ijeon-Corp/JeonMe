@@ -425,7 +425,8 @@ export interface QuickSetupTemplate {
     | "duo"
     | "masthead"
     | "portrait"
-    | "profile";
+    | "profile"
+    | "billboard";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -1053,27 +1054,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "streamer",
     category: "creator",
-    layoutVariant: "portrait",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Streamer",
     description: "Twitch, YouTube, Discord, donasi",
-    theme: "cyber",
-    bio: "Live streaming rutin -- mabar yuk!",
+    theme: "arcade",
+    bio: "Main bareng, lebih seru.",
     social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
     links: [
-      link("twitch", undefined, "Nonton live streaming mabar"),
-      link("youtube", undefined, "VOD & highlight stream"),
-      link("discord", undefined, "Gabung komunitas & obrolan game"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Highlight Push Rank Bareng Subscriber",
-        description: "Cuplikan momen seru & clutch terbaik dari sesi live streaming minggu ini.",
-        badgeText: "Momen Stream",
-        ctaText: "Tonton highlight",
-        url: PLATFORM_URL.youtube,
-      }),
-      { type: "text", title: "Jadwal Live", text: "Tuliskan jadwal live streaming mingguanmu di sini." },
-      faqBlock([{ question: "Ada perk khusus buat subscriber/donatur?", answer: "Ada! Emote khusus, shoutout, dan akses channel Discord eksklusif -- info lengkap ada di stream." }]),
+      { title: "Jadwal Live", url: "https://websitekamu.com/jadwal", description: "Setiap Senin - Jumat", iconKey: "calendar", badgeText: "LIVE" },
+      { title: "Tonton Sekarang", url: "https://youtube.com/@namachannel", iconKey: "radio", accentColor: "#f45a4a" },
     ],
     monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -1986,25 +1979,18 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "dj",
     category: "entertainment",
-    layoutVariant: "portrait",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "DJ",
     description: "Mix, event, booking",
-    theme: "downtown",
-    bio: "DJ | Booking untuk acara kamu",
+    theme: "rave",
+    bio: "Music connects us closer.",
     social: { instagram: "username", email: "kamu@email.com" },
     links: [
-      link("spotify", undefined, "Playlist mix & rilisan terbaru"),
-      link("instagram", undefined, "Cuplikan set & keseruan panggung"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Live Set: Sunset Session Vol. 3",
-        description: "Rekaman set paling diminati pendengar -- perpaduan house & tropical vibes buat santai sore.",
-        badgeText: "Set Favorit",
-        ctaText: "Dengerin set-nya",
-        url: PLATFORM_URL.spotify,
-      }),
-      faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }]),
+      { title: "Dengarkan Sekarang", url: "https://open.spotify.com", iconKey: "play-circle", accentColor: "#6f48fc" },
     ],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -2154,27 +2140,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "restaurant",
     category: "local",
-    layoutVariant: "cover",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Restoran",
     description: "Menu, reservasi, lokasi, WhatsApp",
-    theme: "amber",
-    bio: "Restoran | Reservasi sekarang",
+    theme: "bistro",
+    bio: "Cita rasa lokal untuk cerita yang lebih hangat.",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
     links: [
-      link("whatsapp", "Reservasi via WhatsApp", "Reservasi meja langsung tanpa antre"),
-      link("instagram", "Ikuti Update Kami", "Menu favorit & suasana restoran"),
-    ],
-    blocks: [
-      mapsBlock(),
-      showcaseBlock({
-        title: "Paket Spesial Makan Berdua",
-        description: "Menu paling laris bulan ini -- porsi pas untuk berdua dengan harga bersahabat.",
-        badgeText: "Menu Andalan",
-        ctaText: "Lihat menu lengkap",
-        url: PLATFORM_URL.whatsapp,
-      }),
-      { type: "text", title: "Menu", text: "Tuliskan menu andalan restoranmu di sini." },
-      { type: "contact_form", title: "Kritik dan Saran" },
+      { title: "Lihat Menu", url: "https://websitekamu.com/menu", iconKey: "utensils", accentColor: "#5d46fc" },
+      { title: "Reservasi", url: "https://wa.me/62", iconKey: "calendar" },
     ],
   },
   {
@@ -2276,25 +2254,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "event-organizer",
     category: "local",
-    layoutVariant: "cover",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Event Organizer",
     description: "Event, portofolio, kontak",
-    theme: "golden",
-    bio: "Event organizer | Wujudkan acaramu",
+    theme: "gala",
+    bio: "Event bermakna untuk lebih banyak cerita!",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
     links: [
-      link("instagram", "Lihat Portofolio Acara", "Dokumentasi acara yang sudah kami tangani"),
-      link("whatsapp", "Konsultasi via WhatsApp", "Konsultasi konsep acara impianmu"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Gala Dinner Perusahaan 300 Tamu",
-        description: "Salah satu acara terbesar yang kami tangani -- dari konsep sampai eksekusi hari-H berjalan lancar.",
-        badgeText: "Acara Favorit",
-        ctaText: "Lihat dokumentasinya",
-        url: PLATFORM_URL.instagram,
-      }),
-      { type: "contact_form", title: "Hubungi Kami" },
+      { title: "Sore di Taman", url: "https://websitekamu.com/event", description: "24 Agustus · Jakarta", iconKey: "calendar-days", badgeText: "24 Agu" },
+      { title: "Dapatkan Tiket", url: "https://websitekamu.com/tiket", iconKey: "ticket", accentColor: "#defb53" },
     ],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -2570,52 +2542,37 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "homestay-villa",
     category: "tourism",
-    layoutVariant: "cover",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Homestay & Villa",
     description: "Fasilitas, lokasi, booking",
-    theme: "tide",
-    bio: "Homestay & villa -- nginap nyaman ala rumah sendiri",
+    theme: "villa",
+    bio: "Rumah kedua, di tempat yang lebih indah.",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
     links: [
-      link("whatsapp", "Booking Sekarang", "Booking langsung, cek ketersediaan tanggal"),
-      link("instagram", "Lihat Villa Kami", "Suasana villa & review tamu"),
-    ],
-    blocks: [
-      mapsBlock("Lokasi Villa"),
-      showcaseBlock({
-        title: "Villa 3 Kamar dengan Private Pool",
-        description: "Unit paling sering dibooking -- kolam renang privat & pemandangan langsung ke sawah.",
-        badgeText: "Villa Favorit",
-        ctaText: "Cek ketersediaan",
-        url: PLATFORM_URL.whatsapp,
-      }),
-      { type: "text", title: "Fasilitas", text: "Tuliskan fasilitas villa/homestay (kolam renang, dapur, WiFi, dst) di sini." },
-      faqBlock([{ question: "Berapa lama minimal menginap?", answer: "Minimal 1 malam, tapi ada diskon khusus untuk booking mingguan -- tanya via WhatsApp." }]),
+      { title: "Pesan Sekarang", url: "https://wa.me/62", iconKey: "calendar-days", accentColor: "#fe5642" },
+      { title: "Lihat Lokasi", url: "https://maps.google.com", iconKey: "map-pin" },
     ],
   },
   {
     key: "diving-center",
     category: "tourism",
-    layoutVariant: "portrait",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Pusat Selam",
     description: "Paket diving, spot, booking",
-    theme: "azure",
-    bio: "Diving center -- jelajahi bawah laut bareng kami",
+    theme: "reef",
+    bio: "Selam lebih dalam, jadi versi terbaikmu.",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
     links: [
-      link("whatsapp", "Booking Trip Diving", "Booking trip & tanya jadwal terdekat"),
-      link("instagram", "Lihat Spot Diving", "Dokumentasi bawah laut & spot favorit"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Trip Diving: Coral Garden Bunaken",
-        description: "Spot paling favorit peserta trip -- terumbu karang berwarna-warni dengan visibilitas air jernih.",
-        badgeText: "Spot Favorit",
-        ctaText: "Lihat detail trip",
-        url: PLATFORM_URL.whatsapp,
-      }),
-      { type: "text", title: "Paket Diving", text: "Tuliskan paket diving (open water, spot favorit, sewa alat) & harga di sini." },
-      faqBlock([{ question: "Perlu sertifikat diving dulu?", answer: "Untuk pemula tersedia paket trial diving tanpa sertifikat, didampingi instruktur bersertifikat." }]),
+      { title: "Kursus Selam", url: "https://websitekamu.com/kursus", description: "Untuk semua level", iconKey: "waves" },
+      { title: "Paket Trip", url: "https://websitekamu.com/trip", description: "Raja Ampat & lainnya", iconKey: "ship" },
     ],
   },
   {
@@ -2646,26 +2603,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "adventure-guide",
     category: "tourism",
-    layoutVariant: "portrait",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Pemandu Petualangan",
     description: "Trekking, camping, booking",
-    theme: "highland",
-    bio: "Trekking & camping guide -- taklukkan alam bareng aku",
+    theme: "rimba",
+    bio: "Lebih dari perjalanan, ini tentang makna.",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
     links: [
-      link("whatsapp", "Booking Trip", "Booking trip & tanya perlengkapan"),
-      link("instagram", "Lihat Dokumentasi Trip", "Dokumentasi pendakian & camping ground"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Pendakian Sunrise: Puncak Terbaik Akhir Pekan",
-        description: "Trip paling diminati akhir pekan -- summit attack dini hari buat kejar momen sunrise di puncak.",
-        badgeText: "Trip Favorit",
-        ctaText: "Lihat detail trip",
-        url: PLATFORM_URL.whatsapp,
-      }),
-      { type: "text", title: "Rute & Gunung", text: "Tuliskan jalur pendakian/camping ground favorit yang biasa kamu pandu di sini." },
-      faqBlock([{ question: "Perlu bawa alat sendiri?", answer: "Tenda & alat masak bisa disewa, tinggal bawa perlengkapan pribadi -- detail lengkap dikirim setelah booking." }]),
+      { title: "Paket Pendakian", url: "https://websitekamu.com/paket", description: "Gunung Rinjani", iconKey: "mountain" },
+      { title: "Konsultasi via WhatsApp", url: "https://wa.me/62", iconKey: "brand-whatsapp", accentColor: "#83f98b" },
     ],
   },
   {
@@ -3125,27 +3075,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "nonprofit-charity",
     category: "special",
-    layoutVariant: "cover",
+    // Tampilan persis kartu template homepage (public/homepage/templates/
+    // *.png, 25 September 2026): tema foto + layout "billboard", isi tombol/
+    // kartu dibaca langsung dari kartunya (OCR), warna tombol dari sampel
+    // piksel. Lihat catatan di PAGE_THEMES "villa" (page-themes.ts).
+    layoutVariant: "billboard",
     label: "Nirlaba & Amal",
     description: "Program sosial, donasi, relawan",
-    theme: "blush",
-    bio: "Yayasan -- bersama kita bisa berbuat lebih banyak",
+    theme: "harapan",
+    bio: "Langkah kecil, dampak besar.",
     social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
     links: [
-      link("instagram", undefined, "Dokumentasi program & penyaluran bantuan"),
-      link("whatsapp", "Hubungi Kami", "Tanya program & cara bergabung"),
-    ],
-    blocks: [
-      showcaseBlock({
-        title: "Program Beasiswa Anak Yatim & Dhuafa",
-        description: "Program paling banyak didukung donatur -- bantu wujudkan pendidikan layak untuk anak-anak binaan kami.",
-        badgeText: "Program Unggulan",
-        ctaText: "Lihat detail program",
-        url: PLATFORM_URL.instagram,
-      }),
-      { type: "text", title: "Program Kami", text: "Tuliskan program/kegiatan sosial yang sedang berjalan di sini." },
-      faqBlock([{ question: "Bagaimana cara donasi/menjadi relawan?", answer: "Klik tautan di atas atau isi formulir di bawah, tim kami akan menghubungi balik." }]),
-      { type: "contact_form", title: "Gabung Jadi Relawan" },
+      { title: "Rp 48.250.000 terkumpul", url: "https://websitekamu.com/program", description: "dari target Rp 75.000.000", iconKey: "heart-handshake", badgeText: "64%" },
+      { title: "Donasi Sekarang", url: "https://websitekamu.com/donasi", iconKey: "heart", accentColor: "#fea5cb" },
     ],
     monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
   },
