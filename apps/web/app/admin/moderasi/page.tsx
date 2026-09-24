@@ -69,12 +69,55 @@ export default function AdminModerationPage() {
   const [newDomainCategory, setNewDomainCategory] = useState<ModerationCategory>("judi_online");
   const [savingDomain, setSavingDomain] = useState(false);
 
+  // Paginasi -- 24 September 2026 (audit cross-check tipe API): backend
+  // memotong kedua daftar ini (default 50, maks 100), tapi halaman ini dulu
+  // cuma memanggil sekali tanpa "muat lebih banyak", jadi entri di luar
+  // halaman pertama tak terjangkau sama sekali. "Masih ada lagi" disimpulkan
+  // dari halaman yang penuh (backend tidak mengirim total untuk daftar ini).
+  const MOD_PAGE_SIZE = 100;
+  const [keywordsHasMore, setKeywordsHasMore] = useState(false);
+  const [domainsHasMore, setDomainsHasMore] = useState(false);
+  const [loadingMoreKeywords, setLoadingMoreKeywords] = useState(false);
+  const [loadingMoreDomains, setLoadingMoreDomains] = useState(false);
+
   function reloadKeywords() {
-    return listBlockedKeywords().then(setKeywords);
+    return listBlockedKeywords({ limit: MOD_PAGE_SIZE }).then((items) => {
+      setKeywords(items);
+      setKeywordsHasMore(items.length === MOD_PAGE_SIZE);
+    });
   }
 
   function reloadDomains(filter: "blocked" | "allowed" | undefined) {
-    return listDomainVerdicts(filter).then(setDomains);
+    return listDomainVerdicts(filter, { limit: MOD_PAGE_SIZE }).then((items) => {
+      setDomains(items);
+      setDomainsHasMore(items.length === MOD_PAGE_SIZE);
+    });
+  }
+
+  async function handleLoadMoreKeywords() {
+    setLoadingMoreKeywords(true);
+    try {
+      const items = await listBlockedKeywords({ limit: MOD_PAGE_SIZE, offset: keywords.length });
+      setKeywords((prev) => [...prev, ...items]);
+      setKeywordsHasMore(items.length === MOD_PAGE_SIZE);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat kata kunci lainnya.");
+    } finally {
+      setLoadingMoreKeywords(false);
+    }
+  }
+
+  async function handleLoadMoreDomains() {
+    setLoadingMoreDomains(true);
+    try {
+      const items = await listDomainVerdicts(domainFilter, { limit: MOD_PAGE_SIZE, offset: domains.length });
+      setDomains((prev) => [...prev, ...items]);
+      setDomainsHasMore(items.length === MOD_PAGE_SIZE);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat domain lainnya.");
+    } finally {
+      setLoadingMoreDomains(false);
+    }
   }
 
   useEffect(() => {
@@ -265,6 +308,16 @@ export default function AdminModerationPage() {
             </tbody>
           </table>
           {keywords.length === 0 && <AdminEmptyState text="Belum ada kata kunci." />}
+          {keywordsHasMore && (
+            <button
+              type="button"
+              onClick={handleLoadMoreKeywords}
+              disabled={loadingMoreKeywords}
+              className="mt-2 w-full rounded-lg border-2 border-jeon-ink py-2 text-sm font-semibold hover:border-jeon-purple disabled:opacity-50"
+            >
+              {loadingMoreKeywords ? "Memuat..." : "Muat lebih"}
+            </button>
+          )}
         </div>
       </section>
 
@@ -364,6 +417,16 @@ export default function AdminModerationPage() {
             </tbody>
           </table>
           {domains.length === 0 && <AdminEmptyState text="Belum ada entri." />}
+          {domainsHasMore && (
+            <button
+              type="button"
+              onClick={handleLoadMoreDomains}
+              disabled={loadingMoreDomains}
+              className="mt-2 w-full rounded-lg border-2 border-jeon-ink py-2 text-sm font-semibold hover:border-jeon-purple disabled:opacity-50"
+            >
+              {loadingMoreDomains ? "Memuat..." : "Muat lebih"}
+            </button>
+          )}
         </div>
       </section>
     </div>

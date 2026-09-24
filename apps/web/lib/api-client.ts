@@ -4238,8 +4238,22 @@ export interface BlockedKeyword {
   created_at: string;
 }
 
-export function listBlockedKeywords() {
-  return apiFetch<BlockedKeyword[]>("/admin/moderation/keywords", { method: "GET" }, { auth: true });
+// opts.limit/offset -- ditambahkan 24 September 2026 (audit cross-check tipe
+// API). Backend memotong daftar ini di 50 secara default (parseLimitOffset,
+// maks 100), tapi signature lama tanpa parameter membuat tipenya tampak
+// "seluruh daftar" dan halaman moderasi tidak punya "muat lebih banyak" --
+// entri di luar 50 teratas tak terjangkau dari UI sama sekali. Parameter
+// opsional: pemanggil lama tidak berubah perilakunya.
+function paginationQuery(opts?: { limit?: number; offset?: number }, extra?: Record<string, string>) {
+  const qs = new URLSearchParams(extra);
+  if (opts?.limit) qs.set("limit", String(opts.limit));
+  if (opts?.offset) qs.set("offset", String(opts.offset));
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+export function listBlockedKeywords(opts?: { limit?: number; offset?: number }) {
+  return apiFetch<BlockedKeyword[]>(`/admin/moderation/keywords${paginationQuery(opts)}`, { method: "GET" }, { auth: true });
 }
 
 export function createBlockedKeyword(keyword: string, category: ModerationCategory, matchType: ModerationMatchType = "substring") {
@@ -4267,8 +4281,13 @@ export interface DomainVerdict {
 
 // verdictFilter opsional ("blocked"/"allowed") -- default backend
 // mengembalikan keduanya, diurutkan yang terbaru diputuskan dulu.
-export function listDomainVerdicts(verdictFilter?: "blocked" | "allowed") {
-  const qs = verdictFilter ? `?verdict=${verdictFilter}` : "";
+// Lihat catatan opts di listBlockedKeywords. Tabel link_domain_verdicts
+// TUMBUH OTOMATIS dari hasil scan (moderation.go), jadi di sinilah
+// pemotongan 50 paling nyata: domain lama hilang dari jangkauan admin --
+// dan batas efektifnya malah TURUN dari 200 (literal lama) ke 50, kebalikan
+// dari klaim komentar ListDomainVerdicts di admin.go.
+export function listDomainVerdicts(verdictFilter?: "blocked" | "allowed", opts?: { limit?: number; offset?: number }) {
+  const qs = paginationQuery(opts, verdictFilter ? { verdict: verdictFilter } : undefined);
   return apiFetch<DomainVerdict[]>(`/admin/moderation/domains${qs}`, { method: "GET" }, { auth: true });
 }
 

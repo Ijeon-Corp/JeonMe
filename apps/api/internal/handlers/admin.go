@@ -1040,15 +1040,22 @@ func (h *AdminHandler) CreateBlockedKeyword(c *gin.Context) {
 	defer cancel()
 
 	id := uuid.NewString()
-	if _, err := h.DB.Exec(ctx, `
+	// RETURNING created_at -- respons POST ini dulu gin.H ad-hoc TANPA
+	// created_at, padahal tipe TS BlockedKeyword mendeklarasikannya wajib
+	// (audit cross-check tipe API, 24 September 2026). Aman hari ini karena
+	// halaman moderasi membuang hasilnya lalu refetch, tapi optimistic update
+	// apa pun akan menghasilkan "Invalid Date"/sort NaN tanpa error tsc.
+	var createdAt time.Time
+	if err := h.DB.QueryRow(ctx, `
 		INSERT INTO blocked_keywords (id, keyword, category, match_type, created_at) VALUES ($1, $2, $3, $4, now())
-	`, id, keyword, req.Category, req.MatchType); err != nil {
+		RETURNING created_at
+	`, id, keyword, req.Category, req.MatchType).Scan(&createdAt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menambah kata kunci (mungkin sudah ada)"})
 		return
 	}
 	_ = audit.Log(ctx, h.DB, adminID, "blocked_keyword.created", "blocked_keyword", id, nil)
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "keyword": keyword, "category": req.Category, "match_type": req.MatchType})
+	c.JSON(http.StatusCreated, gin.H{"id": id, "keyword": keyword, "category": req.Category, "match_type": req.MatchType, "created_at": createdAt})
 }
 
 // DeleteBlockedKeyword — hapus satu kata kunci dari blocklist.
@@ -1283,7 +1290,20 @@ func (h *AdminHandler) ListTrafficSources(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	resp := trafficSourcesResponse{RangeDays: rangeDays, Sources: []trafficSourceRow{}}
+	// DailySeries & BySource di-init kosong -- perbaikan 24 September 2026
+	// (audit cross-check tipe API). Keduanya hanya diisi saat offset == 0;
+	// pada "muat lebih banyak" keduanya tetap nil dan tanpa omitempty ter-
+	// marshal jadi JSON `null`, padahal tipe TS-nya T[] non-nullable (dan
+	// komentar di api-client.ts malah mengklaim "array kosong"). Frontend
+	// hari ini selamat karena kebetulan pakai `?? []`, tapi siapa pun yang
+	// menulis data.daily_series.map(...) sesuai tipenya akan membuat
+	// halaman blank. Pola sama analytics.go (semua slice di-init).
+	resp := trafficSourcesResponse{
+		RangeDays:   rangeDays,
+		Sources:     []trafficSourceRow{},
+		DailySeries: []trafficDailyPoint{},
+		BySource:    []trafficSourceTotal{},
+	}
 	if err := h.DB.QueryRow(ctx, `
 		SELECT COUNT(*) FILTER (WHERE event_type = 'view'),
 			COUNT(*) FILTER (WHERE event_type = 'view' AND utm_source != '')
