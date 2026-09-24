@@ -247,7 +247,14 @@ jobs:
               echo "::error::docker compose pull tetap gagal setelah 5 percobaan berturut-turut."
               return 1
             }
-            pull_with_retry docker-compose.prod.yml
+            # Hanya image aplikasi kita (web/api/worker) yang ditarik ulang --
+            # insiden 24 Sept 2026: quay.io/minio/minio mulai membalas 401
+            # Unauthorized, sehingga 'pull' tanpa argumen (ikut menarik
+            # minio) gagal 5x dan SEMUA deploy staging+prod macet sejak
+            # v0.50.0 (disangka gangguan jaringan). Image pihak ketiga
+            # (db/redis/minio) sudah ada di cache VPS; 'up' di bawah
+            # memakainya apa adanya tanpa pull.
+            pull_with_retry docker-compose.prod.yml web api worker
             # --force-recreate -- lihat komentar sama di deploy-staging.yml
             # (insiden nyata, 15 Agustus 2026: env var baru di .env tidak
             # cukup membuat `up -d` polos merecreate container kalau
