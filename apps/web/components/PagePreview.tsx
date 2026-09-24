@@ -31,7 +31,7 @@ import {
   IconTrash,
 } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
-import { getLibraryIcon } from "@/lib/icon-library";
+import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 import { ChevronLeft, HelpCircle, Images as GalleryIcon, LayoutGrid, Video as VideoIcon } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
@@ -1945,7 +1945,7 @@ function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentTyp
   const libraryIcon = getLibraryIcon(link.iconKey);
   if (libraryIcon) {
     return (
-      <ColoredIcon color={link.iconColor}>
+      <ColoredIcon color={libraryIconColor(link.iconKey, link.iconColor)}>
         <libraryIcon.Icon className={`${sizeClass} flex-shrink-0`} />
       </ColoredIcon>
     );
@@ -2556,6 +2556,8 @@ export function renderLinkOrBlock(
   if (!link.lockType && link.isFeatured && link.thumbnailUrl) {
     const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
     const libraryIcon = getLibraryIcon(link.iconKey);
+    // Ikon galeri brand bawaan berwarna logo asli, lihat libraryIconColor.
+    const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
     const cardClassName = `group block w-full overflow-hidden ${theme.cardRounded ?? "rounded-xl"} ${theme.card} transition-all duration-300`;
     const cardInner = (
       <>
@@ -2575,7 +2577,7 @@ export function renderLinkOrBlock(
           />
           <span
             className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm"
-            style={link.iconColor ? { color: link.iconColor } : undefined}
+            style={effectiveIconColor ? { color: effectiveIconColor } : undefined}
           >
             {link.customIconUrl ? (
               // Ukuran TETAP 28px -- span pembungkusnya h-7 w-7.
@@ -2639,6 +2641,7 @@ export function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
+      const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
       const iconNode = link.customIconUrl ? (
         // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
         // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
@@ -2664,7 +2667,7 @@ export function renderLinkOrBlock(
         >
           <span
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
-            style={link.iconColor ? { color: link.iconColor } : undefined}
+            style={effectiveIconColor ? { color: effectiveIconColor } : undefined}
           >
             {iconNode}
           </span>
@@ -2685,7 +2688,7 @@ export function renderLinkOrBlock(
         >
           <span
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
-            style={link.iconColor ? { color: link.iconColor } : undefined}
+            style={effectiveIconColor ? { color: effectiveIconColor } : undefined}
           >
             {iconNode}
           </span>
@@ -2697,6 +2700,7 @@ export function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
+      const effectiveIconColor = libraryIcon ? libraryIconColor(link.iconKey, link.iconColor) : link.iconColor;
       const iconNode = link.customIconUrl ? (
         // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
         // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
@@ -2717,7 +2721,7 @@ export function renderLinkOrBlock(
         >
           <span
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
-            style={link.iconColor ? { color: link.iconColor } : undefined}
+            style={effectiveIconColor ? { color: effectiveIconColor } : undefined}
           >
             {iconNode}
           </span>
@@ -2737,7 +2741,7 @@ export function renderLinkOrBlock(
         >
           <span
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
-            style={link.iconColor ? { color: link.iconColor } : undefined}
+            style={effectiveIconColor ? { color: effectiveIconColor } : undefined}
           >
             {iconNode}
           </span>

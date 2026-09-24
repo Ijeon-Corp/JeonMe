@@ -93,7 +93,7 @@ import {
   type LinkItem,
   type PageStickerData,
 } from "@/lib/api-client";
-import { getLibraryIcon } from "@/lib/icon-library";
+import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { maxNestedGalleryImages } from "@/lib/block-preview";
 import {
   buildTree,
@@ -2125,7 +2125,7 @@ function RootToolsPanel({
               ) : node.customIconUrl ? (
                 <Image src={node.customIconUrl} alt="" width={20} height={20} className="h-5 w-5 flex-shrink-0 rounded-md object-cover ring-1 ring-black/10" />
               ) : (
-                <span style={node.iconColor ? { color: node.iconColor } : undefined} className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                <span style={libraryIconColor(node.iconKey, node.iconColor) ? { color: libraryIconColor(node.iconKey, node.iconColor) } : undefined} className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
                   {libraryIcon ? <libraryIcon.Icon className="h-4 w-4" /> : <Shapes className="h-4 w-4" />}
                 </span>
               )}
@@ -2174,7 +2174,7 @@ function RootToolsPanel({
                     <span className="min-w-0 flex-1 truncate">{node.iconColor ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}</span>
                     <input
                       type="color"
-                      value={node.iconColor || "#000000"}
+                      value={libraryIconColor(node.iconKey, node.iconColor) || "#000000"}
                       onChange={(e) => onUpdateNode(sel, { iconColor: e.target.value })}
                       className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     />

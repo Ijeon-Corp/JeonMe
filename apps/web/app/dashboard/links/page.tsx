@@ -77,7 +77,7 @@ import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import Toggle from "@/components/Toggle";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
-import { getLibraryIcon } from "@/lib/icon-library";
+import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
@@ -3056,8 +3056,11 @@ export default function DashboardLinksPage() {
                 ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
                   (() => {
                     const libraryIcon = getLibraryIcon(link.icon_key)!;
+                    // Warna pilihan kreator, kalau tidak warna logo asli brand
+                    // (lihat libraryIconColor) -- sama dgn halaman publik.
+                    const tileColor = libraryIconColor(link.icon_key, link.icon_color);
                     return (
-                      <span title={libraryIcon.label} className={BLOCK_TILE_CLASS}>
+                      <span title={libraryIcon.label} className={BLOCK_TILE_CLASS} style={tileColor ? { color: tileColor } : undefined}>
                         <libraryIcon.Icon className="h-5 w-5" />
                       </span>
                     );

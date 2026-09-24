@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, LayoutGrid, Palette, Shapes, TriangleAlert, X } from "lucide-react";
 import { IconClock, IconCopy, IconLock, IconStar, IconTrash } from "@/components/icons";
-import { getLibraryIcon } from "@/lib/icon-library";
+import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { useLocale } from "@/lib/locale-context";
 import type { LinkItem } from "@/lib/api-client";
 
@@ -126,8 +126,9 @@ function IconPreview({ link }: { link: LinkItem }) {
   }
   const lib = getLibraryIcon(link.icon_key);
   const Glyph = lib?.Icon ?? Shapes;
+  const color = libraryIconColor(link.icon_key, link.icon_color);
   return (
-    <span style={link.icon_color ? { color: link.icon_color } : undefined} className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
+    <span style={color ? { color } : undefined} className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
       <Glyph className="h-4 w-4" />
     </span>
   );
@@ -306,7 +307,7 @@ export default function BlockToolsStrip({
                   <span className="min-w-0 flex-1 truncate">{link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}</span>
                   <input
                     type="color"
-                    value={link.icon_color || "#000000"}
+                    value={libraryIconColor(link.icon_key, link.icon_color) || "#000000"}
                     onChange={(e) => onIconColorChange(e.target.value)}
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   />

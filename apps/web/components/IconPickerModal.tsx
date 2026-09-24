@@ -96,7 +96,11 @@ export default function IconPickerModal({
                           : "border-app-border text-app-ink hover:border-jeon-purple/50 hover:bg-jeon-purple/5"
                       }`}
                     >
-                      <icon.Icon className="h-5 w-5" />
+                      {/* Ikon brand tampil dgn warna logo aslinya (24 Sept 2026)
+                          -- warna yang sama dgn yang akan dipakai di halaman. */}
+                      <span className="contents" style={icon.color ? { color: icon.color } : undefined}>
+                        <icon.Icon className="h-5 w-5" />
+                      </span>
                     </button>
                   ))}
                 </div>

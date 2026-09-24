@@ -55,7 +55,7 @@ import {
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
-import { getLibraryIcon } from "@/lib/icon-library";
+import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { detectLinkIcon } from "@/lib/link-icons";
 import {
   ChevronDown,
@@ -2231,8 +2231,9 @@ function BlockSection({
               ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
                 (() => {
                   const libraryIcon = getLibraryIcon(link.icon_key)!;
+                  const tileColor = libraryIconColor(link.icon_key, link.icon_color);
                   return (
-                    <span title={libraryIcon.label} className={BLOCK_TILE_CLASS}>
+                    <span title={libraryIcon.label} className={BLOCK_TILE_CLASS} style={tileColor ? { color: tileColor } : undefined}>
                       <libraryIcon.Icon className="h-5 w-5" />
                     </span>
                   );

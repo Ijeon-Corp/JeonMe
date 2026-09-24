@@ -269,6 +269,14 @@ export interface LibraryIcon {
   // catatan lengkap kenapa di komentar header file ini (kategori "Media
   // Sosial" butuh ikon brand dari icons.tsx, bukan lucide-react).
   Icon: LucideIcon | ComponentType<{ className?: string }>;
+  // color -- warna logo ASLI brand (hex), dipakai sbg warna bawaan ikon
+  // kategori "Media Sosial" (permintaan langsung pengguna, 24 September
+  // 2026: "icon seperti whatsapp dll itu kan emang sudah punya warnanya
+  // sendiri... default nya warna logo asli tetapi tetap bisa diubah").
+  // Warna pilihan kreator (links.icon_color) SELALU menang -- lihat
+  // libraryIconColor. TikTok & X sengaja tanpa warna: logo aslinya
+  // monokrom, hitam akan hilang di tema gelap, jadi tetap ikut warna tema.
+  color?: string;
 }
 
 // phosphorIcon -- 24 September 2026 (permintaan pengguna: "Phosphor untuk
@@ -372,21 +380,21 @@ export const ICON_LIBRARY: LibraryIcon[] = [
   // penekanan pengguna "terutama sosmed icon". Key prefix "brand-" (bukan
   // nama platform polos) supaya tidak bentrok kalau suatu saat lucide-react
   // punya key dengan nama sama.
-  { key: "brand-instagram", label: "Instagram", category: "Media Sosial", Icon: IconInstagram },
+  { key: "brand-instagram", label: "Instagram", category: "Media Sosial", Icon: IconInstagram, color: "#E4405F" },
   { key: "brand-tiktok", label: "TikTok", category: "Media Sosial", Icon: IconTiktok },
-  { key: "brand-youtube", label: "YouTube", category: "Media Sosial", Icon: IconYoutube },
-  { key: "brand-whatsapp", label: "WhatsApp", category: "Media Sosial", Icon: IconWhatsapp },
-  { key: "brand-facebook", label: "Facebook", category: "Media Sosial", Icon: IconFacebook },
+  { key: "brand-youtube", label: "YouTube", category: "Media Sosial", Icon: IconYoutube, color: "#FF0000" },
+  { key: "brand-whatsapp", label: "WhatsApp", category: "Media Sosial", Icon: IconWhatsapp, color: "#25D366" },
+  { key: "brand-facebook", label: "Facebook", category: "Media Sosial", Icon: IconFacebook, color: "#1877F2" },
   { key: "brand-x", label: "X (Twitter)", category: "Media Sosial", Icon: IconX },
-  { key: "brand-linkedin", label: "LinkedIn", category: "Media Sosial", Icon: IconLinkedin },
-  { key: "brand-telegram", label: "Telegram", category: "Media Sosial", Icon: IconTelegram },
-  { key: "brand-spotify", label: "Spotify", category: "Media Sosial", Icon: IconSpotify },
-  { key: "brand-discord", label: "Discord", category: "Media Sosial", Icon: IconDiscord },
-  { key: "brand-twitch", label: "Twitch", category: "Media Sosial", Icon: IconTwitch },
-  { key: "brand-shopee", label: "Shopee", category: "Media Sosial", Icon: IconShopee },
-  { key: "brand-apple-music", label: "Apple Music", category: "Media Sosial", Icon: IconAppleMusic },
-  { key: "brand-apple-podcasts", label: "Apple Podcasts", category: "Media Sosial", Icon: IconApplePodcasts },
-  { key: "brand-google-maps", label: "Google Maps", category: "Media Sosial", Icon: IconGoogleMaps },
+  { key: "brand-linkedin", label: "LinkedIn", category: "Media Sosial", Icon: IconLinkedin, color: "#0A66C2" },
+  { key: "brand-telegram", label: "Telegram", category: "Media Sosial", Icon: IconTelegram, color: "#26A5E4" },
+  { key: "brand-spotify", label: "Spotify", category: "Media Sosial", Icon: IconSpotify, color: "#1DB954" },
+  { key: "brand-discord", label: "Discord", category: "Media Sosial", Icon: IconDiscord, color: "#5865F2" },
+  { key: "brand-twitch", label: "Twitch", category: "Media Sosial", Icon: IconTwitch, color: "#9146FF" },
+  { key: "brand-shopee", label: "Shopee", category: "Media Sosial", Icon: IconShopee, color: "#EE4D2D" },
+  { key: "brand-apple-music", label: "Apple Music", category: "Media Sosial", Icon: IconAppleMusic, color: "#FA243C" },
+  { key: "brand-apple-podcasts", label: "Apple Podcasts", category: "Media Sosial", Icon: IconApplePodcasts, color: "#9933CC" },
+  { key: "brand-google-maps", label: "Google Maps", category: "Media Sosial", Icon: IconGoogleMaps, color: "#EA4335" },
 
   // Isi Penuh & Duotone (Phosphor) -- lihat catatan phosphorIcon di atas.
   // Key prefix "ph-fill-"/"ph-duotone-" + nama kebab-case asli Phosphor
@@ -754,5 +762,13 @@ const ICON_LIBRARY_MAP: Record<string, LibraryIcon> = Object.fromEntries(ICON_LI
 export function getLibraryIcon(key: string | undefined | null): LibraryIcon | undefined {
   if (!key) return undefined;
   return ICON_LIBRARY_MAP[key];
+}
+
+// libraryIconColor -- warna efektif ikon galeri: warna pilihan kreator
+// (links.icon_color) kalau ada, kalau tidak warna logo asli brand (hanya
+// ikon brand yang punya), kalau tidak undefined = ikut warna tema.
+export function libraryIconColor(key: string | undefined | null, chosenColor?: string | null): string | undefined {
+  if (chosenColor) return chosenColor;
+  return getLibraryIcon(key)?.color;
 }
 
