@@ -309,8 +309,9 @@ export interface PagePreviewData {
   onSelectLink?: (id: string) => void;
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
-  // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
-  // poin pengunjung dicek terpisah lewat LoyaltyPointsWidget (butuh email).
+  // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin. UI loyalitas
+  // sedang disembunyikan (widget publiknya dihapus 24 Sept 2026) -- prop ini
+  // tetap diterima supaya kontrak data API tidak berubah, tapi belum dirender.
   loyaltyActive?: boolean;
   donation?: PagePreviewDonation;
   leadCapture?: PagePreviewLeadCapture;
