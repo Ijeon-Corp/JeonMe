@@ -815,7 +815,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Dijalankan sebagai pernyataan terpisah (bukan disisipkan ke SET
 	// UPDATE di bawah) karena kolom yang sama akan ter-assign DUA KALI
