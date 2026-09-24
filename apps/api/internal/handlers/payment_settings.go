@@ -236,8 +236,10 @@ func (h *PayoutMethodHandler) RequestVerification(c *gin.Context) {
 
 	if _, err := h.DB.Exec(ctx, `
 		UPDATE payout_methods SET verification_code_hash = $1, verification_expires_at = now() + interval '10 minutes'
-		WHERE id = $2
-	`, hashHex, id); err != nil {
+		-- AND user_id: pertahanan berlapis (audit 24 September 2026), selaras
+		-- keputusan audit 15 September: setiap tulis mengulang kepemilikan.
+		WHERE id = $2 AND user_id = $3
+	`, hashHex, id, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan kode verifikasi"})
 		return
 	}
@@ -325,8 +327,10 @@ func (h *PayoutMethodHandler) Verify(c *gin.Context) {
 
 	if _, err := h.DB.Exec(ctx, `
 		UPDATE payout_methods SET verified = true, verification_code_hash = NULL, verification_expires_at = NULL
-		WHERE id = $1
-	`, id); err != nil {
+		-- AND user_id: pertahanan berlapis (audit 24 September 2026), selaras
+		-- keputusan audit 15 September: setiap tulis mengulang kepemilikan.
+		WHERE id = $1 AND user_id = $2
+	`, id, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memverifikasi metode pembayaran"})
 		return
 	}
@@ -368,7 +372,9 @@ func (h *PayoutMethodHandler) SetPrimary(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui metode utama"})
 		return
 	}
-	if _, err := tx.Exec(ctx, `UPDATE payout_methods SET is_primary = true WHERE id = $1`, id); err != nil {
+	// AND user_id: pertahanan berlapis (audit 24 September 2026), selaras
+	// keputusan audit 15 September -- setiap tulis mengulang kepemilikan.
+	if _, err := tx.Exec(ctx, `UPDATE payout_methods SET is_primary = true WHERE id = $1 AND user_id = $2`, id, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menjadikan metode utama"})
 		return
 	}
