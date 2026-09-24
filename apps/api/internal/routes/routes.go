@@ -105,7 +105,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	onboarding := handlers.NewOnboardingHandler(db)
 	notification := handlers.NewNotificationHandler(db)
 	security := handlers.NewSecurityHandler(db, rdb)
-	payoutMethod := handlers.NewPayoutMethodHandler(db, encryptionKey, cfg.AppEnv)
+	payoutMethod := handlers.NewPayoutMethodHandler(db, encryptionKey, cfg.AppEnv, rdb, queueClient)
 	payoutSchedule := handlers.NewPayoutScheduleHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
@@ -597,8 +597,17 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// pembayaran/jadwal auto-withdraw pemilik).
 			dashboard.GET("/payout-methods", payoutMethod.List)
 			dashboard.POST("/payout-methods", payoutMethod.Create)
-			dashboard.POST("/payout-methods/:id/request-verification", payoutMethod.RequestVerification)
-			dashboard.POST("/payout-methods/:id/verify", payoutMethod.Verify)
+			// authRateLimit di kedua rute OTP -- DITAMBAHKAN 24 September
+			// 2026 (audit menyeluruh). SEBELUMNYA seluruh grup
+			// payout-methods tidak punya middleware rate-limit sama sekali,
+			// padahal rute auth di atas justru dipasangi authRateLimit untuk
+			// ancaman yang PERSIS sama (gempur kode 6 digit). Ini lapis
+			// kedua di atas lockout per-user di handler-nya: rate-limit ini
+			// per-IP, lockout itu per-akun, jadi keduanya saling menutup
+			// celah (satu IP menggempur banyak akun, atau banyak IP
+			// menggempur satu akun).
+			dashboard.POST("/payout-methods/:id/request-verification", authRateLimit, payoutMethod.RequestVerification)
+			dashboard.POST("/payout-methods/:id/verify", authRateLimit, payoutMethod.Verify)
 			dashboard.PATCH("/payout-methods/:id/primary", payoutMethod.SetPrimary)
 			dashboard.DELETE("/payout-methods/:id", payoutMethod.Delete)
 

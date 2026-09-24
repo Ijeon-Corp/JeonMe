@@ -12,10 +12,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
 	"github.com/jeonme/api/internal/crypto"
+	"github.com/jeonme/api/internal/queue"
 )
 
 // PayoutMethodHandler mengimplementasikan Modul Settings §3 (Payment /
@@ -29,10 +32,73 @@ type PayoutMethodHandler struct {
 	DB            *pgxpool.Pool
 	EncryptionKey []byte
 	AppEnv        string
+	// RDB & Queue -- DITAMBAHKAN 24 September 2026 (audit menyeluruh).
+	// Queue: mengirim OTP lewat email, yang SEBELUMNYA tidak pernah
+	// dikirim ke mana pun sehingga pencairan dana terkunci total di
+	// production (lihat catatan lengkap di
+	// queue.TypePayoutMethodVerificationEmail). RDB: lockout percobaan
+	// OTP, yang sebelumnya tidak ada sama sekali -- Verify cuma membalas
+	// 401 tanpa menghitung apa pun, jadi kode 6 digit (ruang 1 juta) bisa
+	// digempur tanpa batas. Keduanya boleh nil (pola sama seperti
+	// AuthHandler.Queue): OTP tetap dibuat, cuma tidak terkirim/tidak
+	// ada lockout -- degradasi, bukan kegagalan.
+	RDB   *redis.Client
+	Queue *asynq.Client
 }
 
-func NewPayoutMethodHandler(db *pgxpool.Pool, encryptionKey []byte, appEnv string) *PayoutMethodHandler {
-	return &PayoutMethodHandler{DB: db, EncryptionKey: encryptionKey, AppEnv: appEnv}
+func NewPayoutMethodHandler(db *pgxpool.Pool, encryptionKey []byte, appEnv string, rdb *redis.Client, queueClient *asynq.Client) *PayoutMethodHandler {
+	return &PayoutMethodHandler{DB: db, EncryptionKey: encryptionKey, AppEnv: appEnv, RDB: rdb, Queue: queueClient}
+}
+
+// Lockout percobaan OTP rekening pencairan -- pola SENGAJA diduplikasi dari
+// checkVerifyLockout/recordVerifyFailure/clearVerifyFailures (auth.go)
+// dengan alasan yang SAMA PERSIS seperti yang ditulis di sana: mekanisme
+// lockout yang sudah teruji tidak ikut berubah/berisiko regresi hanya
+// karena alur baru ini menumpang. Ambang & durasi mengikuti konstanta
+// login yang sama (5 percobaan / 15 menit).
+//
+// Dikunci per USER, BUKAN per payout_method.id -- ini disengaja dan penting:
+// kalau dikunci per metode, penyerang tinggal membuat metode baru (POST
+// /payout-methods tidak dibatasi jumlah) untuk mendapat penghitung yang
+// segar setiap 5 tebakan, jadi lockout-nya tidak menahan apa pun.
+func payoutVerifyFailKey(userID string) string {
+	return "payout_verify_fail:" + userID
+}
+
+func checkPayoutVerifyLockout(ctx context.Context, rdb *redis.Client, userID string) (locked bool, retryAfter time.Duration) {
+	if rdb == nil {
+		return false, 0
+	}
+	count, err := rdb.Get(ctx, payoutVerifyFailKey(userID)).Int()
+	if err != nil || count < loginFailMaxAttempts {
+		return false, 0
+	}
+	ttl, err := rdb.TTL(ctx, payoutVerifyFailKey(userID)).Result()
+	if err != nil || ttl <= 0 {
+		return false, 0
+	}
+	return true, ttl
+}
+
+func recordPayoutVerifyFailure(ctx context.Context, rdb *redis.Client, userID string) {
+	if rdb == nil {
+		return
+	}
+	key := payoutVerifyFailKey(userID)
+	pipe := rdb.TxPipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, loginFailWindow)
+	_, _ = pipe.Exec(ctx)
+	if count, err := incr.Result(); err == nil && count >= int64(loginFailMaxAttempts) {
+		_ = rdb.Expire(ctx, key, loginLockoutDuration).Err()
+	}
+}
+
+func clearPayoutVerifyFailures(ctx context.Context, rdb *redis.Client, userID string) {
+	if rdb == nil {
+		return
+	}
+	_ = rdb.Del(ctx, payoutVerifyFailKey(userID)).Err()
 }
 
 type payoutMethodItem struct {
@@ -127,9 +193,17 @@ func (h *PayoutMethodHandler) Create(c *gin.Context) {
 // pembayaran yang belum ada, jadi verifikasi lewat kode OTP 6 digit
 // (dihash SHA-256 sebelum disimpan, expiry 10 menit -- pola sama persis
 // dengan password_reset_tokens/email_verification_tokens yang sudah ada).
-// Pengiriman SMS/email OTP sungguhan BELUM diwire (belum ada provider) --
-// kode dikembalikan langsung di response HANYA saat non-production, sama
-// seperti dev_reset_token di AuthHandler.
+//
+// Pengiriman OTP lewat EMAIL diwire 24 September 2026 (audit menyeluruh).
+// SEBELUMNYA komentar di sini berbunyi "pengiriman SMS/email OTP sungguhan
+// BELUM diwire" dan kode HANYA dikembalikan di response saat non-production
+// -- artinya di production OTP tidak pernah sampai ke kanal mana pun,
+// `verified` mustahil jadi true lewat UI, dan CreatePayout (balance.go)
+// menolak semua metode yang belum verified: pencairan dana terkunci TOTAL
+// untuk semua kreator sejak fitur ini rilis (dikonfirmasi langsung ke
+// pengguna, belum pernah ada penarikan berhasil di production). dev_otp
+// TETAP dipertahankan untuk non-production supaya e2e/dev lokal tidak
+// bergantung pada mailbox sungguhan.
 func (h *PayoutMethodHandler) RequestVerification(c *gin.Context) {
 	userID := c.GetString("userID")
 	id := c.Param("id")
@@ -137,8 +211,17 @@ func (h *PayoutMethodHandler) RequestVerification(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var exists bool
-	if err := h.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM payout_methods WHERE id = $1 AND user_id = $2)`, id, userID).Scan(&exists); err != nil || !exists {
+	// Email + nomor rekening diambil sekalian di sini (bukan query
+	// terpisah) supaya email OTP bisa menyebut rekening MANA yang sedang
+	// diverifikasi -- lihat catatan Label di
+	// queue.PayoutMethodVerificationPayload.
+	var email, provider string
+	var encryptedAccount string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT u.email, pm.provider, pm.account_number_encrypted
+		FROM payout_methods pm JOIN users u ON u.id = pm.user_id
+		WHERE pm.id = $1 AND pm.user_id = $2
+	`, id, userID).Scan(&email, &provider, &encryptedAccount); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "metode pembayaran tidak ditemukan"})
 		return
 	}
@@ -159,7 +242,21 @@ func (h *PayoutMethodHandler) RequestVerification(c *gin.Context) {
 		return
 	}
 
-	resp := gin.H{"message": "kode verifikasi dibuat, berlaku 10 menit"}
+	// Soft-fail (pola SMTP/S3/WhatsApp se-repo): kode SUDAH tersimpan, jadi
+	// kegagalan enqueue tidak boleh menggagalkan request -- kreator tinggal
+	// menekan "Kirim ulang kode". Nomor rekening yang gagal didekripsi pun
+	// tidak menggagalkan apa pun, labelnya sekadar jadi kurang spesifik.
+	label := provider
+	if decrypted, decErr := crypto.Decrypt(h.EncryptionKey, encryptedAccount); decErr == nil {
+		label = provider + " " + crypto.Mask(decrypted)
+	}
+	if h.Queue != nil {
+		if task, taskErr := queue.NewPayoutMethodVerificationTask(email, code, label); taskErr == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
+	resp := gin.H{"message": "kode verifikasi dikirim ke emailmu, berlaku 10 menit"}
 	if h.AppEnv != "production" {
 		resp["dev_otp"] = code
 	}
@@ -191,6 +288,19 @@ func (h *PayoutMethodHandler) Verify(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	// Lockout percobaan -- DITAMBAHKAN 24 September 2026 (audit menyeluruh).
+	// SEBELUMNYA kode salah cuma membalas 401 tanpa mencatat apa pun: tidak
+	// ada hitungan percobaan, tidak ada lockout, dan kode TIDAK diinvalidasi
+	// setelah N kali salah, jadi ruang tebak 6 digit (1 juta) bisa digempur
+	// habis. Itu berbahaya karena rekening yang terverifikasi langsung bisa
+	// dijadikan tujuan penarikan seluruh saldo (SetPrimary -> CreatePayout).
+	// Lihat catatan panjang di checkPayoutVerifyLockout soal kenapa dikunci
+	// per USER, bukan per metode.
+	if locked, retryAfter := checkPayoutVerifyLockout(ctx, h.RDB, userID); locked {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "terlalu banyak percobaan, coba lagi nanti", "retry_after_seconds": int(retryAfter.Seconds())})
+		return
+	}
+
 	var hashHex string
 	var expiresAt *time.Time
 	err := h.DB.QueryRow(ctx, `
@@ -208,6 +318,7 @@ func (h *PayoutMethodHandler) Verify(c *gin.Context) {
 
 	sum := sha256.Sum256([]byte(req.Code))
 	if hex.EncodeToString(sum[:]) != hashHex {
+		recordPayoutVerifyFailure(ctx, h.RDB, userID)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "kode verifikasi salah"})
 		return
 	}
@@ -219,6 +330,7 @@ func (h *PayoutMethodHandler) Verify(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memverifikasi metode pembayaran"})
 		return
 	}
+	clearPayoutVerifyFailures(ctx, h.RDB, userID)
 	_ = audit.Log(ctx, h.DB, userID, "payout_method.verified", "payout_method", id, nil)
 
 	c.JSON(http.StatusOK, gin.H{"message": "metode pembayaran terverifikasi"})

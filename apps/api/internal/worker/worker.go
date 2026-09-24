@@ -71,6 +71,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypePasswordResetEmail, h.HandlePasswordResetEmail)
 	mux.HandleFunc(queue.TypeLoyaltyVerificationEmail, h.HandleLoyaltyVerificationEmail)
 	mux.HandleFunc(queue.TypeOrderHistoryVerificationEmail, h.HandleOrderHistoryVerificationEmail)
+	mux.HandleFunc(queue.TypePayoutMethodVerificationEmail, h.HandlePayoutMethodVerificationEmail)
 	mux.HandleFunc(queue.TypeAccountSuspendedEmail, h.HandleAccountSuspendedEmail)
 	mux.HandleFunc(queue.TypeAccountActivatedEmail, h.HandleAccountActivatedEmail)
 	mux.HandleFunc(queue.TypeOrderReconcile, h.HandleOrderReconcile)
@@ -181,6 +182,37 @@ func (h *Handler) HandleOrderHistoryVerificationEmail(_ context.Context, t *asyn
 	}
 
 	log.Printf("worker: kode verifikasi riwayat pembelian terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandlePayoutMethodVerificationEmail -- OTP kepemilikan rekening pencairan
+// (lihat catatan lengkap di queue.TypePayoutMethodVerificationEmail soal
+// kenapa ini baru ada 24 September 2026). Pola sama persis dengan
+// HandleOrderHistoryVerificationEmail di atas, dengan dua beda yang
+// disengaja: (1) menyebut rekening tujuan (Label, sudah dimask) supaya
+// kreator bisa mengenali kalau ada rekening ASING yang didaftarkan atas
+// namanya, (2) kalimat penutupnya mendesak ganti password -- kode ini
+// menggerbang ke mana uang mengalir, jadi "abaikan saja" tidak cukup.
+func (h *Handler) HandlePayoutMethodVerificationEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.PayoutMethodVerificationPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Kode verifikasi rekening pencairan Jeon.id"
+	body := fmt.Sprintf(
+		"Kode verifikasinya: %s\n\nMasukkan kode ini untuk memverifikasi rekening pencairan %s di Jeon.id. "+
+			"Kode berlaku 10 menit sejak diminta.\n\nKAMU TIDAK MERASA MENAMBAHKAN REKENING INI? "+
+			"Jangan masukkan kodenya, segera ganti password akunmu, dan hubungi dukungan Jeon.id. "+
+			"Rekening yang terverifikasi bisa dipakai untuk menarik saldomu.\n\nSalam,\nTim Jeon.id",
+		payload.Code, payload.Label,
+	)
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim kode verifikasi rekening pencairan: %w", err)
+	}
+
+	log.Printf("worker: kode verifikasi rekening pencairan terkirim ke %s", payload.Email)
 	return nil
 }
 

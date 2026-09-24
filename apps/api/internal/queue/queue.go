@@ -281,6 +281,42 @@ func NewOrderHistoryVerificationTask(email, code string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeOrderHistoryVerificationEmail, payload), nil
 }
 
+// TypePayoutMethodVerificationEmail -- kode OTP kepemilikan rekening
+// pencairan (audit menyeluruh 24 September 2026). TEMUAN yang membuat task
+// ini ada: OTP-nya SUDAH dibuat & di-hash sejak awal
+// (PayoutMethodHandler.RequestVerification) tapi TIDAK PERNAH dikirim ke
+// kanal mana pun -- komentar lama di handler itu sendiri mengakui
+// "pengiriman SMS/email OTP sungguhan BELUM diwire". Akibatnya di
+// production (AppEnv=production, dev_otp tidak pernah dikembalikan)
+// `payout_methods.verified` MUSTAHIL jadi true lewat UI, padahal
+// BalanceHandler.CreatePayout menolak metode yang belum verified -- jadi
+// pencairan dana terkunci TOTAL untuk semua kreator sejak fitur ini rilis
+// (dikonfirmasi langsung ke pengguna: belum pernah ada penarikan berhasil
+// di production). Pola SAMA PERSIS TypeOrderHistoryVerificationEmail di
+// atas: kode MENTAH dikirim asinkron lewat email, hash-nya saja yang
+// disimpan di DB.
+const TypePayoutMethodVerificationEmail = "payout_method:verification_email"
+
+type PayoutMethodVerificationPayload struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+	// Label -- potongan aman rekening tujuan (mis. "BCA ****1234") supaya
+	// email bisa menyebut rekening MANA yang sedang diverifikasi. Ini
+	// penting sebagai sinyal anti-pembajakan: kalau token kreator dicuri
+	// dan penyerang mendaftarkan rekeningnya sendiri, email ini mendarat
+	// di kreator asli dan menyebut rekening yang tidak dia kenal. TIDAK
+	// PERNAH berisi nomor rekening utuh.
+	Label string `json:"label"`
+}
+
+func NewPayoutMethodVerificationTask(email, code, label string) (*asynq.Task, error) {
+	payload, err := json.Marshal(PayoutMethodVerificationPayload{Email: email, Code: code, Label: label})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload verifikasi rekening pencairan %s: %w", email, err)
+	}
+	return asynq.NewTask(TypePayoutMethodVerificationEmail, payload), nil
+}
+
 // AccountStatusEmailPayload -- dipakai bersama oleh
 // TypeAccountSuspendedEmail & TypeAccountActivatedEmail (audit fitur admin,
 // 5 September 2026): SuspendUser/ActivateUser (admin.go) sebelumnya tidak
