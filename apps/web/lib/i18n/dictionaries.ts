@@ -1644,67 +1644,6 @@ export const dictionaries = {
             updateShowSoldCount: "Gagal memperbarui pengaturan jumlah terjual.",
           },
         },
-        monetisasiLayout: {
-          tabs: {
-            overview: "Ringkasan",
-            vouchers: "Voucher",
-            bundles: "Bundel",
-            donation: "Dukungan",
-            affiliates: "Afiliasi",
-            brand: "Brand & Sponsor",
-            loyalty: "Loyalitas",
-            events: "Event",
-            courses: "Kelas & Kursus",
-          },
-        },
-        monetisasi: {
-          subtitle: "Tipe produk & alat monetisasi tambahan di luar produk digital biasa.",
-          searchPlaceholder: "Cari tipe produk...",
-          noResults: "Tidak ada tipe produk yang cocok dengan \"{query}\".",
-          groups: {
-            pricing: {
-              label: "Harga & Paket",
-              vouchers: {
-                title: "Voucher",
-                description: "Kode diskon untuk produkmu.",
-              },
-              bundles: {
-                title: "Bundel",
-                description: "Gabungkan beberapa produk jadi satu paket harga.",
-              },
-            },
-            schedule: {
-              label: "Jadwal & Konten",
-              events: {
-                title: "Event",
-                description: "Jual tiket acara online maupun offline.",
-              },
-              courses: {
-                title: "Kelas & Kursus",
-                description: "Jual kelas online dengan beberapa bab/modul.",
-              },
-            },
-            growth: {
-              label: "Dukungan & Pertumbuhan",
-              donation: {
-                title: "Dukungan",
-                description: "Blok donasi/support di halaman publikmu.",
-              },
-              brand: {
-                title: "Brand & Sponsor",
-                description: "Tautan bersponsor & kerja sama brand -- lamar sebagai kreator, atau pasang campaign sebagai brand.",
-              },
-              affiliates: {
-                title: "Afiliasi",
-                description: "Ajak orang lain menjualkan produkmu, bagi komisi.",
-              },
-              loyalty: {
-                title: "Loyalitas",
-                description: "Program poin untuk pembeli berulang.",
-              },
-            },
-          },
-        },
         donation: {
           wishlistEmptyTitle: "Buat wishlist pertamamu",
           subtitle: "Biarkan pengunjung memberi dukungan dengan nominal bebas, tanpa harus membeli produk apa pun.",
@@ -4918,67 +4857,6 @@ export const dictionaries = {
             updateNotifyWhatsapp: "Failed to update the WhatsApp notification setting.",
             updateSuccessMessage: "Failed to save the custom message.",
             updateShowSoldCount: "Failed to update the show-sold-count setting.",
-          },
-        },
-        monetisasiLayout: {
-          tabs: {
-            overview: "Overview",
-            vouchers: "Vouchers",
-            bundles: "Bundles",
-            donation: "Support",
-            affiliates: "Affiliates",
-            brand: "Brand & Sponsors",
-            loyalty: "Loyalty",
-            events: "Events",
-            courses: "Classes & Courses",
-          },
-        },
-        monetisasi: {
-          subtitle: "Additional product types & monetization tools beyond regular digital products.",
-          searchPlaceholder: "Search product types...",
-          noResults: "No product types match \"{query}\".",
-          groups: {
-            pricing: {
-              label: "Pricing & Packages",
-              vouchers: {
-                title: "Vouchers",
-                description: "Discount codes for your products.",
-              },
-              bundles: {
-                title: "Bundles",
-                description: "Combine multiple products into one priced package.",
-              },
-            },
-            schedule: {
-              label: "Schedule & Content",
-              events: {
-                title: "Events",
-                description: "Sell tickets for online or offline events.",
-              },
-              courses: {
-                title: "Classes & Courses",
-                description: "Sell online classes with multiple chapters/modules.",
-              },
-            },
-            growth: {
-              label: "Support & Growth",
-              donation: {
-                title: "Support",
-                description: "Donation/support block on your public page.",
-              },
-              brand: {
-                title: "Brand & Sponsors",
-                description: "Sponsored links & brand deals -- apply as a creator, or post a campaign as a brand.",
-              },
-              affiliates: {
-                title: "Affiliates",
-                description: "Invite others to sell your products for a commission.",
-              },
-              loyalty: {
-                title: "Loyalty",
-                description: "Points program for repeat buyers.",
-              },
-            },
           },
         },
         donation: {

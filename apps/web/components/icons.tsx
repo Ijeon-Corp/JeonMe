@@ -732,7 +732,7 @@ export function IconPlayCircle({ className }: IconProps) {
   );
 }
 
-// IconPauseCircle/IconMusicNote/IconPhotoLibrary -- blok "audio"/"gallery"
+// IconPauseCircle/IconMusicNote -- blok "audio"
 // (hasil analisa galeri tema kompetitor, 17 Agustus 2026).
 export function IconPauseCircle({ className }: IconProps) {
   return (
@@ -748,17 +748,6 @@ export function IconMusicNote({ className }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path d="M9 17.5a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 9 17.5Zm0 0V6l9-2v9.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
       <path d="M18 13.5a2.5 2.5 0 1 1-2.5-2.5 2.5 2.5 0 0 1 2.5 2.5Z" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function IconPhotoLibrary({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="5" width="14" height="14" rx="2" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
-      <path d="m3 15 3.5-3.5a1.5 1.5 0 0 1 2.12 0L13 15.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="7.5" cy="9" r="1.4" stroke="currentColor" strokeWidth={base} />
-      <path d="M20 8v9a2 2 0 0 1-2 2H9" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
     </svg>
   );
 }
@@ -889,82 +878,13 @@ export function IconRefresh({ className }: IconProps) {
   );
 }
 
-// IconDivider/IconColumns -- Canvas Page Builder (migrasi 000096, BuilderAddComponentModal.tsx):
-// dua tipe komponen GENERAL Fase 1 (Divider/Column) belum punya padanan
-// ikon yang pas di set yang sudah ada.
-export function IconDivider({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path d="M4 12h16" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
-      <circle cx="6" cy="12" r="1.1" fill="currentColor" />
-      <circle cx="18" cy="12" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
-
+// IconColumns -- Canvas Page Builder (migrasi 000096): tipe komponen GENERAL
+// Fase 1 "Column" belum punya padanan ikon yang pas di set yang sudah ada.
 export function IconColumns({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect x="3.5" y="4.5" width="7" height="15" rx="1.4" stroke="currentColor" strokeWidth={base} />
       <rect x="13.5" y="4.5" width="7" height="15" rx="1.4" stroke="currentColor" strokeWidth={base} />
-    </svg>
-  );
-}
-
-// IconVideoImage -- Canvas Page Builder Fase 2 (BuilderAddComponentModal.tsx,
-// kategori MEDIA "Video+Image"): bingkai foto + lencana lingkaran-putar
-// bertumpuk, kombinasi visual video+foto belum punya padanan di set yang
-// sudah ada.
-export function IconVideoImage({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="5" width="14" height="11" rx="1.6" stroke="currentColor" strokeWidth={base} />
-      <circle cx="17.5" cy="17.5" r="4.5" stroke="currentColor" strokeWidth={base} />
-      <path d="M16.3 15.8v3.4l3-1.7-3-1.7Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-// IconSlideshow -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
-// kategori MEDIA "Image Slider"): bingkai foto tengah lebih besar diapit
-// dua bingkai tepi terpotong + panah kiri/kanan, membedakannya secara
-// visual dari IconPhotoLibrary (grid statis Image Grid).
-export function IconSlideshow({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="7" y="4" width="10" height="16" rx="1.6" stroke="currentColor" strokeWidth={base} />
-      <path d="M4 7v10M20 7v10" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
-      <path d="M2.5 12h1.5M20 12h1.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// IconListCard -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
-// kategori INFORMATION "Card/List/Testimoni", satu block_type "list"
-// fleksibel): tiga baris ikon+garis, representasi netral yang cocok utk
-// ketiga varian tampilan (list/card/testimony).
-export function IconListCard({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <circle cx="5" cy="6.5" r="1.6" fill="currentColor" />
-      <circle cx="5" cy="12" r="1.6" fill="currentColor" />
-      <circle cx="5" cy="17.5" r="1.6" fill="currentColor" />
-      <path d="M9.5 6.5h9M9.5 12h9M9.5 17.5h9" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// IconIframe -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
-// kategori OTHERS "Embed" generik): bingkai jendela browser (bar atas +
-// titik) membedakannya dari IconLink (Embed Link Fase 2, kartu tautan
-// biasa tanpa iframe sungguhan).
-export function IconIframe({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="4.5" width="18" height="15" rx="1.8" stroke="currentColor" strokeWidth={base} />
-      <path d="M3 8.5h18" stroke="currentColor" strokeWidth={base} />
-      <circle cx="5.6" cy="6.5" r="0.7" fill="currentColor" />
-      <circle cx="7.6" cy="6.5" r="0.7" fill="currentColor" />
     </svg>
   );
 }

@@ -545,4 +545,3 @@ export function getLibraryIcon(key: string | undefined | null): LibraryIcon | un
   return ICON_LIBRARY_MAP[key];
 }
 
-export const ICON_LIBRARY_CATEGORIES: string[] = Array.from(new Set(ICON_LIBRARY.map((i) => i.category)));

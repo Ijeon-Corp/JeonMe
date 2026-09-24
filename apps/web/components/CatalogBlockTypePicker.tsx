@@ -10,9 +10,9 @@ import { confirmAction } from "@/lib/confirm";
 // CatalogBlockTypePicker -- dipindahkan verbatim dari
 // components/CatalogBlocksEditor.tsx, 6 September 2026 (redesain editor
 // katalog/FAQ jadi drill-down gaya Linktree -- lihat
-// components/BlockDrilldownEditor.tsx), supaya dipakai bersama oleh editor
-// baru itu DAN CatalogBlocksEditor.tsx lama (sementara masih hidup di balik
-// flag `page_builder`, dashboard-flags.ts).
+// components/BlockDrilldownEditor.tsx). CatalogBlocksEditor.tsx lama sudah
+// dihapus (audit 24 September 2026: 0 importer sejak flag `page_builder`
+// dibersihkan) -- BlockDrilldownEditor kini satu-satunya pemakai.
 //
 // Klik tile terkunci -- audit UX langsung (14 September 2026, permintaan
 // pengguna "coba testing blok katalog ini, dari segi ui dan ux masih sangat
@@ -82,4 +82,3 @@ export function CatalogBlockTypePicker({
   );
 }
 
-export default CatalogBlockTypePicker;

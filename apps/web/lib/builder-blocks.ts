@@ -27,15 +27,13 @@ import type { BuilderSeg, EmbeddedBuilderBlock, LinkItem } from "@/lib/api-clien
 // (reorderLinks/createBlock/deleteLink), TIDAK lewat modul ini -- modul
 // ini cuma untuk navigasi & edit KONTEN DI DALAM satu Section/Column.
 
-// maxBuilderDepth/maxBuilderContainerChildren/minBuilderColumns/
-// maxBuilderColumns -- SATU sumber kebenaran ANGKA di sisi frontend,
+// maxBuilderDepth/maxBuilderContainerChildren/minBuilderColumns -- SATU sumber kebenaran ANGKA di sisi frontend,
 // nilai SAMA PERSIS batas backend (links.go) -- murni utk UI (nonaktifkan
 // tombol lebih awal), backend tetap satu-satunya penegak validasi
 // sesungguhnya.
 export const maxBuilderDepth = 4;
 export const maxBuilderContainerChildren = 30;
 export const minBuilderColumns = 2;
-export const maxBuilderColumns = 4;
 
 export interface BuilderColumn {
   widthPercent?: number;

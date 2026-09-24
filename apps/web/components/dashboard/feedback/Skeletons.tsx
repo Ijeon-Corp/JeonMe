@@ -68,23 +68,6 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
   );
 }
 
-export function EditorBlockSkeleton({ count = 3 }: { count?: number }) {
-  return (
-    <div className="flex flex-col gap-3" aria-hidden="true">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-2xl border border-dash-border bg-dash-surface p-3.5">
-          <Skeleton className="h-8 w-8 flex-shrink-0 rounded-xl" />
-          <div className="min-w-0 flex-1">
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="mt-1.5 h-3 w-3/4" />
-          </div>
-          <Skeleton className="h-6 w-11 flex-shrink-0 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Skeleton halaman Settings template (PageHeader + section form) -- dipakai
 // halaman kecil hasil migrasi Phase 1 (mis. social-proof).
 export function SettingsPageSkeleton() {
