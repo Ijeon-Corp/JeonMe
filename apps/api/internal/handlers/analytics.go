@@ -403,9 +403,54 @@ func (h *AnalyticsHandler) GetSummary(c *gin.Context) {
 // duplikasi query. Query yang gagal untuk satu bagian (mis. top referrer)
 // diam-diam dilewati (bukan gagal total) -- konsisten dengan perilaku asli
 // GetSummary sebelum diekstrak.
+// userPageIDs — SEMUA id halaman milik satu kreator (halaman utama + Toko +
+// halaman tambahan lain). Dipakai bersama computeSummary & ExportCSV supaya
+// keduanya TIDAK BISA menyimpang scope-nya: kalau ringkasan menghitung
+// seluruh akun sementara CSV cuma halaman utama, dua angka yang sama di UI
+// akan saling bertentangan. Lihat catatan panjang di pemanggil pertamanya.
+func userPageIDs(ctx context.Context, db *pgxpool.Pool, userID string) ([]string, error) {
+	rows, err := db.Query(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, errGagalMemuatHalaman
+	}
+	return ids, nil
+}
+
 func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, from, to time.Time, rangeDays int) (analyticsSummaryResponse, error) {
-	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
+	// pageIDs -- SEMUA halaman milik kreator, bukan cuma halaman utama.
+	// Perbaikan 24 September 2026 (audit cross-check tipe API): sampai
+	// sebelum ini metrik trafik (total_views/total_clicks/
+	// total_product_clicks/daily_series/top_links/top_referrers/
+	// device_breakdown) di-scope ke SATU pageID (is_primary=true),
+	// sementara metrik uang di ringkasan yang SAMA (total_checkouts/
+	// total_orders/total_revenue_idr/top_products/weekly_revenue) di-scope
+	// per user_id. Event halaman TOKO tercatat dengan page_id Toko (lihat
+	// TrackEventForSlug di atas), jadi kreator yang berjualan lewat Toko
+	// melihat Kunjungan & Klik nyaris NOL padahal Pesanan & Pendapatannya
+	// normal -- dan "Tingkat Konversi" yang dihitung dari keduanya jadi
+	// omong kosong. Bentuk responsnya benar, angkanya yang bohong; ini tipe
+	// bug yang muncul sebagai keluhan "analitik saya tidak jalan".
+	// Disamakan ke scope AKUN (bukan sebaliknya) supaya konsisten dengan
+	// metrik uang yang sudah lebih dulu per-akun, dan karena ini memang
+	// halaman RINGKASAN akun. Indeks (page_id, created_at) tetap terpakai
+	// untuk = ANY.
+	pageIDs, err := userPageIDs(ctx, h.DB, userID)
+	if err != nil {
 		return analyticsSummaryResponse{}, errGagalMemuatHalaman
 	}
 
@@ -421,8 +466,8 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 			COUNT(*) FILTER (WHERE event_type = 'click'),
 			COUNT(*) FILTER (WHERE event_type = 'product_click')
 		FROM analytics_events
-		WHERE page_id = $1 AND created_at BETWEEN $2 AND $3
-	`, pageID, from, to).Scan(&resp.TotalViews, &resp.TotalClicks, &resp.TotalProductClicks); err != nil {
+		WHERE page_id = ANY($1) AND created_at BETWEEN $2 AND $3
+	`, pageIDs, from, to).Scan(&resp.TotalViews, &resp.TotalClicks, &resp.TotalProductClicks); err != nil {
 		return analyticsSummaryResponse{}, errGagalHitungRingkasan
 	}
 
@@ -463,9 +508,9 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 			COUNT(*) FILTER (WHERE event_type = 'view'),
 			COUNT(*) FILTER (WHERE event_type = 'click')
 		FROM analytics_events
-		WHERE page_id = $1 AND created_at BETWEEN $2 AND $3
+		WHERE page_id = ANY($1) AND created_at BETWEEN $2 AND $3
 		GROUP BY day ORDER BY day ASC
-	`, pageID, from, to)
+	`, pageIDs, from, to)
 	if err == nil {
 		defer dailyRows.Close()
 		for dailyRows.Next() {
@@ -487,9 +532,9 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 	linkRows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, COUNT(*) AS clicks
 		FROM analytics_events e JOIN links l ON l.id = e.link_id
-		WHERE e.page_id = $1 AND e.event_type = 'click' AND e.created_at BETWEEN $2 AND $3
+		WHERE e.page_id = ANY($1) AND e.event_type = 'click' AND e.created_at BETWEEN $2 AND $3
 		GROUP BY l.id, l.title ORDER BY clicks DESC LIMIT 5
-	`, pageID, from, to)
+	`, pageIDs, from, to)
 	if err == nil {
 		defer linkRows.Close()
 		for linkRows.Next() {
@@ -522,10 +567,10 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 	refRows, err := h.DB.Query(ctx, `
 		SELECT NULLIF(referrer, '') AS ref, COUNT(*) AS cnt
 		FROM analytics_events
-		WHERE page_id = $1 AND event_type = 'view' AND created_at BETWEEN $2 AND $3
+		WHERE page_id = ANY($1) AND event_type = 'view' AND created_at BETWEEN $2 AND $3
 			AND referrer != ''
 		GROUP BY ref ORDER BY cnt DESC LIMIT 5
-	`, pageID, from, to)
+	`, pageIDs, from, to)
 	if err == nil {
 		defer refRows.Close()
 		for refRows.Next() {
@@ -541,9 +586,9 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 	deviceRows, err := h.DB.Query(ctx, `
 		SELECT device_type, COUNT(*) AS cnt
 		FROM analytics_events
-		WHERE page_id = $1 AND event_type = 'view' AND created_at BETWEEN $2 AND $3
+		WHERE page_id = ANY($1) AND event_type = 'view' AND created_at BETWEEN $2 AND $3
 		GROUP BY device_type ORDER BY cnt DESC
-	`, pageID, from, to)
+	`, pageIDs, from, to)
 	if err == nil {
 		defer deviceRows.Close()
 		for deviceRows.Next() {
@@ -630,8 +675,11 @@ func (h *AnalyticsHandler) ExportDailyCSV(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
+	// Scope AKUN, sama persis dengan computeSummary -- lihat catatan di
+	// userPageIDs. Sebelum 24 September 2026 keduanya sama-sama cuma
+	// halaman utama; sekarang keduanya sama-sama seluruh akun.
+	pageIDs, err := userPageIDs(ctx, h.DB, userID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
 	}
@@ -641,9 +689,9 @@ func (h *AnalyticsHandler) ExportDailyCSV(c *gin.Context) {
 			COUNT(*) FILTER (WHERE event_type = 'view'),
 			COUNT(*) FILTER (WHERE event_type = 'click')
 		FROM analytics_events
-		WHERE page_id = $1 AND created_at BETWEEN $2 AND $3
+		WHERE page_id = ANY($1) AND created_at BETWEEN $2 AND $3
 		GROUP BY day ORDER BY day ASC
-	`, pageID, from, to)
+	`, pageIDs, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat data ekspor"})
 		return

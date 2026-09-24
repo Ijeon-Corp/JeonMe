@@ -220,3 +220,70 @@ func TestAnalytics_Track_UnknownUsername_FailsSilently(t *testing.T) {
 		t.Fatalf("status = %d, ekspektasi %d", rec.Code, http.StatusNoContent)
 	}
 }
+
+// Ringkasan analitik harus mencakup SELURUH halaman kreator, bukan cuma
+// halaman utama (audit menyeluruh 24 September 2026).
+//
+// SEBELUM perbaikan: computeSummary mengambil SATU pageID lewat
+// `WHERE user_id = $1 AND is_primary = true`, lalu memakainya untuk
+// total_views/total_clicks/total_product_clicks/daily_series/top_links/
+// top_referrers/device_breakdown -- sementara total_checkouts/total_orders/
+// total_revenue_idr/top_products di ringkasan yang SAMA di-scope per
+// user_id. Event halaman Toko tercatat dengan page_id Toko (TrackBySlug),
+// jadi kreator yang berjualan lewat Toko melihat Kunjungan & Klik nyaris
+// NOL padahal Pesanan & Pendapatannya normal, dan "Tingkat Konversi" yang
+// dihitung dari keduanya jadi omong kosong. Bentuk responsnya benar,
+// angkanya yang bohong.
+//
+// Test ini melacak kunjungan di halaman utama DAN di halaman tambahan, lalu
+// memastikan ringkasannya menjumlahkan KEDUANYA.
+func TestAnalytics_Summary_CountsAllPagesNotJustPrimary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	analytics, auth := newTestAnalyticsHandler(t)
+	userID := registerTestUser(t, auth)
+
+	var username string
+	if err := analytics.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
+		t.Fatalf("gagal ambil username: %v", err)
+	}
+
+	// Halaman tambahan (meniru Toko yang dibuat ensureProdukPage).
+	const extraSlug = "produk"
+	if _, err := analytics.DB.Exec(t.Context(), `
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published)
+		VALUES ($1, false, 'Toko Uji', $2, 'produk', true)
+	`, userID, extraSlug); err != nil {
+		t.Fatalf("gagal membuat halaman tambahan: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/pages/:username/track", analytics.Track)
+	router.POST("/pages/:username/:slug/track", analytics.TrackBySlug)
+	g := router.Group("/", fakeAuth())
+	g.GET("/analytics/summary", analytics.GetSummary)
+
+	// 1 kunjungan di halaman utama, 2 di halaman Toko.
+	if rec := doJSON(t, router, http.MethodPost, "/pages/"+username+"/track", map[string]string{"event_type": "view"}, nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("track halaman utama: status %d, body %s", rec.Code, rec.Body.String())
+	}
+	for i := 0; i < 2; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages/"+username+"/"+extraSlug+"/track", map[string]string{"event_type": "view"}, nil)
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("track halaman Toko: status %d, body %s", rec.Code, rec.Body.String())
+		}
+	}
+
+	sumRec := doJSON(t, router, http.MethodGet, "/analytics/summary", nil, map[string]string{"X-Test-UserID": userID})
+	if sumRec.Code != http.StatusOK {
+		t.Fatalf("summary: status %d, body %s", sumRec.Code, sumRec.Body.String())
+	}
+	var resp analyticsSummaryResponse
+	if err := json.Unmarshal(sumRec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode summary: %v", err)
+	}
+
+	// Sebelum perbaikan angkanya 1 (cuma halaman utama).
+	if resp.TotalViews != 3 {
+		t.Fatalf("TotalViews = %d, ekspektasi 3 (1 halaman utama + 2 halaman Toko) -- kunjungan halaman Toko tidak boleh hilang dari ringkasan", resp.TotalViews)
+	}
+}
