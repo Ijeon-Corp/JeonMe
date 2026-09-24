@@ -30,7 +30,19 @@ export const TEST_IMAGE_PNG_BASE64 =
 // beda dengan apa yang API benar-benar pakai, dan supaya secret seperti
 // MIDTRANS_SERVER_KEY tidak pernah tertulis literal di file test yang
 // masuk git). apps/api/.env sendiri gitignored.
+// Env var proses DIUTAMAKAN di atas apps/api/.env -- ditambahkan 24 September
+// 2026. apps/api/.env (gitignored, milik setup lokal masing-masing) biasanya
+// menunjuk Postgres docker-compose di :15432, tapi tidak semua lingkungan
+// menjalankan stack itu: sandbox pengembangan ini memakai Postgres native di
+// :5432, sehingga SETIAP spec yang memanggil runSql/promoteToAdmin/
+// grantPremium langsung gagal "connection refused" -- dua agent audit
+// berbeda tersandung ini di sesi yang sama, dan catatan memorinya sudah ada
+// sejak 22 September tanpa pernah diperbaiki di sini. File .env sengaja TIDAK
+// diubah (itu konfigurasi pribadi, dan 15432 benar untuk setup docker);
+// cukup jalankan spec dengan DATABASE_URL=... untuk mengesampingkannya.
 function readApiEnvValue(key: string): string {
+  const fromProcess = process.env[key];
+  if (fromProcess) return fromProcess;
   const envPath = path.join(__dirname, "..", "..", "api", ".env");
   const content = fs.readFileSync(envPath, "utf-8");
   const line = content.split("\n").find((l) => l.trim().startsWith(`${key}=`));
