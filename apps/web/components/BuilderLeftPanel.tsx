@@ -1405,15 +1405,13 @@ function NodeFieldEditor({
               className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
             />
           </FormField>
-          <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
-            <BuilderVideoSource
-              key={node.id}
-              node={node}
-              onDraftPatch={(patch) => onUpdateNode(sel, { blockData: patch })}
-              onEnsureRootPersisted={onEnsureRootPersisted}
-              onServerPatch={(resolvedRootId, patch) => onVideoFileChanged(resolvedRootId, node.path, patch)}
-            />
-          </FormField>
+          <BuilderVideoSource
+            key={node.id}
+            node={node}
+            onDraftPatch={(patch) => onUpdateNode(sel, { blockData: patch })}
+            onEnsureRootPersisted={onEnsureRootPersisted}
+            onServerPatch={(resolvedRootId, patch) => onVideoFileChanged(resolvedRootId, node.path, patch)}
+          />
           {/* autoplay (25 September 2026) -- BAWAAN aktif, lihat VideoEmbedBlock.tsx. */}
           <label className="flex items-start gap-2 text-xs text-app-ink">
             <input

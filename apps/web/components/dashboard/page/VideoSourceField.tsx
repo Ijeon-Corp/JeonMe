@@ -95,8 +95,13 @@ export default function VideoSourceField({
       active ? "bg-app-surface text-app-ink shadow-sm" : "text-app-muted hover:text-app-ink"
     }`;
 
+  // SENGAJA tidak dibungkus FormField/<label>: <label> yg membungkus
+  // beberapa kontrol mengaitkan dirinya ke kontrol PERTAMA (radio
+  // "Tautan") -- klik di mana pun di area unggah (teks petunjuk, dst)
+  // diam-diam mengganti sumber ke Tautan. Judul dirender sendiri di sini.
   return (
     <div className="flex flex-col gap-2">
+      <span className="text-[11px] font-bold uppercase tracking-wide text-app-muted">{T("sourceLabel")}</span>
       <div role="radiogroup" aria-label={T("sourceLabel")} className="inline-flex self-start rounded-lg bg-app-surface-2 p-1">
         <button type="button" role="radio" aria-checked={source === "url"} onClick={() => onSourceChange("url")} className={tabClass(source === "url")}>
           <Link2 className="h-3.5 w-3.5" aria-hidden />

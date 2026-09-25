@@ -142,7 +142,9 @@ func main() {
 		// ada blok baru berikutnya yang punya endpoint upload sendiri, WAJIB
 		// ditambahkan ke daftar ini juga -- catatan ini sudah 4x
 		// memperingatkan hal yang sama.
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images", "business-card-bg", "link-media"); err != nil {
+		// "video-blocks" -- unggah video sendiri di blok video (25 September
+		// 2026, video_file.go); pelajaran audio 17 Agustus di atas berlaku.
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images", "business-card-bg", "link-media", "video-blocks"); err != nil {
 			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file/showcase/katalog tautan/background kartu nama: %v", err)
 		}
 		cancel()

@@ -1929,16 +1929,14 @@ function BlockSection({
               </FormField>
             )}
             {blockType === "video" && (
-              <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
-                <VideoSourceField
-                  source={videoSource}
-                  onSourceChange={setVideoSource}
-                  url={videoUrl}
-                  onUrlChange={setVideoUrl}
-                  urlInputClassName="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-                  linkId={null}
-                />
-              </FormField>
+              <VideoSourceField
+                source={videoSource}
+                onSourceChange={setVideoSource}
+                url={videoUrl}
+                onUrlChange={setVideoUrl}
+                urlInputClassName="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                linkId={null}
+              />
             )}
             {blockType === "maps" && (
               <>
@@ -2739,33 +2737,31 @@ function BlockSection({
               <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 {link.block_type === "video" ? (
                   <>
-                    <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
-                      <VideoSourceField
-                        source={editVideoSource}
-                        onSourceChange={setEditVideoSource}
-                        url={editVideoUrl}
-                        onUrlChange={setEditVideoUrl}
-                        urlInputClassName="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        linkId={link.id}
-                        fileName={link.block_data?.video_file_name as string | undefined}
-                        fileUrl={link.block_data?.video_file_url as string | undefined}
-                        onUploaded={(res) =>
-                          setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, ...res, source: "upload" } } : l)))
-                        }
-                        onRemoved={() =>
-                          setLinks((prev) =>
-                            prev.map((l) => {
-                              if (l.id !== link.id) return l;
-                              const rest = { ...l.block_data };
-                              delete rest.video_file_url;
-                              delete rest.video_file_name;
-                              return { ...l, block_data: rest };
-                            }),
-                          )
-                        }
-                        onError={setError}
-                      />
-                    </FormField>
+                    <VideoSourceField
+                      source={editVideoSource}
+                      onSourceChange={setEditVideoSource}
+                      url={editVideoUrl}
+                      onUrlChange={setEditVideoUrl}
+                      urlInputClassName="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      linkId={link.id}
+                      fileName={link.block_data?.video_file_name as string | undefined}
+                      fileUrl={link.block_data?.video_file_url as string | undefined}
+                      onUploaded={(res) =>
+                        setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, ...res, source: "upload" } } : l)))
+                      }
+                      onRemoved={() =>
+                        setLinks((prev) =>
+                          prev.map((l) => {
+                            if (l.id !== link.id) return l;
+                            const rest = { ...l.block_data };
+                            delete rest.video_file_url;
+                            delete rest.video_file_name;
+                            return { ...l, block_data: rest };
+                          }),
+                        )
+                      }
+                      onError={setError}
+                    />
                     <label className="flex items-start gap-2 text-xs text-app-ink">
                       <input
                         type="checkbox"
