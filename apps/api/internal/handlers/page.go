@@ -1470,7 +1470,8 @@ func (h *PageHandler) UpdateMyPageStickers(c *gin.Context) {
 }
 
 // maxAvatarSize -- 5MB, cukup untuk foto profil tanpa membebani VPS shared.
-const maxAvatarSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxAvatarSize = imageconv.MaxUploadSize
 
 // allowedAvatarExt -- daftar putih ekstensi gambar + content-type yang benar
 // untuk disetel saat upload (TIDAK dipercaya begitu saja dari header yang
@@ -1504,7 +1505,7 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 	}
 
 	if fileHeader.Size > maxAvatarSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -1526,7 +1527,7 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 	// package imageconv soal kenapa encoder murni-Go (bukan cgo/libwebp).
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -1565,7 +1566,8 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 // maxCustomBackgroundSize -- 8MB, sedikit lebih longgar dari avatar (5MB)
 // karena wallpaper latar penuh biasanya berresolusi lebih tinggi daripada
 // foto profil bulat kecil.
-const maxCustomBackgroundSize = 8 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxCustomBackgroundSize = imageconv.MaxUploadSize
 
 // UploadCustomBackground -- bug dilaporkan pengguna: "tidak bisa mengupload
 // gambar" -- akar masalah ditemukan lewat investigasi kode: opsi latar
@@ -1607,7 +1609,7 @@ func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
 	}
 
 	if fileHeader.Size > maxCustomBackgroundSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 8MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -1628,7 +1630,7 @@ func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
 	// lihat package imageconv.
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -1703,7 +1705,7 @@ func (h *PageHandler) UploadAvatarForPage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxAvatarSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
@@ -1721,7 +1723,7 @@ func (h *PageHandler) UploadAvatarForPage(c *gin.Context) {
 	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -1776,7 +1778,7 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxCustomBackgroundSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 8MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
@@ -1794,7 +1796,7 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 

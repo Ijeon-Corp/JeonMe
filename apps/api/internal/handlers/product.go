@@ -78,7 +78,8 @@ func sanitizeFileNameForKey(name string) string {
 
 // maxCoverImageSize -- 5MB, cukup untuk gambar sampul produk (bukan file
 // produk itu sendiri, lihat maxProductFileSize).
-const maxCoverImageSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxCoverImageSize = imageconv.MaxUploadSize
 
 // allowedCoverExt -- content-type diambil dari ekstensi (BUKAN dipercaya
 // dari header klien) karena sampul disajikan langsung ke <img> di halaman
@@ -1456,7 +1457,7 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 	}
 
 	if fileHeader.Size > maxCoverImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran gambar melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran gambar melebihi 20MB"})
 		return
 	}
 
@@ -1476,7 +1477,7 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 

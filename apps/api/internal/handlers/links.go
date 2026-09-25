@@ -2202,7 +2202,8 @@ func (h *LinksHandler) Update(c *gin.Context) {
 
 // maxLinkIconSize -- 2MB, cukup untuk ikon kecil (bukan foto resolusi
 // penuh seperti avatar/latar).
-const maxLinkIconSize = 2 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxLinkIconSize = imageconv.MaxUploadSize
 
 // UploadIcon -- permintaan langsung pengguna: unggah gambar kustom per
 // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL di
@@ -2236,7 +2237,7 @@ func (h *LinksHandler) UploadIcon(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxLinkIconSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 2MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -2256,7 +2257,7 @@ func (h *LinksHandler) UploadIcon(c *gin.Context) {
 	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -2308,7 +2309,8 @@ func (h *LinksHandler) DeleteIcon(c *gin.Context) {
 // maxLinkThumbnailSize -- 5MB (sama seperti avatar) -- lebih besar dari
 // maxLinkIconSize (2MB) karena thumbnail Featured Link tampil BESAR
 // (16:9, seluruh lebar kartu), bukan ikon bulat kecil.
-const maxLinkThumbnailSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxLinkThumbnailSize = imageconv.MaxUploadSize
 
 // UploadThumbnail -- Modul "Featured Link" (permintaan langsung pengguna,
 // referensi "Featured Layout" Linktree sungguhan): unggah manual thumbnail
@@ -2340,7 +2342,7 @@ func (h *LinksHandler) UploadThumbnail(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxLinkThumbnailSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -2359,7 +2361,7 @@ func (h *LinksHandler) UploadThumbnail(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -2410,7 +2412,8 @@ func (h *LinksHandler) DeleteThumbnail(c *gin.Context) {
 
 // maxShowcaseImageSize -- sama seperti maxLinkThumbnailSize (5MB), gambar
 // kartu "Project Unggulan" tampil besar (bukan ikon kecil).
-const maxShowcaseImageSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxShowcaseImageSize = imageconv.MaxUploadSize
 
 // UploadShowcaseImage -- block_type "project_showcase" (permintaan langsung
 // pengguna, 24 Agustus 2026, lihat catatan lengkap di validateBlockData).
@@ -2443,7 +2446,7 @@ func (h *LinksHandler) UploadShowcaseImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxShowcaseImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -2462,7 +2465,7 @@ func (h *LinksHandler) UploadShowcaseImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -2493,7 +2496,8 @@ func (h *LinksHandler) UploadShowcaseImage(c *gin.Context) {
 
 // maxGalleryImageSize -- sama seperti maxLinkThumbnailSize (5MB), foto
 // galeri tampil besar di grid, bukan ikon kecil.
-const maxGalleryImageSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxGalleryImageSize = imageconv.MaxUploadSize
 
 // maxGalleryImages -- grid 3 kolom, 9 = pas 3 baris penuh di galeri (mockup
 // portofolio kompetitor "s56" pakai grid serupa, "My Shoot" 6 foto) --
@@ -2588,7 +2592,7 @@ func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxGalleryImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -2607,7 +2611,7 @@ func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -2877,7 +2881,7 @@ func (h *LinksHandler) UploadGalleryNestedImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxGalleryImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -2896,7 +2900,7 @@ func (h *LinksHandler) UploadGalleryNestedImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -3102,7 +3106,7 @@ func (h *LinksHandler) UploadMediaImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxShowcaseImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -3121,7 +3125,7 @@ func (h *LinksHandler) UploadMediaImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 
@@ -3774,7 +3778,8 @@ const maxCatalogItems = 20
 const maxCatalogImagesPerItem = 6
 
 // maxCatalogImageSize -- sama seperti maxGalleryImageSize (5MB).
-const maxCatalogImageSize = 5 * 1024 * 1024
+// Naik ke imageconv.MaxUploadSize (20MB) 25 September 2026 -- lihat catatan di sana.
+const maxCatalogImageSize = imageconv.MaxUploadSize
 
 // findCatalogItem -- cari item di block_data.items berdasarkan id (dibuat
 // klien, lihat catatan validateBlockData case "catalog") -- dipakai kedua
@@ -3853,7 +3858,7 @@ func (h *LinksHandler) UploadCatalogItemImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxCatalogImageSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -3872,7 +3877,7 @@ func (h *LinksHandler) UploadCatalogItemImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 

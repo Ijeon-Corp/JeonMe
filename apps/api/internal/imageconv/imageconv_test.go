@@ -2,6 +2,7 @@ package imageconv
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -129,5 +130,23 @@ func TestToWebP_KeepsSmallImageDimensionsUnchanged(t *testing.T) {
 	w, h := decodedSize(t, out)
 	if w != 400 || h != 300 {
 		t.Errorf("dimensi = %dx%d, ekspektasi tetap 400x300 (tidak di-resize)", w, h)
+	}
+}
+
+// TestToWebP_RejectsDecompressionBomb -- PNG kecil (warna polos terkompresi
+// habis) tapi dimensinya melebihi maxPixelsOther harus ditolak lewat
+// DecodeConfig SEBELUM decode penuh, dengan ErrTooManyPixels (pesan
+// khusus utk kreator, bukan "gambar tidak valid").
+func TestToWebP_RejectsDecompressionBomb(t *testing.T) {
+	data := solidPNG(t, 8000, 7000) // 56MP > 50MP
+	if len(data) > MaxUploadSize {
+		t.Fatalf("fixture terlalu besar: %d byte", len(data))
+	}
+	_, err := ToWebP(bytes.NewReader(data))
+	if !errors.Is(err, ErrTooManyPixels) {
+		t.Fatalf("expected ErrTooManyPixels, got %v", err)
+	}
+	if !strings.Contains(UserMessage(err), "megapiksel") {
+		t.Fatalf("pesan kreator tidak menyebut resolusi: %q", UserMessage(err))
 	}
 }

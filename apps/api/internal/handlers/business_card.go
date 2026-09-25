@@ -161,7 +161,7 @@ func (h *BusinessCardHandler) UpsertCard(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "kartu kontak disimpan"})
 }
 
-// maxBusinessCardBackgroundSize -- sama seperti maxShowcaseImageSize (5MB),
+// maxBusinessCardBackgroundSize -- sama seperti maxShowcaseImageSize (20MB),
 // background ditampilkan besar (seluruh kartu), bukan ikon kecil.
 const maxBusinessCardBackgroundSize = maxShowcaseImageSize
 
@@ -189,7 +189,7 @@ func (h *BusinessCardHandler) UploadBackgroundImage(c *gin.Context) {
 		return
 	}
 	if fileHeader.Size > maxBusinessCardBackgroundSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
 		return
 	}
 
@@ -208,7 +208,7 @@ func (h *BusinessCardHandler) UploadBackgroundImage(c *gin.Context) {
 
 	webpBytes, err := imageconv.ToWebP(file)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": imageconv.UserMessage(err)})
 		return
 	}
 

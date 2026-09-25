@@ -21,6 +21,7 @@ package imageconv
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg" // pendaftaran decoder JPEG (image.Decode mendeteksi format otomatis)
@@ -54,12 +55,64 @@ const ContentType = "image/webp"
 // diproses ulang (di luar cakupan perbaikan ini).
 const maxDimension = 1600
 
+// MaxUploadSize -- batas ukuran FILE semua unggahan gambar dekoratif
+// (avatar, latar, ikon, thumbnail, kartu unggulan, galeri, katalog, sampul
+// produk, latar kartu nama). Permintaan langsung pengguna, 25 September
+// 2026: "untuk gambar naikkan jadi batas 20 mb karna ada foto foto yang
+// hd" -- SEBELUMNYA 2-8MB per endpoint, foto kamera HP/DSLR resolusi
+// penuh ditolak. SATU konstanta dipakai semua handler supaya batasnya
+// tidak lagi berbeda-beda per blok. Hasil simpan tetap dikecilkan ke
+// maxDimension di bawah -- batas ini soal "boleh diunggah", bukan
+// resolusi yang disimpan.
+const MaxUploadSize = 20 * 1024 * 1024
+
+// maxPixelsJPEG/maxPixelsOther -- pengaman memori saat decode. Menaikkan
+// batas file ke 20MB berarti foto 50-100+ megapiksel ikut masuk, dan
+// image.Decode membuka SELURUH piksel ke RAM sebelum downscale (VPS
+// shared, container API tanpa limit memori). JPEG 4:2:0 ~1.5 byte/piksel
+// -> 110MP ~165MB (cukup utk mode 108MP kamera HP). PNG/WebP didecode ke
+// RGBA 4 byte/piksel dan bisa berupa "decompression bomb" (file kecil,
+// dimensi raksasa) -- dibatasi 50MP (~200MB). Dimensi dibaca lewat
+// DecodeConfig (header saja) SEBELUM decode penuh.
+const (
+	maxPixelsJPEG  = 110_000_000
+	maxPixelsOther = 50_000_000
+)
+
+// ErrTooManyPixels -- gambar valid tapi resolusinya melebihi batas di atas;
+// handler memakai UserMessage utk pesan yang bisa ditindaklanjuti kreator.
+var ErrTooManyPixels = errors.New("resolusi gambar terlalu besar")
+
+// UserMessage -- pesan error ToWebP untuk ditampilkan ke kreator.
+func UserMessage(err error) string {
+	if errors.Is(err, ErrTooManyPixels) {
+		return "resolusi foto terlalu besar (maks sekitar 100 megapiksel untuk JPG, 50 megapiksel untuk PNG/WebP) -- kecilkan dulu lalu unggah lagi"
+	}
+	return "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"
+}
+
 // ToWebP membaca gambar apa pun yang didukung (jpg/png/webp) dari r,
 // mengecilkan dimensinya kalau sisi terpanjang melebihi maxDimension (lihat
 // catatan di atas), lalu mengembalikan bytes WebP lossless hasil konversi.
 // Error kalau r bukan gambar valid dari salah satu format itu.
 func ToWebP(r io.Reader) ([]byte, error) {
-	img, _, err := image.Decode(r)
+	raw, err := io.ReadAll(io.LimitReader(r, MaxUploadSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("gagal membaca gambar: %w", err)
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return nil, fmt.Errorf("gambar tidak valid atau format tidak didukung: %w", err)
+	}
+	limit := maxPixelsOther
+	if format == "jpeg" {
+		limit = maxPixelsJPEG
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > limit {
+		return nil, fmt.Errorf("%w: %dx%d", ErrTooManyPixels, cfg.Width, cfg.Height)
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
 		return nil, fmt.Errorf("gambar tidak valid atau format tidak didukung: %w", err)
 	}
