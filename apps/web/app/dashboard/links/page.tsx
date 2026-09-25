@@ -82,6 +82,7 @@ import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
 import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
@@ -456,6 +457,8 @@ export default function DashboardLinksPage() {
   // banyak foto utama, masing-masing dengan sub-galerinya sendiri.
   const [nestedPanelOpenFor, setNestedPanelOpenFor] = useState<string | null>(null);
   const [nestedUploadingFor, setNestedUploadingFor] = useState<string | null>(null);
+  // uploadProgress -- "2/5" di tombol unggah selama multi-upload berjalan.
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
   // Blok "file" (permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
   // file pdf download") -- pola sama seperti galleryUploadingId/
@@ -1279,20 +1282,26 @@ export default function DashboardLinksPage() {
   // URL foto baru) supaya state links tinggal ditimpa langsung, tidak
   // perlu digabung manual dengan array lama di sisi klien.
   async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
-    const file = e.target.files?.[0];
+    // multi-upload (25 September 2026) -- lihat lib/multi-upload.ts.
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
-
+    if (files.length === 0) return;
     setGalleryUploadingId(link.id);
     setError(null);
-    try {
-      const { images } = await uploadGalleryImage(link.id, file);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadGalleryPhotoFailed"));
-    } finally {
-      setGalleryUploadingId(null);
-    }
+    const current = ((link.block_data?.images as string[]) ?? []).length;
+    const outcome = await uploadFilesSequentially(
+      files,
+      maxGalleryImages - current,
+      (file) => uploadGalleryImage(link.id, file),
+      ({ images }, done, total) => {
+        setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+        setUploadProgress({ done, total });
+      },
+      (total) => setUploadProgress({ done: 0, total }),
+    );
+    setGalleryUploadingId(null);
+    setUploadProgress(null);
+    reportMultiUpload(outcome, maxGalleryImages, "dashboard.pages.links.errors.uploadGalleryPhotoFailed");
   }
 
   async function handleGalleryImageDelete(link: LinkItem, index: number) {
@@ -1319,20 +1328,38 @@ export default function DashboardLinksPage() {
   // `nested_images` TERBARU (bukan cuma array satu parent) supaya cukup
   // ditimpa langsung, sama filosofinya dgn `images`.
   async function handleNestedImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, parentUrl: string) {
-    const file = e.target.files?.[0];
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
-
+    if (files.length === 0) return;
     setNestedUploadingFor(parentUrl);
     setError(null);
-    try {
-      const { nested_images } = await uploadGalleryNestedImage(link.id, parentUrl, file);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadNestedPhotoFailed"));
-    } finally {
-      setNestedUploadingFor(null);
+    const current = ((link.block_data?.nestedImages as Record<string, string[]> | undefined)?.[parentUrl] ?? []).length;
+    const outcome = await uploadFilesSequentially(
+      files,
+      maxNestedGalleryImages - current,
+      (file) => uploadGalleryNestedImage(link.id, parentUrl, file),
+      ({ nested_images }, done, total) => {
+        setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
+        setUploadProgress({ done, total });
+      },
+      (total) => setUploadProgress({ done: 0, total }),
+    );
+    setNestedUploadingFor(null);
+    setUploadProgress(null);
+    reportMultiUpload(outcome, maxNestedGalleryImages, "dashboard.pages.links.errors.uploadNestedPhotoFailed");
+  }
+
+  // reportMultiUpload -- pesan akhir multi-upload: error unggahan (foto yg
+  // sudah masuk tetap tersimpan) dan/atau jumlah foto di luar kuota.
+  function reportMultiUpload(outcome: MultiUploadOutcome, max: number, fallbackKey: string) {
+    const parts: string[] = [];
+    if (outcome.error) parts.push(outcome.error instanceof ApiError ? outcome.error.message : t(fallbackKey));
+    if (outcome.skipped > 0) {
+      parts.push(
+        t("dashboard.pages.links.galleryPanel.uploadSkipped").replace("{count}", String(outcome.skipped)).replace("{max}", String(max)),
+      );
     }
+    if (parts.length > 0) setError(parts.join(" "));
   }
 
   async function handleNestedImageDelete(link: LinkItem, parentUrl: string, index: number) {
@@ -3604,12 +3631,16 @@ export default function DashboardLinksPage() {
                                   ))}
                                   {nested.length < maxNestedGalleryImages ? (
                                     <label
+                                      title={t("dashboard.pages.links.galleryPanel.uploadHint")}
                                       className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                                         nestedUploadingFor === src ? "opacity-60" : ""
                                       }`}
                                     >
                                       {nestedUploadingFor === src ? (
+                                        <span className="flex flex-col items-center">
                                         <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                                        {uploadProgress && uploadProgress.total > 1 && <span className="text-[8px] font-semibold tabular-nums">{uploadProgress.done}/{uploadProgress.total}</span>}
+                                        </span>
                                       ) : (
                                         <IconPlus className="h-4 w-4" />
                                       )}
@@ -3617,6 +3648,7 @@ export default function DashboardLinksPage() {
                                         type="file"
                                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                                         onChange={(e) => handleNestedImageUpload(e, link, src)}
+                                        multiple
                                         disabled={nestedUploadingFor === src}
                                         className="hidden"
                                       />
@@ -3637,12 +3669,16 @@ export default function DashboardLinksPage() {
                   <div className="flex flex-wrap gap-2">
                     {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                       <label
+                        title={t("dashboard.pages.links.galleryPanel.uploadHint")}
                         className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                           galleryUploadingId === link.id ? "opacity-60" : ""
                         }`}
                       >
                         {galleryUploadingId === link.id ? (
+                          <>
                           <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                          {uploadProgress && uploadProgress.total > 1 && <span className="text-[9px] font-semibold tabular-nums">{uploadProgress.done}/{uploadProgress.total}</span>}
+                          </>
                         ) : (
                           <>
                             <IconPlus className="h-4 w-4" />
@@ -3653,6 +3689,7 @@ export default function DashboardLinksPage() {
                           type="file"
                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                           onChange={(e) => handleGalleryImageUpload(e, link)}
+                          multiple
                           disabled={galleryUploadingId === link.id}
                           className="hidden"
                         />

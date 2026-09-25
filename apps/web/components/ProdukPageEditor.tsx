@@ -54,6 +54,7 @@ import {
   IconX,
 } from "@/components/icons";
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
@@ -805,6 +806,8 @@ function BlockSection({
   // generik/siap) -- pola sama persis dashboard/links/page.tsx.
   const [nestedPanelOpenFor, setNestedPanelOpenFor] = useState<string | null>(null);
   const [nestedUploadingFor, setNestedUploadingFor] = useState<string | null>(null);
+  // uploadProgress -- "2/5" di tombol unggah selama multi-upload berjalan.
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
   // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
   // file pdf download", pola sama seperti galleryUploadingId/audioUploadingId.
@@ -815,19 +818,26 @@ function BlockSection({
   const [mediaImageUploadingId, setMediaImageUploadingId] = useState<string | null>(null);
 
   async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
-    const file = e.target.files?.[0];
+    // multi-upload (25 September 2026) -- lihat lib/multi-upload.ts.
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setGalleryUploadingId(link.id);
     setError(null);
-    try {
-      const { images } = await uploadGalleryImage(link.id, file);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadGalleryImage"));
-    } finally {
-      setGalleryUploadingId(null);
-    }
+    const current = ((link.block_data?.images as string[]) ?? []).length;
+    const outcome = await uploadFilesSequentially(
+      files,
+      maxGalleryImages - current,
+      (file) => uploadGalleryImage(link.id, file),
+      ({ images }, done, total) => {
+        setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+        setUploadProgress({ done, total });
+      },
+      (total) => setUploadProgress({ done: 0, total }),
+    );
+    setGalleryUploadingId(null);
+    setUploadProgress(null);
+    reportMultiUpload(outcome, maxGalleryImages, "dashboard.components.produkPageEditor.errors.uploadGalleryImage");
   }
 
   async function handleGalleryImageDelete(link: LinkItem, index: number) {
@@ -851,20 +861,38 @@ function BlockSection({
   // sekali, walau backend generik & sudah dipakai penuh di Links) -- pola
   // APA ADANYA dari dashboard/links/page.tsx.
   async function handleNestedImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, parentUrl: string) {
-    const file = e.target.files?.[0];
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
-
+    if (files.length === 0) return;
     setNestedUploadingFor(parentUrl);
     setError(null);
-    try {
-      const { nested_images } = await uploadGalleryNestedImage(link.id, parentUrl, file);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadNestedPhoto"));
-    } finally {
-      setNestedUploadingFor(null);
+    const current = ((link.block_data?.nestedImages as Record<string, string[]> | undefined)?.[parentUrl] ?? []).length;
+    const outcome = await uploadFilesSequentially(
+      files,
+      maxNestedGalleryImages - current,
+      (file) => uploadGalleryNestedImage(link.id, parentUrl, file),
+      ({ nested_images }, done, total) => {
+        setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, nestedImages: nested_images } } : l)));
+        setUploadProgress({ done, total });
+      },
+      (total) => setUploadProgress({ done: 0, total }),
+    );
+    setNestedUploadingFor(null);
+    setUploadProgress(null);
+    reportMultiUpload(outcome, maxNestedGalleryImages, "dashboard.components.produkPageEditor.errors.uploadNestedPhoto");
+  }
+
+  // reportMultiUpload -- pesan akhir multi-upload: error unggahan (foto yg
+  // sudah masuk tetap tersimpan) dan/atau jumlah foto di luar kuota.
+  function reportMultiUpload(outcome: MultiUploadOutcome, max: number, fallbackKey: string) {
+    const parts: string[] = [];
+    if (outcome.error) parts.push(outcome.error instanceof ApiError ? outcome.error.message : t(fallbackKey));
+    if (outcome.skipped > 0) {
+      parts.push(
+        t("dashboard.pages.links.galleryPanel.uploadSkipped").replace("{count}", String(outcome.skipped)).replace("{max}", String(max)),
+      );
     }
+    if (parts.length > 0) setError(parts.join(" "));
   }
 
   async function handleNestedImageDelete(link: LinkItem, parentUrl: string, index: number) {
@@ -2969,12 +2997,16 @@ function BlockSection({
                                 ))}
                                 {nested.length < maxNestedGalleryImages ? (
                                   <label
+                                    title={t("dashboard.pages.links.galleryPanel.uploadHint")}
                                     className={`flex h-12 w-12 flex-shrink-0 cursor-pointer items-center justify-center rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                                       nestedUploadingFor === src ? "opacity-60" : ""
                                     }`}
                                   >
                                     {nestedUploadingFor === src ? (
+                                      <span className="flex flex-col items-center">
                                       <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                                      {uploadProgress && uploadProgress.total > 1 && <span className="text-[8px] font-semibold tabular-nums">{uploadProgress.done}/{uploadProgress.total}</span>}
+                                      </span>
                                     ) : (
                                       <IconPlus className="h-4 w-4" />
                                     )}
@@ -2982,6 +3014,7 @@ function BlockSection({
                                       type="file"
                                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                                       onChange={(e) => handleNestedImageUpload(e, link, src)}
+                                      multiple
                                       disabled={nestedUploadingFor === src}
                                       className="hidden"
                                     />
@@ -3002,12 +3035,16 @@ function BlockSection({
                 <div className="flex flex-wrap gap-2">
                   {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                     <label
+                      title={t("dashboard.pages.links.galleryPanel.uploadHint")}
                       className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                         galleryUploadingId === link.id ? "opacity-60" : ""
                       }`}
                     >
                       {galleryUploadingId === link.id ? (
+                        <>
                         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                        {uploadProgress && uploadProgress.total > 1 && <span className="text-[9px] font-semibold tabular-nums">{uploadProgress.done}/{uploadProgress.total}</span>}
+                        </>
                       ) : (
                         <>
                           <IconPlus className="h-4 w-4" />
@@ -3018,6 +3055,7 @@ function BlockSection({
                         type="file"
                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                         onChange={(e) => handleGalleryImageUpload(e, link)}
+                        multiple
                         disabled={galleryUploadingId === link.id}
                         className="hidden"
                       />

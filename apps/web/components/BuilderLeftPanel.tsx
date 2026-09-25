@@ -95,6 +95,7 @@ import {
 } from "@/lib/api-client";
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { maxNestedGalleryImages } from "@/lib/block-preview";
+import { uploadFilesSequentially } from "@/lib/multi-upload";
 import {
   buildTree,
   findNodeByPath,
@@ -400,21 +401,29 @@ function CatalogItemPhotos({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // multi-upload (25 September 2026) -- lihat lib/multi-upload.ts.
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setUploading(true);
     setError(null);
+    let realRootId: string;
     try {
-      const realRootId = await onEnsureRootPersisted(rootId);
-      const res = await uploadCatalogItemImage(realRootId, itemId, file);
-      onChanged(res.images, realRootId);
+      realRootId = await onEnsureRootPersisted(rootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
-    } finally {
       setUploading(false);
+      return;
     }
+    const outcome = await uploadFilesSequentially(files, maxCatalogItemImages - images.length, (file) => uploadCatalogItemImage(realRootId, itemId, file), (res) =>
+      onChanged(res.images, realRootId),
+    );
+    setUploading(false);
+    const msgs: string[] = [];
+    if (outcome.error) msgs.push(outcome.error instanceof ApiError ? outcome.error.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    if (outcome.skipped > 0) msgs.push(t("dashboard.pages.links.galleryPanel.uploadSkipped").replace("{count}", String(outcome.skipped)).replace("{max}", String(maxCatalogItemImages)));
+    if (msgs.length > 0) setError(msgs.join(" "));
   }
 
   // uploading dijadikan guard bersama upload & hapus -- alasan SAMA
@@ -467,6 +476,7 @@ function CatalogItemPhotos({
               type="file"
               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               onChange={handleUpload}
+              multiple
               disabled={uploading}
               className="hidden"
             />
@@ -733,21 +743,29 @@ function GalleryGridEditor({
   const [nestedPanelOpenFor, setNestedPanelOpenFor] = useState<string | null>(null);
   const [nestedUploadingFor, setNestedUploadingFor] = useState<string | null>(null);
 
+  // multi-upload (25 September 2026) -- lihat lib/multi-upload.ts.
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setUploading(true);
     setError(null);
+    let realRootId: string;
     try {
-      const realRootId = await onEnsureRootPersisted(rootId);
-      const res = await uploadGalleryImage(realRootId, file, path);
-      onChanged(res.images, realRootId);
+      realRootId = await onEnsureRootPersisted(rootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
-    } finally {
       setUploading(false);
+      return;
     }
+    const outcome = await uploadFilesSequentially(files, maxGalleryImages - images.length, (file) => uploadGalleryImage(realRootId, file, path), (res) =>
+      onChanged(res.images, realRootId),
+    );
+    setUploading(false);
+    const msgs: string[] = [];
+    if (outcome.error) msgs.push(outcome.error instanceof ApiError ? outcome.error.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    if (outcome.skipped > 0) msgs.push(t("dashboard.pages.links.galleryPanel.uploadSkipped").replace("{count}", String(outcome.skipped)).replace("{max}", String(maxGalleryImages)));
+    if (msgs.length > 0) setError(msgs.join(" "));
   }
 
   // uploading dipakai bersama guard upload MAUPUN hapus -- bug ditemukan
@@ -775,20 +793,30 @@ function GalleryGridEditor({
   }
 
   async function handleNestedUpload(e: React.ChangeEvent<HTMLInputElement>, parentUrl: string) {
-    const file = e.target.files?.[0];
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setNestedUploadingFor(parentUrl);
     setError(null);
+    let realRootId: string;
     try {
-      const realRootId = await onEnsureRootPersisted(rootId);
-      const res = await uploadGalleryNestedImage(realRootId, parentUrl, file, path);
-      onPatchBlockData({ nestedImages: res.nested_images });
+      realRootId = await onEnsureRootPersisted(rootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadNestedPhotoFailed"));
-    } finally {
       setNestedUploadingFor(null);
+      return;
     }
+    const outcome = await uploadFilesSequentially(
+      files,
+      maxNestedGalleryImages - (nestedImages[parentUrl]?.length ?? 0),
+      (file) => uploadGalleryNestedImage(realRootId, parentUrl, file, path),
+      (res) => onPatchBlockData({ nestedImages: res.nested_images }),
+    );
+    setNestedUploadingFor(null);
+    const msgs: string[] = [];
+    if (outcome.error) msgs.push(outcome.error instanceof ApiError ? outcome.error.message : t("dashboard.pages.links.errors.uploadNestedPhotoFailed"));
+    if (outcome.skipped > 0) msgs.push(t("dashboard.pages.links.galleryPanel.uploadSkipped").replace("{count}", String(outcome.skipped)).replace("{max}", String(maxNestedGalleryImages)));
+    if (msgs.length > 0) setError(msgs.join(" "));
   }
 
   async function handleNestedDelete(parentUrl: string, index: number) {
@@ -897,6 +925,7 @@ function GalleryGridEditor({
                             type="file"
                             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             onChange={(e) => handleNestedUpload(e, src)}
+                            multiple
                             disabled={nestedUploadingFor === src}
                             className="hidden"
                           />
@@ -930,6 +959,7 @@ function GalleryGridEditor({
               type="file"
               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               onChange={handleUpload}
+              multiple
               disabled={uploading}
               className="hidden"
             />

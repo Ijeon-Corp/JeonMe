@@ -995,6 +995,9 @@ export const dictionaries = {
           },
           galleryPanel: {
             photoCountSuffix: "foto",
+            // multi-upload (25 September 2026), lihat lib/multi-upload.ts.
+            uploadSkipped: "{count} foto tidak diunggah -- maksimal {max} foto.",
+            uploadHint: "Bisa pilih beberapa foto sekaligus.",
             deletePhoto: "Hapus foto",
             // display/caption -- blok galeri tampilan "Tumpukan" + keterangan
             // per foto (18 September 2026), lihat GalleryBlock.tsx.
@@ -4319,6 +4322,8 @@ export const dictionaries = {
           },
           galleryPanel: {
             photoCountSuffix: "photos",
+            uploadSkipped: "{count} photo(s) were not uploaded -- the limit is {max} photos.",
+            uploadHint: "You can pick several photos at once.",
             deletePhoto: "Delete photo",
             displayLabel: "Display",
             displayGrid: "Grid",
