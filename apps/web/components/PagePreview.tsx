@@ -2648,7 +2648,7 @@ function renderLinkOrBlockInner(
     const imageUrl = (link.blockData?.image_url as string) ?? "";
     return (
       <div key={link.id} className="flex w-full flex-col gap-2 rounded-xl">
-        {videoUrl && <VideoEmbedBlock title={link.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />}
+        {videoUrl && <VideoEmbedBlock title={link.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} autoplay={link.blockData?.autoplay !== false} />}
         {imageUrl && (
           // Rasio ASLI foto, sama persis kasusnya dengan blok "gambar" di atas
           // -- lihat catatan panjang `aspect-auto h-auto` di sana.

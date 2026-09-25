@@ -326,6 +326,7 @@ function renderBuilderNode(
             videoUrl={(node.blockData.video_url as string) ?? ""}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
+            autoplay={node.blockData.autoplay !== false}
           />
         </div>
       );
@@ -404,7 +405,7 @@ function renderBuilderNode(
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video_image" className={`flex w-full flex-col gap-2 rounded-xl${ring}`}>
           {videoUrl && (
-            <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />
+            <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} autoplay={node.blockData.autoplay !== false} />
           )}
           {imageUrl && (
             // Rasio ASLI foto -- lihat catatan `aspect-auto h-auto` di blok
