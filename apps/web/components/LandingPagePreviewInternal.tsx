@@ -11,6 +11,7 @@ import { IconChevronRight } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import { Watermark, applyPreviewHighlight, buildUtmHref, renderVideoBackground } from "@/components/PagePreview";
 import type { PagePreviewData } from "@/components/PagePreview";
+import { videoBlockProps } from "@/components/video-block-props";
 
 // LandingPagePreviewInternal -- diekstrak dari PagePreview.tsx (audit
 // performa 15 September 2026, susulan langsung dari pemecahan
@@ -144,10 +145,9 @@ export default function LandingPagePreview({
                 <VideoEmbedBlock
                   key={block.id}
                   title={block.title}
-                  videoUrl={(block.blockData?.video_url as string) ?? ""}
+                  {...videoBlockProps(block.blockData)}
                   cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
-                  autoplay={block.blockData?.autoplay !== false}
                 />
               );
             case "faq":

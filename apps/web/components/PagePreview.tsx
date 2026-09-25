@@ -37,6 +37,7 @@ import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 import { ChevronLeft, HelpCircle, Images as GalleryIcon, LayoutGrid, Video as VideoIcon } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
+import { videoBlockProps } from "@/components/video-block-props";
 
 // Blok konten "langka" -- audit performa 4 September 2026 (laporan
 // pengguna: "audit semua kode dari security performance ui ux dll"):
@@ -2290,11 +2291,10 @@ function renderLinkOrBlockInner(
       <VideoEmbedBlock
         key={link.id}
         title={link.title}
-        videoUrl={(link.blockData?.video_url as string) ?? ""}
+        {...videoBlockProps(link.blockData)}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}
         icon={resolveBlockIcon(link, VideoIcon, "h-4 w-4")}
-        autoplay={link.blockData?.autoplay !== false}
       />
     );
   }

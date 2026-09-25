@@ -96,6 +96,7 @@ import {
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { maxNestedGalleryImages } from "@/lib/block-preview";
 import { uploadFilesSequentially } from "@/lib/multi-upload";
+import VideoSourceField from "@/components/dashboard/page/VideoSourceField";
 import {
   buildTree,
   findNodeByPath,
@@ -971,6 +972,56 @@ function GalleryGridEditor({
   );
 }
 
+// BuilderVideoSource -- sumber blok video di Builder (25 September 2026,
+// paritas VideoSourceField halaman utama/Toko). Sumber & URL masuk DRAF
+// (onUpdateNode, tersimpan saat Simpan); unggah/hapus file langsung ke
+// server (pola AudioUploadEditor) lalu ditambal lewat onServerPatch.
+function BuilderVideoSource({
+  node,
+  onDraftPatch,
+  onEnsureRootPersisted,
+  onServerPatch,
+}: {
+  node: BuilderTreeNode;
+  onDraftPatch: (patch: Record<string, unknown>) => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onServerPatch: (resolvedRootId: string, patch: Record<string, unknown>) => void;
+}) {
+  const [url, setUrl] = useState((node.blockData?.video_url as string) ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const resolvedRef = useRef<string | null>(null);
+  const source = node.blockData?.source === "upload" ? "upload" : "url";
+  async function resolveLinkId() {
+    const id = await onEnsureRootPersisted(node.rootId);
+    resolvedRef.current = id;
+    return id;
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <VideoSourceField
+        source={source}
+        onSourceChange={(next) => onDraftPatch({ source: next })}
+        url={url}
+        onUrlChange={(next) => {
+          setUrl(next);
+          onDraftPatch({ video_url: next });
+        }}
+        urlInputClassName="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+        linkId={node.rootId}
+        path={node.path}
+        resolveLinkId={resolveLinkId}
+        fileName={node.blockData?.video_file_name as string | undefined}
+        fileUrl={node.blockData?.video_file_url as string | undefined}
+        onUploaded={(res) => onServerPatch(resolvedRef.current ?? node.rootId, { ...res, source: "upload" })}
+        onRemoved={() => onServerPatch(resolvedRef.current ?? node.rootId, { video_file_url: undefined, video_file_name: undefined })}
+        onError={setError}
+      />
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+
 // AudioUploadEditor/FileUploadEditor -- Fase 4 (13 September 2026, blok
 // klasik "audio"/"file" ditambahkan ke Builder): pola SAMA PERSIS
 // MediaImageEditor di atas (SATU file per blok, upload/hapus langsung ke
@@ -1226,6 +1277,7 @@ function NodeFieldEditor({
   onMediaImageChanged,
   onGalleryImagesChanged,
   onAudioChanged,
+  onVideoFileChanged,
   onFileChanged,
   onCatalogItemImagesChanged,
   products,
@@ -1237,6 +1289,7 @@ function NodeFieldEditor({
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onVideoFileChanged: (rootId: string, path: BuilderSeg[], patch: Record<string, unknown>) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   // onCatalogItemImagesChanged -- foto per item Katalog (19 September
   // 2026), immediate-write spt onGalleryImagesChanged dkk di atas, lihat
@@ -1352,12 +1405,13 @@ function NodeFieldEditor({
               className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
             />
           </FormField>
-          <FormField label={t("dashboard.pages.linksBuilder.videoUrlLabel")}>
-            <input
-              defaultValue={(node.blockData?.video_url as string) ?? ""}
-              onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
-              placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
-              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+          <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
+            <BuilderVideoSource
+              key={node.id}
+              node={node}
+              onDraftPatch={(patch) => onUpdateNode(sel, { blockData: patch })}
+              onEnsureRootPersisted={onEnsureRootPersisted}
+              onServerPatch={(resolvedRootId, patch) => onVideoFileChanged(resolvedRootId, node.path, patch)}
             />
           </FormField>
           {/* autoplay (25 September 2026) -- BAWAAN aktif, lihat VideoEmbedBlock.tsx. */}
@@ -2427,6 +2481,7 @@ function TreeNodeView({
   onMediaImageChanged,
   onGalleryImagesChanged,
   onAudioChanged,
+  onVideoFileChanged,
   onFileChanged,
   onIconChanged,
   onThumbnailChanged,
@@ -2454,6 +2509,7 @@ function TreeNodeView({
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onVideoFileChanged: (rootId: string, path: BuilderSeg[], patch: Record<string, unknown>) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   // onIconChanged/onThumbnailChanged/onThumbnailRemoved -- paritas
   // BlockToolsStrip (19 September 2026), dipakai HANYA oleh RootToolsPanel
@@ -2776,6 +2832,7 @@ function TreeNodeView({
             onMediaImageChanged={onMediaImageChanged}
             onGalleryImagesChanged={onGalleryImagesChanged}
             onAudioChanged={onAudioChanged}
+            onVideoFileChanged={onVideoFileChanged}
             onFileChanged={onFileChanged}
             onCatalogItemImagesChanged={onCatalogItemImagesChanged}
             products={products}
@@ -2830,6 +2887,7 @@ function TreeNodeView({
                   onMediaImageChanged={onMediaImageChanged}
                   onGalleryImagesChanged={onGalleryImagesChanged}
                   onAudioChanged={onAudioChanged}
+                  onVideoFileChanged={onVideoFileChanged}
                   onFileChanged={onFileChanged}
                   onIconChanged={onIconChanged}
                   onThumbnailChanged={onThumbnailChanged}
@@ -2864,6 +2922,7 @@ export default function BuilderLeftPanel({
   onMediaImageChanged,
   onGalleryImagesChanged,
   onAudioChanged,
+  onVideoFileChanged,
   onFileChanged,
   onIconChanged,
   onThumbnailChanged,
@@ -2926,6 +2985,7 @@ export default function BuilderLeftPanel({
   // sekaligus (audio: audio_url+title opsional; file: file_url/file_name/
   // file_size_bytes).
   onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onVideoFileChanged: (rootId: string, path: BuilderSeg[], patch: Record<string, unknown>) => void;
   onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   onIconChanged: (rootId: string, patch: { customIconUrl?: string; iconKey?: string }) => void;
   onThumbnailChanged: (rootId: string, thumbnailUrl: string) => void;
@@ -3193,6 +3253,7 @@ export default function BuilderLeftPanel({
                       onMediaImageChanged={onMediaImageChanged}
                       onGalleryImagesChanged={onGalleryImagesChanged}
                       onAudioChanged={onAudioChanged}
+                      onVideoFileChanged={onVideoFileChanged}
                       onFileChanged={onFileChanged}
                       onIconChanged={onIconChanged}
                       onThumbnailChanged={onThumbnailChanged}

@@ -795,6 +795,22 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		if videoURL != "" && !isValidVideoEmbedURL(videoURL) {
 			return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
 		}
+		// source/video_file_url -- unggah video sendiri (25 September 2026,
+		// lihat video_file.go). video_file_url normalnya diisi UploadVideoFile;
+		// kalau dikirim lewat PATCH tetap wajib URL http(s) (pola audio_url).
+		if src, ok := data["source"]; ok {
+			if s, _ := src.(string); s != "" && s != "url" && s != "upload" {
+				return "source video wajib \"url\" atau \"upload\"", false
+			}
+		}
+		if raw, ok := data["video_file_url"]; ok {
+			if fileURL, _ := raw.(string); fileURL != "" {
+				u, err := url.Parse(fileURL)
+				if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+					return "video_file_url wajib berupa URL yang valid", false
+				}
+			}
+		}
 	case "faq":
 		// Fase 2 -- requirement kelengkapan di depth==1 DIHAPUS, alasan SAMA
 		// seperti "video" di atas: form dashboard (`items.length === 0`
@@ -4367,6 +4383,7 @@ func linkOwnedStorageKeyPrefixes(linkID string) []string {
 		fmt.Sprintf("catalog-images/%s/", linkID),
 		fmt.Sprintf("audio-blocks/%s.", linkID),
 		fmt.Sprintf("file-blocks/%s.", linkID),
+		fmt.Sprintf("video-blocks/%s.", linkID),
 	}
 }
 

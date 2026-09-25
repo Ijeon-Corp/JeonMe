@@ -53,6 +53,7 @@ import {
 } from "@/components/PagePreview";
 import type { PagePreviewData, PagePreviewLink, PagePreviewProduct } from "@/components/PagePreview";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
+import { videoBlockProps } from "@/components/video-block-props";
 
 // Blok konten "langka" -- SALINAN pola next/dynamic yang sama persis dari
 // PagePreview.tsx (lihat catatan lengkapnya di sana): tiap tipe blok tetap
@@ -323,10 +324,9 @@ function renderBuilderNode(
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video" className={`w-full rounded-xl${ring}`}>
           <VideoEmbedBlock
             title={node.title}
-            videoUrl={(node.blockData.video_url as string) ?? ""}
+            {...videoBlockProps(node.blockData)}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
-            autoplay={node.blockData.autoplay !== false}
           />
         </div>
       );

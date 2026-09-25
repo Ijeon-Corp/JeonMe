@@ -76,6 +76,7 @@ import LivePreviewPanel from "@/components/LivePreviewPanel";
 import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import ButtonStyleMenu from "@/components/dashboard/page/ButtonStyleMenu";
 import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
+import VideoSourceField from "@/components/dashboard/page/VideoSourceField";
 import Toggle from "@/components/Toggle";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -546,6 +547,9 @@ export default function DashboardLinksPage() {
   >("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
+  // blockVideoSource -- "upload": blok dibuat tanpa URL lalu panel edit
+  // langsung dibuka utk mengunggah file (25 September 2026).
+  const [blockVideoSource, setBlockVideoSource] = useState<"url" | "upload">("url");
   // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA tautan/aksi.
   const [blockText, setBlockText] = useState("");
   // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
@@ -642,7 +646,7 @@ export default function DashboardLinksPage() {
   // belum-disimpan -- lihat lib/use-content-edit-buffers.ts (dipakai
   // bersama halaman utama & Toko sejak audit P4 24 September 2026).
   const {
-    editVideoUrl, setEditVideoUrl, editVideoAutoplay, setEditVideoAutoplay, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
+    editVideoUrl, setEditVideoUrl, editVideoAutoplay, setEditVideoAutoplay, editVideoSource, setEditVideoSource, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
     editText, setEditText, editAccordionText, setEditAccordionText, editShowcaseUrl,
     setEditShowcaseUrl, editShowcaseDescription, setEditShowcaseDescription, editShowcaseBadge,
     setEditShowcaseBadge, editShowcaseCta, setEditShowcaseCta, editButtonUrl, setEditButtonUrl,
@@ -677,7 +681,7 @@ export default function DashboardLinksPage() {
     let patch: { url?: string; description?: string; block_data?: Record<string, unknown> } | null;
     switch (link.block_type) {
       case "video":
-        patch = { block_data: { ...link.block_data, video_url: editVideoUrl, autoplay: editVideoAutoplay } };
+        patch = { block_data: { ...link.block_data, video_url: editVideoUrl, autoplay: editVideoAutoplay, source: editVideoSource } };
         break;
       case "maps":
         patch = { url: editMapsUrl, block_data: { embed: editMapsEmbed } };
@@ -729,6 +733,7 @@ export default function DashboardLinksPage() {
     links,
     editVideoUrl,
     editVideoAutoplay,
+    editVideoSource,
     editMapsUrl,
     editMapsEmbed,
     editText,
@@ -1893,7 +1898,9 @@ export default function DashboardLinksPage() {
     }
     let blockData: Record<string, unknown> = {};
     let blockUrl: string | undefined;
-    if (blockType === "video") {
+    if (blockType === "video" && blockVideoSource === "upload") {
+      blockData = { source: "upload" };
+    } else if (blockType === "video") {
       if (!blockVideoUrl.trim()) {
         setError(t("dashboard.pages.links.errors.videoUrlRequired"));
         return;
@@ -2015,9 +2022,11 @@ export default function DashboardLinksPage() {
       // "faq" tidak butuh ini, form buat FAQ sudah mengumpulkan pertanyaan
       // pertama di awal).
       if (blockType === "catalog") setDrilldownBlockId(created.id);
+      if (blockType === "video" && blockVideoSource === "upload") openContentEdit(created);
       setAddingBlock(false);
       setBlockTitle("");
       setBlockVideoUrl("");
+      setBlockVideoSource("url");
       setBlockFaqItems([{ question: "", answer: "" }]);
       setBlockAccordionText("");
       setBlockMapsUrl("");
@@ -2118,12 +2127,21 @@ export default function DashboardLinksPage() {
     let blockUrl: string | undefined;
     let blockDescription: string | undefined;
     if (link.block_type === "video") {
-      if (!editVideoUrl.trim()) {
-        setError(t("dashboard.pages.links.errors.videoUrlRequired"));
-        return;
+      // spread block_data lama: field lain (file unggahan, dst.) tidak ikut
+      // terhapus -- berpindah sumber tidak menghapus video yg sudah diunggah.
+      if (editVideoSource === "upload") {
+        if (!link.block_data?.video_file_url) {
+          setError(t("dashboard.pages.links.blockForm.video.uploadRequired"));
+          return;
+        }
+        blockData = { ...link.block_data, source: "upload", autoplay: editVideoAutoplay };
+      } else {
+        if (!editVideoUrl.trim()) {
+          setError(t("dashboard.pages.links.errors.videoUrlRequired"));
+          return;
+        }
+        blockData = { ...link.block_data, source: "url", video_url: editVideoUrl.trim(), autoplay: editVideoAutoplay };
       }
-      // spread block_data lama: field lain (mis. ikon) tidak ikut terhapus.
-      blockData = { ...link.block_data, video_url: editVideoUrl.trim(), autoplay: editVideoAutoplay };
     } else if (link.block_type === "maps") {
       if (!editMapsUrl.trim()) {
         setError(t("dashboard.pages.links.errors.mapsUrlRequired"));
@@ -2941,13 +2959,14 @@ export default function DashboardLinksPage() {
               </FormField>
             )}
             {blockType === "video" && (
-              <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
-                <input
-                  type="url"
-                  placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
-                  value={blockVideoUrl}
-                  onChange={(e) => setBlockVideoUrl(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+              <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
+                <VideoSourceField
+                  source={blockVideoSource}
+                  onSourceChange={setBlockVideoSource}
+                  url={blockVideoUrl}
+                  onUrlChange={setBlockVideoUrl}
+                  urlInputClassName="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                  linkId={null}
                 />
               </FormField>
             )}
@@ -4119,13 +4138,31 @@ export default function DashboardLinksPage() {
                   <p className="text-[10px] font-bold uppercase tracking-wide text-jeon-purple">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
                   {link.block_type === "video" ? (
                     <>
-                      <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
-                        <input
-                          type="url"
-                          placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
-                          value={editVideoUrl}
-                          onChange={(e) => setEditVideoUrl(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      <FormField label={t("dashboard.pages.links.blockForm.video.sourceLabel")}>
+                        <VideoSourceField
+                          source={editVideoSource}
+                          onSourceChange={setEditVideoSource}
+                          url={editVideoUrl}
+                          onUrlChange={setEditVideoUrl}
+                          urlInputClassName="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                          linkId={link.id}
+                          fileName={link.block_data?.video_file_name as string | undefined}
+                          fileUrl={link.block_data?.video_file_url as string | undefined}
+                          onUploaded={(res) =>
+                            setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, ...res, source: "upload" } } : l)))
+                          }
+                          onRemoved={() =>
+                            setLinks((prev) =>
+                              prev.map((l) => {
+                                if (l.id !== link.id) return l;
+                                const rest = { ...l.block_data };
+                                delete rest.video_file_url;
+                                delete rest.video_file_name;
+                                return { ...l, block_data: rest };
+                              }),
+                            )
+                          }
+                          onError={setError}
                         />
                       </FormField>
                       <label className="flex items-start gap-2 text-xs text-app-ink">

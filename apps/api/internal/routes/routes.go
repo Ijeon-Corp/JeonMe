@@ -399,6 +399,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				linksGroup.DELETE("/links/:id/media-image", links.DeleteMediaImage)
 				linksGroup.POST("/links/:id/audio", links.UploadAudio)
 				linksGroup.DELETE("/links/:id/audio", links.DeleteAudio)
+				linksGroup.POST("/links/:id/video-file", links.UploadVideoFile)
+				linksGroup.DELETE("/links/:id/video-file", links.DeleteVideoFile)
 				// Blok "file" (permintaan langsung pengguna, 20 Agustus 2026:
 				// "tambahkan file pdf download") -- pola upload SAMA seperti
 				// audio di atas (satu file per blok).

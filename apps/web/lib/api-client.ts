@@ -1781,6 +1781,49 @@ export function deleteAudioBlock(id: string, path?: BuilderSeg[]) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}/audio${query}`, { method: "DELETE" }, { auth: true });
 }
 
+// uploadVideoFile/deleteVideoFile -- unggah video sendiri di blok "video"
+// (25 September 2026, lihat video_file.go). XHR (bukan fetch) supaya
+// persentase unggah bisa ditampilkan -- video sampai 50MB bisa makan
+// waktu lama di koneksi seluler. `path` utk node Builder tertanam.
+export function uploadVideoFile(
+  id: string,
+  file: File,
+  opts: { path?: BuilderSeg[]; onProgress?: (percent: number) => void } = {},
+): Promise<{ video_file_url: string; video_file_name: string; message: string }> {
+  return new Promise((resolve, reject) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("video", file);
+    if (opts.path && opts.path.length > 0) form.append("path", JSON.stringify(opts.path));
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE_URL}/dashboard/links/${id}/video-file`);
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      for (const [k, v] of Object.entries(activeWorkspaceHeaders())) xhr.setRequestHeader(k, v as string);
+    }
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) opts.onProgress?.(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      let body: { error?: string } & Record<string, unknown> = {};
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // respons non-JSON (mis. 413 dari proxy) -- pakai pesan umum di bawah
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body as unknown as { video_file_url: string; video_file_name: string; message: string });
+      else reject(new ApiError(xhr.status, body?.error ?? `Unggah gagal (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new ApiError(0, "Koneksi terputus saat mengunggah video"));
+    xhr.send(form);
+  });
+}
+
+export function deleteVideoFile(id: string, path?: BuilderSeg[]) {
+  const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/video-file${query}`, { method: "DELETE" }, { auth: true });
+}
+
 // uploadFileBlock/deleteFileBlock -- blok "file" (permintaan langsung
 // pengguna, 20 Agustus 2026: "tambahkan file pdf download"), pola sama
 // seperti uploadAudioBlock/deleteAudioBlock di atas -- SATU file per blok,

@@ -77,9 +77,13 @@ export default function VideoEmbedBlock({
   titleClassName,
   icon,
   autoplay = false,
+  fileUrl,
 }: {
   title: string;
   videoUrl: string;
+  // fileUrl -- video unggahan sendiri (block_data.source "upload"); kalau
+  // terisi, dirender <video> bawaan browser, bukan iframe embed.
+  fileUrl?: string;
   // autoplay -- permintaan langsung pengguna, 25 September 2026 ("buat blok
   // untuk video itu auto play"): block_data.autoplay, BAWAAN aktif (hanya
   // `false` eksplisit yang mematikan, lihat PagePreview.tsx). Iframe baru
@@ -93,7 +97,7 @@ export default function VideoEmbedBlock({
   // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
   icon?: React.ReactNode;
 }) {
-  const embedUrl = toEmbedUrl(videoUrl);
+  const embedUrl = fileUrl ? null : toEmbedUrl(videoUrl);
   const [playing, setPlaying] = useState(false);
   const [autoStarted, setAutoStarted] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -126,7 +130,21 @@ export default function VideoEmbedBlock({
           <span className="truncate">{title}</span>
         </p>
       )}
-      {embedUrl ? (
+      {fileUrl ? (
+        // Video unggahan: autoplay HARUS muted + playsInline (syarat iOS
+        // Safari & Chrome), loop spt klip pendek. Tanpa autoplay: kontrol
+        // biasa, preload metadata saja (hemat kuota pengunjung).
+        <video
+          src={fileUrl}
+          className="aspect-video w-full rounded-xl bg-black object-contain"
+          controls
+          playsInline
+          muted={autoplay}
+          autoPlay={autoplay}
+          loop={autoplay}
+          preload={autoplay ? "auto" : "metadata"}
+        />
+      ) : embedUrl ? (
         <div ref={boxRef} className="aspect-video w-full overflow-hidden rounded-xl">
           {autoStarted && !playing ? (
             <iframe

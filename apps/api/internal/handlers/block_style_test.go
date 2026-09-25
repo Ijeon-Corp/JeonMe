@@ -20,3 +20,24 @@ func TestValidateBlockStyle(t *testing.T) {
 		}
 	}
 }
+
+// TestValidateBlockData_VideoSource -- sumber video "upload" (25 September
+// 2026, video_file.go): source hanya url/upload, video_file_url wajib
+// http(s) kalau diisi, blok upload boleh tanpa video_url.
+func TestValidateBlockData_VideoSource(t *testing.T) {
+	cases := []struct {
+		data map[string]any
+		ok   bool
+	}{
+		{map[string]any{"source": "upload"}, true},
+		{map[string]any{"source": "upload", "video_file_url": "https://cdn.example.com/v.mp4"}, true},
+		{map[string]any{"source": "url", "video_url": "https://www.youtube.com/watch?v=abc"}, true},
+		{map[string]any{"source": "vimeo"}, false},
+		{map[string]any{"source": "upload", "video_file_url": "javascript:alert(1)"}, false},
+	}
+	for _, tc := range cases {
+		if _, ok := validateBlockDataAtDepth("video", tc.data, 0); ok != tc.ok {
+			t.Errorf("data %v: ok=%v, harap %v", tc.data, ok, tc.ok)
+		}
+	}
+}

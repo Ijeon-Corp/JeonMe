@@ -1040,6 +1040,16 @@ export default function BuilderPage() {
       setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, title: patch.title! } : l)));
     }
   }
+  // handleVideoFileChanged -- unggah/hapus video sendiri (25 September 2026,
+  // VideoSourceField): server SUDAH diperbarui, cukup tambal block_data di
+  // path ini (pola sama handleAudioChanged). Nilai undefined = hapus field.
+  function handleVideoFileChanged(rootId: string, path: BuilderSeg[], patch: Record<string, unknown>) {
+    applyFieldToPath(rootId, path, (bd) => {
+      const next: Record<string, unknown> = { ...bd, ...patch };
+      for (const [k, v] of Object.entries(patch)) if (v === undefined) delete next[k];
+      return next;
+    });
+  }
   function handleFileChanged(rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) {
     applyFieldToPath(rootId, path, (bd) => ({ ...bd, file_url: patch.file_url, file_name: patch.file_name, file_size_bytes: patch.file_size_bytes }));
   }
@@ -1727,6 +1737,7 @@ export default function BuilderPage() {
           onMediaImageChanged={handleMediaImageChanged}
           onGalleryImagesChanged={handleGalleryImagesChanged}
           onAudioChanged={handleAudioChanged}
+          onVideoFileChanged={handleVideoFileChanged}
           onFileChanged={handleFileChanged}
           onIconChanged={handleIconChanged}
           onThumbnailChanged={handleThumbnailChanged}
