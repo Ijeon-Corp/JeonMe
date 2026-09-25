@@ -3492,7 +3492,7 @@ export default function PagePreview({
             SELALU mendorong tombol ini ke kanan terlepas dari PageSwitcher
             merender apa pun. */}
         <div className="ml-auto">
-          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+          <ShareButton title={`@${data.username} | Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat

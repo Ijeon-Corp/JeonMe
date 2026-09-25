@@ -20,11 +20,11 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   const page = await getPublicPageBySlug(username, slug);
 
   if (!page) {
-    return { title: "Halaman tidak ditemukan — Jeon.id" };
+    return { title: "Halaman tidak ditemukan | Jeon.id" };
   }
 
   const displayName = page.display_name || page.username;
-  const title = page.seo_title || `${displayName} — Jeon.id`;
+  const title = page.seo_title || `${displayName} | Jeon.id`;
   const description = page.seo_description || page.bio || `Lihat semua tautan ${displayName} di Jeon.id.`;
 
   return {

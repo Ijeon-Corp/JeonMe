@@ -72,7 +72,7 @@ export default function LandingPagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        <ShareButton title={`@${data.username} | Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {/* applyPreviewHighlight membungkus HASIL map di bawah (tanpa

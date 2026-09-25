@@ -2813,7 +2813,7 @@ export const dictionaries = {
           cancelLink: "Batalkan Penghapusan",
         },
         twoFactorPrompt: {
-          message: "Akunmu punya rekening pembayaran terhubung — aktifkan 2FA untuk melindunginya.",
+          message: "Akunmu punya rekening pembayaran terhubung. Aktifkan 2FA untuk melindunginya.",
           enableLink: "Aktifkan Sekarang",
           snoozeButton: "Ingatkan lagi dalam 7 hari",
         },
@@ -3240,7 +3240,7 @@ export const dictionaries = {
     hero: {
       title1: "Bangun",
       titleGradient: "kehadiranmu.",
-      subtitle: "Satu link untuk semuanya — halaman bio, jualan produk digital, dan audiensmu. jeon.id adalah rumah bisnis kreatormu.",
+      subtitle: "Satu link untuk semuanya: halaman bio, jualan produk digital, dan audiensmu. jeon.id adalah rumah bisnis kreatormu.",
       ctaPrimary: "Mulai gratis",
       ctaSecondary: "Lihat fitur",
       flipHint: "Klik kartu untuk lihat statistiknya ↻",
@@ -6013,7 +6013,7 @@ export const dictionaries = {
           cancelLink: "Cancel Deletion",
         },
         twoFactorPrompt: {
-          message: "Your account has a connected payout method — enable 2FA to protect it.",
+          message: "Your account has a connected payout method. Enable 2FA to protect it.",
           enableLink: "Enable Now",
           snoozeButton: "Remind me in 7 days",
         },
@@ -6398,7 +6398,7 @@ export const dictionaries = {
     hero: {
       title1: "Build",
       titleGradient: "your presence.",
-      subtitle: "One link for everything — your bio page, digital product sales, and your audience. jeon.id is your creator business home.",
+      subtitle: "One link for everything: your bio page, digital product sales, and your audience. jeon.id is your creator business home.",
       ctaPrimary: "Start free",
       ctaSecondary: "See features",
       flipHint: "Click the card to see its stats ↻",
@@ -6441,7 +6441,7 @@ export const dictionaries = {
       badge: "Features",
       title1: "Everything Creators Need,",
       titleGradient: "All on One Page",
-      subtitle: "From link management to full monetization, Jeon.id gives you a complete toolkit to grow — without stitching together a dozen separate tools.",
+      subtitle: "From link management to full monetization, Jeon.id gives you a complete toolkit to grow, without stitching together a dozen separate tools.",
     },
     productShowcase: {
       heading1: "One Page for Every",
@@ -6549,7 +6549,7 @@ export const dictionaries = {
         },
         freePlan: {
           q: "Is there a free plan?",
-          a: "Absolutely. The Free plan includes unlimited links & content blocks, every theme (including wallpapers and video), 1 storefront page, and visitor & click stats — no credit card required to start.",
+          a: "Absolutely. The Free plan includes unlimited links & content blocks, every theme (including wallpapers and video), 1 storefront page, and visitor & click stats. No credit card required to start.",
         },
         sellDigital: {
           q: "How do I sell digital products?",
@@ -6557,7 +6557,7 @@ export const dictionaries = {
         },
         analytics: {
           q: "Can I track analytics?",
-          a: "Yes — every plan (Free included) comes with a full analytics dashboard: visitors, clicks per link, best-selling products, and revenue. Premium adds a Meta Conversions API integration to track Facebook/Instagram ad conversions.",
+          a: "Yes, every plan (Free included) comes with a full analytics dashboard: visitors, clicks per link, best-selling products, and revenue. Premium adds a Meta Conversions API integration to track Facebook/Instagram ad conversions.",
         },
       },
     },

@@ -143,7 +143,7 @@ export const metadata: Metadata = {
   // SEMUA metadata relatif (canonical, OG image, dll) sekaligus, satu
   // sumber kebenaran SITE_URL yang sama dipakai sitemap.ts.
   metadataBase: new URL(SITE_URL),
-  title: "Jeon.id — Satu Link, Peluang Tanpa Batas",
+  title: "Jeon.id | Satu Link, Peluang Tanpa Batas",
   description: "Platform link-in-bio dan monetisasi produk digital untuk kreator Indonesia.",
 };
 

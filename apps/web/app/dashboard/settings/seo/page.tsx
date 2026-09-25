@@ -114,7 +114,7 @@ export default function SettingsSeoPage() {
             type="text"
             maxLength={70}
             value={seoTitle}
-            placeholder={`@${page.username} — Jeon.id`}
+            placeholder={`@${page.username} | Jeon.id`}
             onChange={(e) => setSeoTitle(e.target.value)}
             className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />

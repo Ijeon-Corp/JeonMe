@@ -889,7 +889,7 @@ export default function BuilderPagePreview({
       <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
         <PageSwitcher username={data.username} pages={data.sitePages} currentSlug={data.pageSlug ?? null} theme={theme} />
         <div className="ml-auto">
-          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+          <ShareButton title={`@${data.username} | Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
       </div>
       <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
