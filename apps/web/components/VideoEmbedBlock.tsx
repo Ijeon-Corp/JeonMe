@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconPlayCircle } from "@/components/icons";
 
 // No.77 (Sprint 9): blok video embed (YouTube/TikTok).
@@ -50,6 +50,20 @@ function toEmbedUrl(raw: string): string | null {
 // oEmbed call tambahan"). TikTok tetap dapat manfaat performa dari pola
 // klik-utk-buka ini, cuma tanpa gambar pratinjau sungguhan (placeholder
 // ikon generik).
+// autoplayEmbedUrl -- versi URL embed yang langsung main TANPA SUARA.
+// Browser (Chrome/Safari/Firefox) hanya mengizinkan autoplay tanpa gestur
+// kalau video di-mute, jadi mute=1 wajib -- pengunjung menyalakan suara
+// dari kontrol player. YouTube: loop butuh playlist=<id yg sama>. TikTok:
+// embed/v2 tidak mengenal parameter autoplay, player/v1 (Embed Player
+// resmi) yang mendukung autoplay & loop.
+function autoplayEmbedUrl(embedUrl: string): string {
+  const yt = embedUrl.match(/youtube\.com\/embed\/([^/?]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${yt[1]}`;
+  const tt = embedUrl.match(/tiktok\.com\/embed\/v2\/(\d+)/);
+  if (tt) return `https://www.tiktok.com/player/v1/${tt[1]}?autoplay=1&loop=1&muted=1`;
+  return embedUrl;
+}
+
 function getYoutubeThumbnail(embedUrl: string): string | null {
   const match = embedUrl.match(/\/embed\/([^/?]+)/);
   if (!match) return null;
@@ -62,9 +76,17 @@ export default function VideoEmbedBlock({
   cardClassName,
   titleClassName,
   icon,
+  autoplay = false,
 }: {
   title: string;
   videoUrl: string;
+  // autoplay -- permintaan langsung pengguna, 25 September 2026 ("buat blok
+  // untuk video itu auto play"): block_data.autoplay, BAWAAN aktif (hanya
+  // `false` eksplisit yang mematikan, lihat PagePreview.tsx). Iframe baru
+  // dimuat saat blok >= 50% terlihat di layar -- manfaat performa pola
+  // klik-utk-buka di atas tetap terjaga utk video di bawah lipatan -- dan
+  // dilewati kalau pengunjung memilih prefers-reduced-motion.
+  autoplay?: boolean;
   cardClassName: string;
   titleClassName: string;
   // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
@@ -73,6 +95,26 @@ export default function VideoEmbedBlock({
 }) {
   const embedUrl = toEmbedUrl(videoUrl);
   const [playing, setPlaying] = useState(false);
+  const [autoStarted, setAutoStarted] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!autoplay || !embedUrl) return;
+    const el = boxRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setAutoStarted(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [autoplay, embedUrl]);
   const isYoutube = embedUrl?.includes("youtube.com/embed/") ?? false;
   const thumbnail = embedUrl && isYoutube ? getYoutubeThumbnail(embedUrl) : null;
 
@@ -85,8 +127,16 @@ export default function VideoEmbedBlock({
         </p>
       )}
       {embedUrl ? (
-        <div className="aspect-video w-full overflow-hidden rounded-xl">
-          {playing ? (
+        <div ref={boxRef} className="aspect-video w-full overflow-hidden rounded-xl">
+          {autoStarted && !playing ? (
+            <iframe
+              src={autoplayEmbedUrl(embedUrl)}
+              title={title || "Video"}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : playing ? (
             <iframe
               src={`${embedUrl}${embedUrl.includes("?") ? "&" : "?"}autoplay=1`}
               title={title || "Video"}

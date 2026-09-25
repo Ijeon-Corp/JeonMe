@@ -2238,6 +2238,7 @@ export function renderLinkOrBlock(
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}
         icon={resolveBlockIcon(link, VideoIcon, "h-4 w-4")}
+        autoplay={link.blockData?.autoplay !== false}
       />
     );
   }

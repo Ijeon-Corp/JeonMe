@@ -739,7 +739,7 @@ function BlockSection({
   // belum-disimpan -- lihat lib/use-content-edit-buffers.ts (dipakai
   // bersama halaman utama & Toko sejak audit P4 24 September 2026).
   const {
-    editVideoUrl, setEditVideoUrl, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
+    editVideoUrl, setEditVideoUrl, editVideoAutoplay, setEditVideoAutoplay, editMapsUrl, setEditMapsUrl, editMapsEmbed, setEditMapsEmbed,
     editText, setEditText, editAccordionText, setEditAccordionText, editShowcaseUrl,
     setEditShowcaseUrl, editShowcaseDescription, setEditShowcaseDescription, editShowcaseBadge,
     setEditShowcaseBadge, editShowcaseCta, setEditShowcaseCta, editButtonUrl, setEditButtonUrl,
@@ -1282,7 +1282,8 @@ function BlockSection({
         setError(t("dashboard.components.produkPageEditor.errors.videoUrlRequired"));
         return;
       }
-      blockData = { video_url: editVideoUrl.trim() };
+      // spread block_data lama: field lain (mis. ikon) tidak ikut terhapus.
+      blockData = { ...link.block_data, video_url: editVideoUrl.trim(), autoplay: editVideoAutoplay };
     } else if (link.block_type === "maps") {
       if (!editMapsUrl.trim()) {
         setError(t("dashboard.components.produkPageEditor.errors.mapsUrlRequired"));
@@ -2649,15 +2650,29 @@ function BlockSection({
               contentEditId === link.id && (
               <div className="sm:ml-[60px] flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 {link.block_type === "video" ? (
-                  <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
-                    <input
-                      type="url"
-                      placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
-                      value={editVideoUrl}
-                      onChange={(e) => setEditVideoUrl(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                    />
-                  </FormField>
+                  <>
+                    <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
+                      <input
+                        type="url"
+                        placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
+                        value={editVideoUrl}
+                        onChange={(e) => setEditVideoUrl(e.target.value)}
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                    <label className="flex items-start gap-2 text-xs text-app-ink">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={editVideoAutoplay}
+                        onChange={(e) => setEditVideoAutoplay(e.target.checked)}
+                      />
+                      <span>
+                        <span className="font-semibold">{t("dashboard.pages.links.blockForm.video.autoplayToggle")}</span>
+                        <span className="block text-[11px] text-app-muted">{t("dashboard.pages.links.blockForm.video.autoplayHint")}</span>
+                      </span>
+                    </label>
+                  </>
                 ) : link.block_type === "maps" ? (
                   <FormField label={t("dashboard.components.produkPageEditor.blockForm.mapsUrlLabel")}>
                     <input

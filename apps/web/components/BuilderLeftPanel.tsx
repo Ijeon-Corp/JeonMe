@@ -1330,6 +1330,19 @@ function NodeFieldEditor({
               className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
             />
           </FormField>
+          {/* autoplay (25 September 2026) -- BAWAAN aktif, lihat VideoEmbedBlock.tsx. */}
+          <label className="flex items-start gap-2 text-xs text-app-ink">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              defaultChecked={node.blockData?.autoplay !== false}
+              onChange={(e) => onUpdateNode(sel, { blockData: { autoplay: e.target.checked } })}
+            />
+            <span>
+              <span className="font-semibold">{t("dashboard.pages.links.blockForm.video.autoplayToggle")}</span>
+              <span className="block text-[11px] text-app-muted">{t("dashboard.pages.links.blockForm.video.autoplayHint")}</span>
+            </span>
+          </label>
         </div>
       </div>
     );

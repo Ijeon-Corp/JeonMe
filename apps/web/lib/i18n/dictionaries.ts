@@ -697,6 +697,8 @@ export const dictionaries = {
             video: {
               label: "Tautan Video",
               placeholder: "https://youtube.com/... atau https://tiktok.com/...",
+              autoplayToggle: "Putar otomatis (tanpa suara)",
+              autoplayHint: "Video langsung main saat terlihat di layar. Pengunjung bisa menyalakan suara dari player.",
             },
             maps: {
               label: "Tautan Google Maps",
@@ -4052,6 +4054,8 @@ export const dictionaries = {
             video: {
               label: "Video Link",
               placeholder: "https://youtube.com/... or https://tiktok.com/...",
+              autoplayToggle: "Autoplay (muted)",
+              autoplayHint: "The video starts playing when it scrolls into view. Visitors can unmute it from the player.",
             },
             maps: {
               label: "Google Maps Link",

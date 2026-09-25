@@ -147,6 +147,7 @@ export default function LandingPagePreview({
                   videoUrl={(block.blockData?.video_url as string) ?? ""}
                   cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
+                  autoplay={block.blockData?.autoplay !== false}
                 />
               );
             case "faq":

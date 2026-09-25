@@ -28,6 +28,7 @@ import { toDatetimeLocalValue } from "@/components/dashboard/page/ListItemsEdito
 
 interface ContentEditValues {
   videoUrl: string;
+  videoAutoplay: boolean;
   mapsUrl: string;
   mapsEmbed: boolean;
   text: string;
@@ -56,7 +57,7 @@ interface ContentEditValues {
 function computeContentEditSnapshot(blockType: LinkItem["block_type"], v: ContentEditValues): Record<string, unknown> | null {
   switch (blockType) {
     case "video":
-      return { videoUrl: v.videoUrl };
+      return { videoUrl: v.videoUrl, videoAutoplay: v.videoAutoplay };
     case "maps":
       return { mapsUrl: v.mapsUrl, mapsEmbed: v.mapsEmbed };
     case "text":
@@ -83,6 +84,8 @@ function computeContentEditSnapshot(blockType: LinkItem["block_type"], v: Conten
 function contentEditValuesFromLink(link: LinkItem): ContentEditValues {
   return {
     videoUrl: (link.block_data?.video_url as string) ?? "",
+    // autoplay BAWAAN aktif -- hanya `false` eksplisit yang mematikan.
+    videoAutoplay: link.block_data?.autoplay !== false,
     mapsUrl: link.url ?? "",
     mapsEmbed: Boolean(link.block_data?.embed),
     text: (link.block_data?.text as string) ?? "",
@@ -109,6 +112,7 @@ function contentEditValuesFromLink(link: LinkItem): ContentEditValues {
 export function useContentEditBuffers() {
   const [contentEditSnapshot, setContentEditSnapshot] = useState<string | null>(null);
   const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editVideoAutoplay, setEditVideoAutoplay] = useState(true);
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
   const [editText, setEditText] = useState("");
@@ -139,6 +143,7 @@ export function useContentEditBuffers() {
     setContentEditSnapshot(JSON.stringify(computeContentEditSnapshot(link.block_type, v)));
     if (link.block_type === "video") {
       setEditVideoUrl(v.videoUrl);
+      setEditVideoAutoplay(v.videoAutoplay);
     } else if (link.block_type === "maps") {
       setEditMapsUrl(v.mapsUrl);
       setEditMapsEmbed(v.mapsEmbed);
@@ -177,6 +182,7 @@ export function useContentEditBuffers() {
     if (contentEditSnapshot === null) return false;
     const current = computeContentEditSnapshot(blockType, {
       videoUrl: editVideoUrl,
+      videoAutoplay: editVideoAutoplay,
       mapsUrl: editMapsUrl,
       mapsEmbed: editMapsEmbed,
       text: editText,
@@ -209,6 +215,7 @@ export function useContentEditBuffers() {
 
   return {
     editVideoUrl, setEditVideoUrl,
+    editVideoAutoplay, setEditVideoAutoplay,
     editMapsUrl, setEditMapsUrl,
     editMapsEmbed, setEditMapsEmbed,
     editText, setEditText,
