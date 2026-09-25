@@ -1398,7 +1398,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}>
+          <FormField label={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1502,7 +1502,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}>
+          <FormField label={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1546,7 +1546,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}>
+          <FormField label={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1598,7 +1598,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}>
+          <FormField label={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1694,7 +1694,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1714,7 +1714,7 @@ function NodeFieldEditor({
     return (
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
-        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")} optional>
           <input
             defaultValue={node.title}
             onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1738,7 +1738,7 @@ function NodeFieldEditor({
     return (
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
-        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")} optional>
           <input
             defaultValue={node.title}
             onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1769,7 +1769,7 @@ function NodeFieldEditor({
       <div className="flex flex-col gap-3">
         <BlockPanelHeader node={node} t={t} />
         <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
@@ -1831,7 +1831,7 @@ function NodeFieldEditor({
     return (
       <div className="flex flex-col gap-3">
         <div className="rounded-xl bg-app-surface-2 p-3">
-          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")} optional>
             <input
               defaultValue={node.title}
               onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}

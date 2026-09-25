@@ -96,6 +96,7 @@ import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import ButtonStyleMenu from "@/components/dashboard/page/ButtonStyleMenu";
 import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
+import FormField from "@/components/FormField";
 import VideoSourceField from "@/components/dashboard/page/VideoSourceField";
 import {
   DesignSectionPatch,
@@ -594,31 +595,9 @@ export default function ProdukPageEditor({
 }
 // ---------- Blok & Tautan ----------
 
-// FormField -- permintaan langsung pengguna, 27 Agustus 2026: "perbaiki ui
-// dan ux semua blok yang ada di link bio dan juga toko seperti kasih label
-// url atau desc dsb" -- field bertumpuk (mis. Judul lalu Tautan) tanpa
-// label bikin bingung mana yang teks tampil vs mana yang URL tujuan,
-// terutama setelah field terisi (placeholder hilang begitu ada teks).
-// Disalin APA ADANYA dari dashboard/links/page.tsx (BUKAN diimpor dari satu
-// sumber) -- konsisten dengan pola "dua jalur kode berbeda" yang sudah
-// dipakai proyek ini untuk paritas halaman utama/Toko (lihat catatan
-// LAYOUT_OPTIONS di atas). label dibungkus DI DALAM <label> (asosiasi a11y
-// otomatis, tanpa id/htmlFor manual, juga kebaca getByLabel() di test) --
-// hint SENGAJA di LUAR <label> supaya prosa hint tidak ikut masuk ke nama
-// aksesibel elemen (kalau hint kebetulan memuat kata yang sama dengan
-// label lain, getByLabel() bisa salah tangkap).
-function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-app-muted">{label}</span>
-        {children}
-      </label>
-      {hint && <p className="text-[10.5px] text-app-muted">{hint}</p>}
-    </div>
-  );
-}
-
+// FormField -- SEKARANG diimpor dari components/FormField.tsx (25 September
+// 2026: chip "Opsional" perlu tampil sama di halaman utama & Toko; salinan
+// lokal yang identik dihapus supaya tidak tertinggal lagi).
 function BlockSection({
   pageId,
   links,
@@ -1912,6 +1891,8 @@ function BlockSection({
                   ? t("dashboard.components.produkPageEditor.blockForm.titleLabel")
                   : t("dashboard.components.produkPageEditor.blockForm.blockTitleLabel")
               }
+              // judul tautan wajib (backend), judul blok opsional kecuali Katalog
+              optional={blockType !== "link" && blockType !== "catalog"}
               hint={
                 blockType === "link"
                   ? t("dashboard.components.produkPageEditor.blockForm.titleHintLink")

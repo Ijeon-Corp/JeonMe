@@ -592,6 +592,7 @@ export const dictionaries = {
             hint: "Isi handle saja (mis. \"username\") atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.",
           },
           common: {
+            optional: "Opsional",
             save: "Simpan",
             saving: "Menyimpan...",
             cancel: "Batal",
@@ -4009,6 +4010,7 @@ export const dictionaries = {
             hint: "Enter just the handle (e.g. \"username\") or the full link. Leave blank to hide the icon.",
           },
           common: {
+            optional: "Optional",
             save: "Save",
             saving: "Saving...",
             cancel: "Cancel",

@@ -2729,6 +2729,8 @@ export default function DashboardLinksPage() {
             )}
             <FormField
               label={blockType === "project_showcase" ? t("dashboard.pages.links.blockForm.titleLabel.project") : t("dashboard.pages.links.blockForm.titleLabel.default")}
+              // judul blok opsional kecuali Katalog (lihat handleCreateBlock)
+              optional={blockType !== "catalog"}
               hint={
                 blockType === "text"
                   ? t("dashboard.pages.links.blockForm.titleHint.text")
