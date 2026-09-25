@@ -39,7 +39,7 @@ export default function ImageSliderBlock({
   return (
     <div className={cardClassName}>
       {title && (
-        <p className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
+        <p data-block-title className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
           {icon}
           <span className="truncate">{title}</span>
         </p>

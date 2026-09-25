@@ -306,6 +306,15 @@ export interface BlockStyle {
   button_bg?: string;
   button_text?: string;
   rounded?: "none" | "sm" | "md" | "full";
+  // title_* -- gaya judul blok (25 September 2026), terpisah dari gaya
+  // seluruh isi blok di atas. title_position "top"/"bottom" = di atas/di
+  // bawah konten blok.
+  title_align?: "left" | "center" | "right" | "justify";
+  title_size?: "sm" | "base" | "lg" | "xl" | "2xl";
+  title_weight?: "normal" | "semibold" | "bold";
+  title_italic?: boolean;
+  title_color?: string;
+  title_position?: "top" | "bottom";
 }
 
 export interface PublicLink {

@@ -19,7 +19,7 @@ import type { BlockStyle, LinkItem } from "@/lib/api-client";
 const SWATCHES = ["#ffffff", "#111111", "#d7ff60", "#d9ceff", "#ff6448", "#ffafd0", "#8ad5ff", "#5b3fe0"];
 const COMMIT_DELAY_MS = 400;
 
-type ColorKey = "bg" | "text" | "button_bg" | "button_text";
+type ColorKey = "bg" | "text" | "button_bg" | "button_text" | "title_color";
 
 function clean(style: BlockStyle): BlockStyle {
   const out: BlockStyle = {};
@@ -35,6 +35,7 @@ export default function BlockDesignMenu({
   inline = false,
   onPreview,
   onCommit,
+  titleMode,
 }: {
   link: LinkItem;
   chipClassName: string;
@@ -46,6 +47,11 @@ export default function BlockDesignMenu({
   inline?: boolean;
   onPreview: (style: BlockStyle) => void;
   onCommit: (style: BlockStyle) => void;
+  // titleMode -- bagian "Judul blok" (25 September 2026). "full": judul di
+  // atas/bawah konten (posisi & perataan berlaku); "inline": judul sejajar
+  // tombol (audio/file) -- cuma ukuran/tebal/miring/warna; undefined:
+  // tipe tanpa judul terpisah (tautan, tombol, pembatas, dst).
+  titleMode?: "full" | "inline";
 }) {
   const { t } = useLocale();
   const T = (key: string) => t(`dashboard.pages.links.linkCard.blockDesign.${key}`);
@@ -158,7 +164,7 @@ export default function BlockDesignMenu({
     );
   }
 
-  function segmented<K extends "font_size" | "font_weight" | "align" | "rounded">(key: K, label: string, options: { value: NonNullable<BlockStyle[K]>; label: string }[]) {
+  function segmented<K extends "font_size" | "font_weight" | "align" | "rounded" | "title_align" | "title_size" | "title_weight" | "title_position">(key: K, label: string, options: { value: NonNullable<BlockStyle[K]>; label: string }[]) {
     const value = draft[key] ?? "";
     return (
       <div>
@@ -232,10 +238,76 @@ export default function BlockDesignMenu({
             { value: "md", label: T("roundedMd") },
             { value: "full", label: T("roundedFull") },
           ])}
+          {titleMode && (
+            <section className="flex flex-col gap-3 border-t border-app-border pt-3">
+              <div>
+                <p className="text-sm font-bold text-app-ink">{T("titleSection")}</p>
+                <p className="text-[11px] text-app-muted">{T("titleIntro")}</p>
+              </div>
+              {/* Dipanggil TANPA syarat lalu disembunyikan utk judul sebaris:
+                  pemanggilan bersyarat membuat linter React Compiler salah
+                  mengira `update` (memakai ref) dipanggil saat render. */}
+              <div className={titleMode === "full" ? "contents" : "hidden"}>
+                {segmented("title_position", T("titlePosition"), [
+                  { value: "top", label: T("posTop") },
+                  { value: "bottom", label: T("posBottom") },
+                ])}
+                {segmented("title_align", T("titleAlign"), [
+                  { value: "left", label: T("alignLeft") },
+                  { value: "center", label: T("alignCenter") },
+                  { value: "right", label: T("alignRight") },
+                  { value: "justify", label: T("alignJustify") },
+                ])}
+              </div>
+              {segmented("title_size", T("titleSize"), [
+                { value: "sm", label: T("sizeSm") },
+                { value: "base", label: T("sizeBase") },
+                { value: "lg", label: T("sizeLg") },
+                { value: "xl", label: T("sizeXl") },
+                { value: "2xl", label: T("size2xl") },
+              ])}
+              <div className="flex flex-wrap items-end gap-3">
+                {segmented("title_weight", T("titleWeight"), [
+                  { value: "normal", label: T("weightNormal") },
+                  { value: "semibold", label: T("weightSemibold") },
+                  { value: "bold", label: T("weightBold") },
+                ])}
+                <button
+                  type="button"
+                  aria-pressed={Boolean(draft.title_italic)}
+                  onClick={() => update({ title_italic: !draft.title_italic })}
+                  className={`rounded-md border px-2 py-1 text-[11px] font-semibold italic transition-colors ${
+                    draft.title_italic ? "border-jeon-purple bg-jeon-lavender/60 text-jeon-purple" : "border-app-border text-app-ink hover:bg-app-surface-2"
+                  }`}
+                >
+                  {T("titleItalic")}
+                </button>
+              </div>
+              {colorRow("title_color", T("titleColor"))}
+            </section>
+          )}
           {Object.keys(clean(draft)).length > 0 && (
             <button
               type="button"
-              onClick={() => update({ bg: "", text: "", font: "", font_size: undefined, font_weight: undefined, align: undefined, button_bg: "", button_text: "", rounded: undefined })}
+              onClick={() =>
+                update({
+                  bg: "",
+                  text: "",
+                  font: "",
+                  font_size: undefined,
+                  font_weight: undefined,
+                  align: undefined,
+                  button_bg: "",
+                  button_text: "",
+                  rounded: undefined,
+                  title_align: undefined,
+                  title_size: undefined,
+                  title_weight: undefined,
+                  title_italic: false,
+                  title_color: "",
+                  title_position: undefined,
+                })
+              }
               className="inline-flex items-center gap-1.5 self-start rounded-lg border border-app-border px-2.5 py-1.5 text-[11px] font-semibold text-app-ink hover:bg-app-surface-2"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden />

@@ -98,7 +98,7 @@ export default function AudioPlayerBlock({
               SEBELUMNYA `title || "Audio"` selalu menampilkan label generik
               begitu judul dikosongkan, tidak seperti VideoEmbedBlock/
               EmbedBlock yang sudah `{title && ...}` sejak awal -- disamakan. */}
-          {title && <p className={`truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
+          {title && <p data-block-title data-title-inline className={`truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
           <div className={`mt-1 flex items-center gap-2 ${titleClassName}`}>
             <span className="flex-shrink-0 text-[10px] tabular-nums opacity-70">{formatTime(currentTime)}</span>
             <input

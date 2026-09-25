@@ -2175,6 +2175,7 @@ function SensitiveContentGate({ theme, renderContent }: { theme: PageTheme; rend
 }
 
 const BLOCK_RADIUS: Record<string, string> = { none: "0px", sm: "8px", md: "16px", full: "9999px" };
+const BLOCK_TITLE_SIZE: Record<string, string> = { sm: "12px", base: "14px", lg: "17px", xl: "20px", "2xl": "24px" };
 
 // blockStyleProps -- atribut + variabel CSS utk pembungkus .jeon-bs
 // (aturan lengkap di globals.css). null = blok tanpa desain khusus
@@ -2197,6 +2198,18 @@ function blockStyleProps(bs: BlockStyle | undefined): Record<string, unknown> | 
   set("btn-bg", "--bs-btn-bg", bs.button_bg);
   set("btn-text", "--bs-btn-text", bs.button_text);
   if (bs.font_size && bs.font_size !== "base") attrs["data-bs-size"] = bs.font_size;
+  // Gaya JUDUL blok (25 September 2026) -- diterapkan ke elemen
+  // [data-block-title] di renderer tiap tipe, lihat globals.css.
+  if (bs.title_align) {
+    attrs["data-bs-t-align"] = "";
+    vars["--bs-t-align"] = bs.title_align;
+    vars["--bs-t-justify"] = { left: "flex-start", center: "center", right: "flex-end", justify: "flex-start" }[bs.title_align];
+  }
+  set("t-size", "--bs-t-size", bs.title_size ? BLOCK_TITLE_SIZE[bs.title_size] : undefined);
+  set("t-weight", "--bs-t-weight", bs.title_weight ? { normal: "400", semibold: "600", bold: "700" }[bs.title_weight] : undefined);
+  set("t-color", "--bs-t-color", bs.title_color);
+  if (bs.title_italic) attrs["data-bs-t-italic"] = "";
+  if (bs.title_position) attrs["data-bs-t-pos"] = bs.title_position;
   if (Object.keys(attrs).length === 0) return null;
   return { ...attrs, style: vars as React.CSSProperties };
 }
@@ -2460,7 +2473,7 @@ function renderLinkOrBlockInner(
               {badgeText}
             </span>
           )}
-          {link.title && <span className={`block text-[13px] font-bold leading-snug ${theme.cardTitle}`}>{link.title}</span>}
+          {link.title && <span data-block-title className={`block text-[13px] font-bold leading-snug ${theme.cardTitle}`}>{link.title}</span>}
           {link.description && (
             <span
               className={`jeon-rich-text-content mt-1 line-clamp-3 block text-[10.5px] leading-snug opacity-75 ${theme.cardTitle}`}
@@ -2492,7 +2505,7 @@ function renderLinkOrBlockInner(
             2026 ("judul blok juga itu optional untuk bisa ditampilkan"):
             SEBELUMNYA `<p>{link.title}</p>` tanpa gerbang, judul kosong
             tetap merender paragraf kosong (baris kosong terbuang). */}
-        {link.title && <p className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>}
+        {link.title && <p data-block-title className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>}
         {/* Rich text (susulan 12 September 2026) -- whitespace-pre-line
             utk kompatibilitas mundur konten lama (plain string ber-"\n"). */}
         {link.description && (
@@ -2618,7 +2631,7 @@ function renderLinkOrBlockInner(
       // 448x448 murni petunjuk srcset (lebar kolom publik), BUKAN rasio.
       <Image src={imageUrl} alt={link.title || ""} width={448} height={448} className="aspect-auto h-auto w-full rounded-xl object-cover" />
     );
-    const caption = link.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>;
+    const caption = link.title && <p data-block-title className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>;
     if (!link.url) {
       return (
         <div key={link.id} className="w-full">
@@ -2679,7 +2692,7 @@ function renderLinkOrBlockInner(
         {/* title opsional -- permintaan langsung pengguna, 19 September
             2026 ("judul blok juga itu optional untuk bisa ditampilkan"),
             sama seperti project_showcase di atas. */}
-        {link.title && <p className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>}
+        {link.title && <p data-block-title className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>}
         {link.description && (
           <p
             className={`jeon-rich-text-content whitespace-pre-line text-[11px] ${theme.bio}`}

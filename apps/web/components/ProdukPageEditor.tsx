@@ -53,7 +53,7 @@ import {
   IconSparkle,
   IconX,
 } from "@/components/icons";
-import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, blockTitleMode, isBlockExpandable, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
 import type { BlockStyle } from "@/lib/api-client";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
@@ -98,6 +98,7 @@ import ButtonStyleMenu from "@/components/dashboard/page/ButtonStyleMenu";
 import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
 import FormField from "@/components/FormField";
 import VideoSourceField from "@/components/dashboard/page/VideoSourceField";
+import BlockTitleField from "@/components/dashboard/page/BlockTitleField";
 import {
   DesignSectionPatch,
   FontSection,
@@ -1543,6 +1544,18 @@ function BlockSection({
   // ikut berubah); Commit mengirim PATCH. savedBlockStyles menyimpan nilai
   // terakhir yang dikonfirmasi server per blok, dipakai utk rollback kalau
   // PATCH gagal (preview sudah mengubah `links` sebelum commit).
+  // handleBlockTitleSave -- paritas halaman utama (BlockTitleField).
+  async function handleBlockTitleSave(link: LinkItem, title: string) {
+    const previousTitle = link.title;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title } : l)));
+    try {
+      await updateLink(link.id, { title });
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title: previousTitle } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateFieldFailed").replace("{field}", t("dashboard.pages.links.fieldNames.title")));
+    }
+  }
+
   const savedBlockStyles = useRef<Map<string, BlockStyle>>(new Map());
   function handleBlockStylePreview(link: LinkItem, style: BlockStyle) {
     if (!savedBlockStyles.current.has(link.id)) savedBlockStyles.current.set(link.id, link.block_style ?? {});
@@ -2522,26 +2535,29 @@ function BlockSection({
                   ))}
                 </div>
                 {toolsTab === "tools" ? (
-                  <BlockToolsStrip
-                    link={link}
-                    className=""
-                    iconUploading={iconUploadingId === link.id}
-                    onMoveUp={() => moveLinkByOffset(index, -1)}
-                    onMoveDown={() => moveLinkByOffset(index, 1)}
-                    canMoveUp={index > 0}
-                    canMoveDown={index < links.length - 1}
-                    onSchedule={() => openScheduleForm(link)}
-                    onLock={() => openLockForm(link)}
-                    onToggleSensitive={() => handleToggleSensitive(link)}
-                    onIconUpload={(e) => handleIconUpload(e, link)}
-                    onOpenIconGallery={() => setIconPickerLinkId(link.id)}
-                    onIconColorChange={(color) => handleIconColorChange(link, color)}
-                    onClearIconColor={() => handleClearIconColor(link)}
-                    onRemoveIcon={() => handleRemoveIcon(link)}
-                    onToggleFeatured={() => handleToggleFeatured(link)}
-                    onDuplicate={() => handleDuplicate(link)}
-                    onDelete={() => setConfirmDeleteId(link.id)}
-                  />
+                  <div className="flex flex-col gap-2">
+                    {link.block_type !== "divider" && <BlockTitleField link={link} onSave={(title) => handleBlockTitleSave(link, title)} />}
+                    <BlockToolsStrip
+                      link={link}
+                      className=""
+                      iconUploading={iconUploadingId === link.id}
+                      onMoveUp={() => moveLinkByOffset(index, -1)}
+                      onMoveDown={() => moveLinkByOffset(index, 1)}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < links.length - 1}
+                      onSchedule={() => openScheduleForm(link)}
+                      onLock={() => openLockForm(link)}
+                      onToggleSensitive={() => handleToggleSensitive(link)}
+                      onIconUpload={(e) => handleIconUpload(e, link)}
+                      onOpenIconGallery={() => setIconPickerLinkId(link.id)}
+                      onIconColorChange={(color) => handleIconColorChange(link, color)}
+                      onClearIconColor={() => handleClearIconColor(link)}
+                      onRemoveIcon={() => handleRemoveIcon(link)}
+                      onToggleFeatured={() => handleToggleFeatured(link)}
+                      onDuplicate={() => handleDuplicate(link)}
+                      onDelete={() => setConfirmDeleteId(link.id)}
+                    />
+                  </div>
                 ) : (
                   <div role="tabpanel" className="flex flex-col gap-5 rounded-lg border border-app-border bg-app-surface p-3">
                     {link.block_type === "link" && (
@@ -2552,6 +2568,7 @@ function BlockSection({
                     )}
                     <BlockDesignMenu
                       inline
+                      titleMode={blockTitleMode(link.block_type)}
                       link={link}
                       chipClassName=""
                       activeClassName=""

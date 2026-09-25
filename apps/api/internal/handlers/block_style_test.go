@@ -10,7 +10,12 @@ func TestValidateBlockStyle(t *testing.T) {
 	if b, err := validateBlockStyle(blockStyle{}); err != nil || string(b) != "{}" {
 		t.Fatalf("style kosong harus jadi {}: %s %v", b, err)
 	}
+	title := blockStyle{TitleAlign: "justify", TitleSize: "2xl", TitleWeight: "bold", TitleItalic: true, TitleColor: "#5b3fe0", TitlePosition: "bottom"}
+	if _, err := validateBlockStyle(title); err != nil {
+		t.Fatalf("gaya judul valid ditolak: %v", err)
+	}
 	bad := []blockStyle{
+		{TitleAlign: "middle"}, {TitleSize: "huge"}, {TitleWeight: "black"}, {TitlePosition: "left"}, {TitleColor: "blue"},
 		{Bg: "red"}, {Text: "#12345"}, {Font: "comic-sans"}, {FontSize: "huge"},
 		{FontWeight: "900"}, {Align: "justify"}, {ButtonBg: "url(x)"}, {Rounded: "pill"},
 	}

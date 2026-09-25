@@ -1184,3 +1184,28 @@ h1, h2, h3, h4, h5 {
 .jeon-bs[data-bs-size="xl"] .text-xl { font-size: 26.0px !important; }
 .jeon-bs[data-bs-size="xl"] .text-2xl { font-size: 31.2px !important; }
 .jeon-bs[data-bs-size="xl"] { font-size: 18.2px; }
+
+/* Gaya JUDUL blok (25 September 2026, permintaan langsung pengguna:
+   perataan kiri/tengah/kanan/rata kiri-kanan, ukuran, tebal, dan posisi di
+   atas/bawah konten). Renderer menandai elemen judulnya dgn
+   [data-block-title]; judul sebaris (audio/file, sejajar tombol) diberi
+   [data-title-inline] sehingga hanya ukuran/tebal/warna yg berlaku.
+   Posisi memakai `order` pada induk yg dijadikan flex-kolom lewat :has(). */
+.jeon-bs[data-bs-t-align] [data-block-title]:not([data-title-inline]) {
+  text-align: var(--bs-t-align) !important;
+  justify-content: var(--bs-t-justify) !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+.jeon-bs[data-bs-t-align] [data-block-title]:not([data-title-inline]) > span { white-space: normal !important; overflow: visible !important; }
+.jeon-bs[data-bs-t-size] [data-block-title],
+.jeon-bs[data-bs-t-size] [data-block-title] * { font-size: var(--bs-t-size) !important; line-height: 1.25 !important; }
+.jeon-bs[data-bs-t-weight] [data-block-title],
+.jeon-bs[data-bs-t-weight] [data-block-title] * { font-weight: var(--bs-t-weight) !important; }
+.jeon-bs[data-bs-t-color] [data-block-title],
+.jeon-bs[data-bs-t-color] [data-block-title] * { color: var(--bs-t-color) !important; }
+.jeon-bs[data-bs-t-italic] [data-block-title],
+.jeon-bs[data-bs-t-italic] [data-block-title] * { font-style: italic !important; }
+.jeon-bs[data-bs-t-pos] :has(> [data-block-title]:not([data-title-inline])) { display: flex !important; flex-direction: column !important; }
+.jeon-bs[data-bs-t-pos="bottom"] [data-block-title]:not([data-title-inline]) { order: 99; margin-top: 0.5rem !important; margin-bottom: 0 !important; }
+.jeon-bs[data-bs-t-pos="top"] [data-block-title]:not([data-title-inline]) { order: -1; margin-top: 0 !important; margin-bottom: 0.5rem !important; }

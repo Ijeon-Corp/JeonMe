@@ -205,3 +205,19 @@ export function showsClickCount(link: LinkItem): boolean {
 // diam-diam no-op" di CLAUDE.md.
 export const BLOCK_TILE_CLASS =
   "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-app-border bg-app-surface text-app-ink shadow-[0_1px_2px_rgba(17,17,17,0.06)]";
+
+// blockTitleMode -- tipe blok yang menampilkan JUDUL terpisah dari isinya
+// (gaya judul per blok, 25 September 2026). Harus cocok dgn renderer yang
+// memberi [data-block-title] (PagePreview.tsx & komponen *Block.tsx):
+// "full" = judul di atas/bawah konten (posisi & perataan berlaku),
+// "inline" = judul sejajar tombol putar/unduh. Tipe lain (tautan, tombol,
+// heading, teks, pembatas, peta, katalog, akordeon, produk) memakai judul
+// sebagai label/isi utamanya sendiri, jadi tidak diberi pengaturan ini.
+const FULL_TITLE_BLOCKS = new Set(["video", "faq", "contact_form", "countdown", "embed", "gallery", "image_slider", "list", "project_showcase", "embed_link", "image", "video_image"]);
+const INLINE_TITLE_BLOCKS = new Set(["audio", "file"]);
+export function blockTitleMode(blockType: string | undefined): "full" | "inline" | undefined {
+  if (!blockType) return undefined;
+  if (FULL_TITLE_BLOCKS.has(blockType)) return "full";
+  if (INLINE_TITLE_BLOCKS.has(blockType)) return "inline";
+  return undefined;
+}

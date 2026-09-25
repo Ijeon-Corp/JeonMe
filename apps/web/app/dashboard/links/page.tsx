@@ -77,6 +77,7 @@ import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
 import ButtonStyleMenu from "@/components/dashboard/page/ButtonStyleMenu";
 import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
 import VideoSourceField from "@/components/dashboard/page/VideoSourceField";
+import BlockTitleField from "@/components/dashboard/page/BlockTitleField";
 import Toggle from "@/components/Toggle";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -84,7 +85,7 @@ import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 // blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
 // dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
-import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
+import { BLOCK_TILE_CLASS, blockPreviewFor, blockTitleMode, buildBlockTypeLabel, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
 import type { BlockStyle } from "@/lib/api-client";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
@@ -757,16 +758,29 @@ export default function DashboardLinksPage() {
   ]);
 
   useEffect(() => {
+    // active -- respons pemuatan awal yang sudah usang diabaikan (25
+    // September 2026: Strict Mode dev menjalankan efek dua kali; respons
+    // kedua yang datang belakangan MENIMPA editan pengguna yang sudah
+    // dilakukan, mis. judul blok balik ke nilai lama).
+    let active = true;
     Promise.all([getMyPage(), listLinks(), listProducts(), listMyExtraPages()])
       .then(([p, l, prod, extras]) => {
+        if (!active) return;
         setPage(p);
         setLinks(l);
         setProducts(prod);
         setAccountUsername(p.username);
         setExtraPages(extras.filter((ep) => ep.page_type !== "produk"));
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.loadFailed")))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (active) setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.loadFailed"));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
@@ -1266,6 +1280,19 @@ export default function DashboardLinksPage() {
   // ikut berubah); Commit mengirim PATCH. savedBlockStyles menyimpan nilai
   // terakhir yang dikonfirmasi server per blok, dipakai utk rollback kalau
   // PATCH gagal (preview sudah mengubah `links` sebelum commit).
+  // handleBlockTitleSave -- judul dari detail blok (BlockTitleField, 25
+  // September 2026), optimistis + rollback per field.
+  async function handleBlockTitleSave(link: LinkItem, title: string) {
+    const previousTitle = link.title;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title } : l)));
+    try {
+      await updateLink(link.id, { title });
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title: previousTitle } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateFieldFailed").replace("{field}", t("dashboard.pages.links.fieldNames.title")));
+    }
+  }
+
   const savedBlockStyles = useRef<Map<string, BlockStyle>>(new Map());
   function handleBlockStylePreview(link: LinkItem, style: BlockStyle) {
     if (!savedBlockStyles.current.has(link.id)) savedBlockStyles.current.set(link.id, link.block_style ?? {});
@@ -1727,7 +1754,11 @@ export default function DashboardLinksPage() {
     // dikosongkan lagi (kembali ke foto tidak bisa diklik), TIDAK seperti
     // "link" yang menolak string kosong (URL-nya inti blok itu sendiri).
     const urlOptionalForThisBlock = field === "url" && link.block_type === "image";
-    if (field !== "description" && !urlOptionalForThisBlock && !value) return;
+    // Judul blok opsional (19 September 2026) -- SEBELUMNYA string kosong
+    // di sini dibatalkan utk SEMUA tipe, jadi judul blok yg sudah terisi
+    // tidak pernah bisa dikosongkan lagi. Tautan & Katalog tetap wajib.
+    const titleOptionalForThisBlock = field === "title" && link.block_type !== "link" && link.block_type !== "catalog";
+    if (field !== "description" && !urlOptionalForThisBlock && !titleOptionalForThisBlock && !value) return;
     if (value === currentValue) return;
 
     const previous = links;
@@ -3446,6 +3477,7 @@ export default function DashboardLinksPage() {
               aria-labelledby="block-tab-content"
               className={`${blockEditorTab === "content" ? "flex" : "hidden"} flex-col gap-4 rounded-jmd border border-app-border bg-app-surface p-4 shadow-card`}
             >
+              {link.block_type !== "divider" && <BlockTitleField link={link} onSave={(title) => handleBlockTitleSave(link, title)} />}
                       {link.block_type === "link" && (
                         <div className="flex items-center gap-1.5">
                           {editingField?.id === link.id && editingField.field === "url" ? (
@@ -4432,6 +4464,7 @@ export default function DashboardLinksPage() {
                 )}
                 <BlockDesignMenu
                   inline
+                  titleMode={blockTitleMode(link.block_type)}
                   link={link}
                   chipClassName=""
                   activeClassName=""

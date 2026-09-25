@@ -980,6 +980,18 @@ export const dictionaries = {
               customColor: "Warna lain",
               reset: "Kembalikan ke tema",
               saveFailed: "Gagal menyimpan desain blok.",
+              titleSection: "Judul blok",
+              titleIntro: "Atur tampilan judul blok ini saja.",
+              titlePosition: "Posisi judul",
+              posTop: "Di atas konten",
+              posBottom: "Di bawah konten",
+              titleAlign: "Perataan judul",
+              alignJustify: "Rata kiri-kanan",
+              titleSize: "Ukuran judul",
+              size2xl: "Jumbo",
+              titleWeight: "Ketebalan judul",
+              titleItalic: "Miring",
+              titleColor: "Warna judul",
             },
             buttonStyle: {
               trigger: "Gaya",
@@ -1034,6 +1046,12 @@ export const dictionaries = {
           // blok di klik masuk ke page baru", referensi Linktree) --
           // menggantikan accordion inline utk isi blok (tombol tools ⋮ tetap
           // inline di kartu, TIDAK ikut pindah ke sini).
+          // blockTitleField -- judul di detail blok (25 September 2026).
+          blockTitleField: {
+            label: "Judul blok",
+            hint: "Tampil di halaman publik. Kosongkan kalau tidak perlu judul.",
+            placeholder: "Tulis judul blok",
+          },
           contentEditorPage: {
             back: "Kembali",
             tabsLabel: "Bagian editor blok",
@@ -4388,6 +4406,18 @@ export const dictionaries = {
               customColor: "Other color",
               reset: "Reset to theme",
               saveFailed: "Couldn't save the block design.",
+              titleSection: "Block title",
+              titleIntro: "Style this block's title only.",
+              titlePosition: "Title position",
+              posTop: "Above content",
+              posBottom: "Below content",
+              titleAlign: "Title alignment",
+              alignJustify: "Justified",
+              titleSize: "Title size",
+              size2xl: "Jumbo",
+              titleWeight: "Title weight",
+              titleItalic: "Italic",
+              titleColor: "Title color",
             },
             buttonStyle: {
               trigger: "Style",
@@ -4414,6 +4444,11 @@ export const dictionaries = {
             sectionLabel: "Display",
             classicLabel: "Classic",
             featuredLabel: "Featured",
+          },
+          blockTitleField: {
+            label: "Block title",
+            hint: "Shown on your public page. Leave empty for no title.",
+            placeholder: "Write a block title",
           },
           contentEditorPage: {
             back: "Back",

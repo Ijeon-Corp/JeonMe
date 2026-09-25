@@ -424,7 +424,7 @@ export default function GalleryBlock({
                 jadi baris kosong) -- disamakan, subjudul "Galeri · N foto"
                 di bawah tetap tampil apa pun kondisinya. */}
             {title && (
-              <p className={`flex items-center gap-1.5 ${isFan ? "text-2xl" : "text-lg"} font-bold leading-tight ${titleClassName}`}>
+              <p data-block-title className={`flex items-center gap-1.5 ${isFan ? "text-2xl" : "text-lg"} font-bold leading-tight ${titleClassName}`}>
                 {icon}
                 <span>{title}</span>
               </p>
@@ -698,7 +698,7 @@ export default function GalleryBlock({
   return (
     <div className={cardClassName}>
       {title && (
-        <p className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
+        <p data-block-title className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
           {icon}
           <span className="truncate">{title}</span>
         </p>
