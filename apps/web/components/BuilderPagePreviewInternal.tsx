@@ -44,6 +44,8 @@ import {
   PageSwitcher,
   StickerOverlay,
   Watermark,
+  blockStyleProps,
+  blockStyledTheme,
   buildUtmHref,
   renderBioHeader,
   renderCountdownAction,
@@ -381,7 +383,7 @@ function renderBuilderNode(
         // di PagePreview.tsx.
         <Image src={imageUrl} alt={node.title || ""} width={576} height={576} className="aspect-auto h-auto w-full rounded-xl object-cover" />
       );
-      const caption = node.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>;
+      const caption = node.title && <p data-block-title className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>;
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`w-full${ring}`}>
           {node.url && interactive ? (
@@ -432,7 +434,7 @@ function renderBuilderNode(
             // `aspect-video` selama tinggi bukan `auto`.
             <Image src={imageUrl} alt="" width={576} height={324} className="-m-2.5 mb-0 aspect-video h-auto w-[calc(100%+20px)] object-cover" />
           )}
-          <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
+          <p data-block-title className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
           {node.description && (
             // whitespace-pre-line -- kompatibilitas mundur: deskripsi Embed
             // Link yang dibuat SEBELUM diperluas jadi rich text (12
@@ -707,7 +709,7 @@ function renderBuilderNode(
             />
           ) : (
             <div className={`w-full rounded-xl p-2.5 text-center ${theme.card}`}>
-              {node.title && <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>}
+              {node.title && <p data-block-title className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>}
               {/* div ber-role button, BUKAN <button disabled> -- alasan sama
                   persis blok "button" di atas (form control disabled tidak
                   mem-bubble-kan klik, blok jadi tidak bisa dipilih di kanvas). */}
@@ -744,7 +746,7 @@ function renderBuilderNode(
             // embed_link di atas.
             <Image src={imageUrl} alt="" width={576} height={324} className="mb-3 aspect-video h-auto w-full rounded-lg object-cover" />
           )}
-          <p className={`text-sm font-bold ${theme.cardTitle}`}>{node.title}</p>
+          <p data-block-title className={`text-sm font-bold ${theme.cardTitle}`}>{node.title}</p>
           {node.description && (
             <p
               className={`jeon-rich-text-content mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75 ${theme.cardTitle}`}
@@ -992,7 +994,23 @@ export default function BuilderPagePreview({
             blockType,
             blockData: link.blockData ?? {},
           };
-          return inactiveWrap(renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId));
+          // Desain per blok (links.block_style) -- halaman builder_mode
+          // merender sebagian besar tipe blok lewat renderBuilderNode, yang
+          // SEBELUMNYA mengabaikan block_style sama sekali (laporan pengguna
+          // 25 September 2026: "fungsi design di block title belum
+          // berfungsi" -- halaman yg pernah dibuka di Builder). Pembungkus &
+          // theme bertanda sama persis dgn renderLinkOrBlock.
+          const bsProps = blockStyleProps(link.blockStyle);
+          const rendered = renderBuilderNode(node, bsProps ? blockStyledTheme(theme, link.blockStyle) : theme, data, interactive, canBuy, selectedNodeId);
+          return inactiveWrap(
+            bsProps ? (
+              <div key={link.id} className="jeon-bs" {...bsProps}>
+                {rendered}
+              </div>
+            ) : (
+              rendered
+            ),
+          );
         })}
 
         {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15

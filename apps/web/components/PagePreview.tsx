@@ -2180,7 +2180,7 @@ const BLOCK_TITLE_SIZE: Record<string, string> = { sm: "12px", base: "14px", lg:
 // blockStyleProps -- atribut + variabel CSS utk pembungkus .jeon-bs
 // (aturan lengkap di globals.css). null = blok tanpa desain khusus
 // (tidak dibungkus sama sekali, DOM identik dgn sebelumnya).
-function blockStyleProps(bs: BlockStyle | undefined): Record<string, unknown> | null {
+export function blockStyleProps(bs: BlockStyle | undefined): Record<string, unknown> | null {
   if (!bs) return null;
   const vars: Record<string, string> = {};
   const attrs: Record<string, string> = {};
@@ -2214,6 +2214,21 @@ function blockStyleProps(bs: BlockStyle | undefined): Record<string, unknown> | 
   return { ...attrs, style: vars as React.CSSProperties };
 }
 
+// blockStyledTheme -- penanda kelas di theme utk blok bergaya: kartu blok
+// (theme.card/productCard) & tombol di dalam blok (buyButton). Banyak
+// renderer membungkus kartunya dgn div luar (mis. list: div > ListBlock >
+// kartu), jadi `.jeon-bs > *` saja salah sasaran (latar jatuh ke
+// pembungkus, kartu tetap warna tema). Diekspor utk jalur Builder
+// (renderBuilderNode) yang juga harus menghormati desain per blok.
+export function blockStyledTheme(theme: PageTheme, bs: BlockStyle | undefined): PageTheme {
+  return {
+    ...theme,
+    card: `${theme.card} jeon-bs-card`,
+    productCard: `${theme.productCard} jeon-bs-card`,
+    buyButton: bs?.button_bg || bs?.button_text ? `${theme.buyButton} jeon-bs-btn` : theme.buyButton,
+  };
+}
+
 // renderLinkOrBlock -- pembungkus desain per blok di atas
 // renderLinkOrBlockInner (permintaan langsung pengguna, 25 September
 // 2026). Satu titik utk SEMUA tipe blok & semua pemanggil (halaman publik,
@@ -2230,16 +2245,7 @@ export function renderLinkOrBlock(
 ): React.ReactNode {
   const props = blockStyleProps(link.blockStyle);
   if (!props) return renderLinkOrBlockInner(link, theme, data, interactive, canBuy, onOpenCatalog);
-  // Penanda kelas di theme: kartu blok (theme.card/productCard) & tombol di
-  // dalam blok (buyButton) -- banyak renderer membungkus kartunya dgn div
-  // luar (mis. list: div > ListBlock > kartu), jadi `.jeon-bs > *` saja
-  // salah sasaran (latar jatuh ke pembungkus, kartu tetap warna tema).
-  const styledTheme = {
-    ...theme,
-    card: `${theme.card} jeon-bs-card`,
-    productCard: `${theme.productCard} jeon-bs-card`,
-    buyButton: link.blockStyle?.button_bg || link.blockStyle?.button_text ? `${theme.buyButton} jeon-bs-btn` : theme.buyButton,
-  };
+  const styledTheme = blockStyledTheme(theme, link.blockStyle);
   const inner = renderLinkOrBlockInner(link, styledTheme, data, interactive, canBuy, onOpenCatalog);
   if (!inner) return inner;
   return (
