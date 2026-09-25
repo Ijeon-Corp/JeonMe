@@ -1127,12 +1127,12 @@ h1, h2, h3, h4, h5 {
    renderer. !important sengaja: harus menang atas kelas tema & warna
    tombol inline (accent_color). Tombol di dalam blok ditandai .jeon-bs-btn
    (ditambahkan ke theme.buyButton hanya utk blok bergaya). */
-.jeon-bs[data-bs-bg] > * { background: var(--bs-bg) !important; }
+.jeon-bs[data-bs-bg] > *, .jeon-bs[data-bs-bg] .jeon-bs-card { background: var(--bs-bg) !important; }
 .jeon-bs[data-bs-text], .jeon-bs[data-bs-text] * { color: var(--bs-text) !important; }
 .jeon-bs[data-bs-font], .jeon-bs[data-bs-font] * { font-family: var(--bs-font) !important; }
 .jeon-bs[data-bs-weight] * { font-weight: var(--bs-weight) !important; }
 .jeon-bs[data-bs-align] * { text-align: var(--bs-align) !important; }
-.jeon-bs[data-bs-rounded] > * { border-radius: var(--bs-radius) !important; }
+.jeon-bs[data-bs-rounded] > *, .jeon-bs[data-bs-rounded] .jeon-bs-card { border-radius: var(--bs-radius) !important; }
 .jeon-bs[data-bs-btn-bg] .jeon-bs-btn { background: var(--bs-btn-bg) !important; border-color: var(--bs-btn-bg) !important; }
 .jeon-bs[data-bs-btn-text] .jeon-bs-btn, .jeon-bs[data-bs-btn-text] .jeon-bs-btn * { color: var(--bs-btn-text) !important; }
 /* Ukuran font: kelas Tailwind memakai ukuran tetap (bukan em), jadi tiap

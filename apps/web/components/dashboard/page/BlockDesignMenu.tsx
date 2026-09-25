@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Palette, RotateCcw } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, RotateCcw } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { CUSTOM_FONT_OPTIONS } from "@/lib/page-themes";
 import type { BlockStyle, LinkItem } from "@/lib/api-client";
@@ -19,7 +19,48 @@ import type { BlockStyle, LinkItem } from "@/lib/api-client";
 const SWATCHES = ["#ffffff", "#111111", "#d7ff60", "#d9ceff", "#ff6448", "#ffafd0", "#8ad5ff", "#5b3fe0"];
 const COMMIT_DELAY_MS = 400;
 
+const PRESETS = [
+  { key: "theme", labelKey: "presetTheme" },
+  { key: "dark", labelKey: "presetDark", bg: "#111111", text: "#ffffff", button_bg: "#d7ff60", button_text: "#111111" },
+  { key: "light", labelKey: "presetLight", bg: "#ffffff", text: "#111111", button_bg: "#111111", button_text: "#ffffff" },
+  { key: "lime", labelKey: "presetLime", bg: "#d7ff60", text: "#111111", button_bg: "#111111", button_text: "#ffffff" },
+  { key: "lavender", labelKey: "presetLavender", bg: "#d9ceff", text: "#111111", button_bg: "#111111", button_text: "#ffffff" },
+  { key: "pink", labelKey: "presetPink", bg: "#ffafd0", text: "#111111", button_bg: "#111111", button_text: "#ffffff" },
+  { key: "sky", labelKey: "presetSky", bg: "#8ad5ff", text: "#111111", button_bg: "#111111", button_text: "#ffffff" },
+] as { key: string; labelKey: string; bg?: string; text?: string; button_bg?: string; button_text?: string }[];
+
+const TITLE_ALIGNS = [
+  { value: "left", labelKey: "alignLeft", Icon: AlignLeft },
+  { value: "center", labelKey: "alignCenter", Icon: AlignCenter },
+  { value: "right", labelKey: "alignRight", Icon: AlignRight },
+  { value: "justify", labelKey: "alignJustify", Icon: AlignJustify },
+] as const;
+
+const TITLE_SIZES = [
+  { value: "sm", short: "S" },
+  { value: "base", short: "M" },
+  { value: "lg", short: "L" },
+  { value: "xl", short: "XL" },
+] as const;
+
 type ColorKey = "bg" | "text" | "button_bg" | "button_text" | "title_color";
+
+function ToolButton({ label, pressed, onClick, children }: { label: string; pressed: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-bold transition-colors ${
+        pressed ? "bg-[#111111] text-white" : "text-app-ink hover:bg-app-surface-2"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 function clean(style: BlockStyle): BlockStyle {
   const out: BlockStyle = {};
@@ -188,13 +229,80 @@ export default function BlockDesignMenu({
     );
   }
 
+  // Preset "Gaya cepat" -- penyederhanaan 25 September 2026 (pengguna:
+  // "ui dan ux nya terlalu sulit dan terlalu ramai untuk pemula"). Satu
+  // klik mengatur warna latar/teks/tombol sekaligus; kontrol detail pindah
+  // ke "Pengaturan lanjutan" yg terlipat.
+  const presetActive = (p: (typeof PRESETS)[number]) =>
+    (draft.bg ?? "") === (p.bg ?? "") && (draft.text ?? "") === (p.text ?? "") && (draft.button_bg ?? "") === (p.button_bg ?? "");
+  const isLink = link.block_type === "link";
+
   const panelBody = (
     <>
-          <div>
-            <p className="text-sm font-bold text-app-ink">{T("title")}</p>
-            <p className="text-[11px] text-app-muted">{T("intro")}</p>
+      <p className="text-[11px] text-app-muted">{T("intro")}</p>
+
+      {/* Gaya cepat -- disembunyikan utk tautan: warna tombol tautan diatur
+          lewat "Warna tombol" di atas (latar blok = tombol yg sama). */}
+      <section className={isLink ? "hidden" : "flex flex-col gap-2"}>
+        <p className="text-sm font-bold text-app-ink">{T("quickStyle")}</p>
+        <div role="group" aria-label={T("quickStyle")} className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          {PRESETS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              aria-pressed={presetActive(p)}
+              onClick={() => update({ bg: p.bg ?? "", text: p.text ?? "", button_bg: p.button_bg ?? "", button_text: p.button_text ?? "" })}
+              className="flex flex-col items-center gap-1 rounded-lg p-1 transition-colors hover:bg-app-surface-2"
+            >
+              <span
+                className={`flex h-10 w-full items-center justify-center rounded-lg border-2 font-display text-sm font-bold ${
+                  presetActive(p) ? "border-jeon-purple ring-2 ring-jeon-purple/30" : "border-app-border"
+                } ${p.bg ? "" : "bg-app-surface-2 text-app-ink"}`}
+                style={p.bg ? { backgroundColor: p.bg, color: p.text } : undefined}
+                aria-hidden
+              >
+                Aa
+              </span>
+              <span className="text-[10.5px] font-semibold text-app-ink">{T(p.labelKey)}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Judul -- satu baris toolbar ala editor teks. */}
+      <section className={titleMode ? "flex flex-col gap-2" : "hidden"}>
+        <p className="text-sm font-bold text-app-ink">{T("titleSection")}</p>
+        <div role="toolbar" aria-label={T("titleSection")} className="flex flex-wrap items-center gap-1 rounded-lg border border-app-border p-1">
+          <div className={titleMode === "full" ? "flex items-center gap-1 border-r border-app-border pr-1" : "hidden"}>
+            <ToolButton label={T("posTop")} pressed={draft.title_position === "top"} onClick={() => update({ title_position: draft.title_position === "top" ? undefined : "top" })}>{T("posTopShort")}</ToolButton>
+            <ToolButton label={T("posBottom")} pressed={draft.title_position === "bottom"} onClick={() => update({ title_position: draft.title_position === "bottom" ? undefined : "bottom" })}>{T("posBottomShort")}</ToolButton>
           </div>
-          {colorRow("bg", T("bg"))}
+          <div className={titleMode === "full" ? "flex items-center gap-1 border-r border-app-border pr-1" : "hidden"}>
+            {TITLE_ALIGNS.map((a) =>
+              <ToolButton key={a.value} label={T(a.labelKey)} pressed={draft.title_align === a.value} onClick={() => update({ title_align: draft.title_align === a.value ? undefined : a.value })}><a.Icon className="h-4 w-4" aria-hidden /></ToolButton>
+            )}
+          </div>
+          <div className="flex items-center gap-1 border-r border-app-border pr-1">
+            {TITLE_SIZES.map((sz) =>
+              <ToolButton key={sz.value} label={`${T("titleSize")} ${sz.short}`} pressed={draft.title_size === sz.value} onClick={() => update({ title_size: draft.title_size === sz.value ? undefined : sz.value })}>{sz.short}</ToolButton>
+            )}
+          </div>
+          <ToolButton label={T("weightBold")} pressed={draft.title_weight === "bold"} onClick={() => update({ title_weight: draft.title_weight === "bold" ? undefined : "bold" })}><Bold className="h-4 w-4" aria-hidden /></ToolButton>
+          <ToolButton label={T("titleItalic")} pressed={Boolean(draft.title_italic)} onClick={() => update({ title_italic: !draft.title_italic })}><Italic className="h-4 w-4" aria-hidden /></ToolButton>
+        </div>
+      </section>
+
+      {/* Pengaturan lanjutan -- terlipat secara bawaan. */}
+      <details className="group rounded-lg border border-app-border">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="block text-sm font-bold text-app-ink">{T("advanced")}</span>
+            <span className="block text-[11px] text-app-muted">{T("advancedHint")}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 flex-shrink-0 text-app-muted transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="flex flex-col gap-3 border-t border-app-border p-3">
+          <div className={isLink ? "hidden" : "contents"}>{colorRow("bg", T("bg"))}</div>
           {colorRow("text", T("text"))}
           <div>
             <label htmlFor={`bs-font-${link.id}`} className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-app-muted">
@@ -230,90 +338,48 @@ export default function BlockDesignMenu({
             { value: "center", label: T("alignCenter") },
             { value: "right", label: T("alignRight") },
           ])}
-          {colorRow("button_bg", T("buttonBg"))}
-          {colorRow("button_text", T("buttonText"))}
+          <div className={isLink ? "hidden" : "contents"}>
+            {colorRow("button_bg", T("buttonBg"))}
+            {colorRow("button_text", T("buttonText"))}
+          </div>
           {segmented("rounded", T("rounded"), [
             { value: "none", label: T("roundedNone") },
             { value: "sm", label: T("roundedSm") },
             { value: "md", label: T("roundedMd") },
             { value: "full", label: T("roundedFull") },
           ])}
-          {titleMode && (
-            <section className="flex flex-col gap-3 border-t border-app-border pt-3">
-              <div>
-                <p className="text-sm font-bold text-app-ink">{T("titleSection")}</p>
-                <p className="text-[11px] text-app-muted">{T("titleIntro")}</p>
-              </div>
-              {/* Dipanggil TANPA syarat lalu disembunyikan utk judul sebaris:
-                  pemanggilan bersyarat membuat linter React Compiler salah
-                  mengira `update` (memakai ref) dipanggil saat render. */}
-              <div className={titleMode === "full" ? "contents" : "hidden"}>
-                {segmented("title_position", T("titlePosition"), [
-                  { value: "top", label: T("posTop") },
-                  { value: "bottom", label: T("posBottom") },
-                ])}
-                {segmented("title_align", T("titleAlign"), [
-                  { value: "left", label: T("alignLeft") },
-                  { value: "center", label: T("alignCenter") },
-                  { value: "right", label: T("alignRight") },
-                  { value: "justify", label: T("alignJustify") },
-                ])}
-              </div>
-              {segmented("title_size", T("titleSize"), [
-                { value: "sm", label: T("sizeSm") },
-                { value: "base", label: T("sizeBase") },
-                { value: "lg", label: T("sizeLg") },
-                { value: "xl", label: T("sizeXl") },
-                { value: "2xl", label: T("size2xl") },
-              ])}
-              <div className="flex flex-wrap items-end gap-3">
-                {segmented("title_weight", T("titleWeight"), [
-                  { value: "normal", label: T("weightNormal") },
-                  { value: "semibold", label: T("weightSemibold") },
-                  { value: "bold", label: T("weightBold") },
-                ])}
-                <button
-                  type="button"
-                  aria-pressed={Boolean(draft.title_italic)}
-                  onClick={() => update({ title_italic: !draft.title_italic })}
-                  className={`rounded-md border px-2 py-1 text-[11px] font-semibold italic transition-colors ${
-                    draft.title_italic ? "border-jeon-purple bg-jeon-lavender/60 text-jeon-purple" : "border-app-border text-app-ink hover:bg-app-surface-2"
-                  }`}
-                >
-                  {T("titleItalic")}
-                </button>
-              </div>
-              {colorRow("title_color", T("titleColor"))}
-            </section>
-          )}
-          {Object.keys(clean(draft)).length > 0 && (
-            <button
-              type="button"
-              onClick={() =>
-                update({
-                  bg: "",
-                  text: "",
-                  font: "",
-                  font_size: undefined,
-                  font_weight: undefined,
-                  align: undefined,
-                  button_bg: "",
-                  button_text: "",
-                  rounded: undefined,
-                  title_align: undefined,
-                  title_size: undefined,
-                  title_weight: undefined,
-                  title_italic: false,
-                  title_color: "",
-                  title_position: undefined,
-                })
-              }
-              className="inline-flex items-center gap-1.5 self-start rounded-lg border border-app-border px-2.5 py-1.5 text-[11px] font-semibold text-app-ink hover:bg-app-surface-2"
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-              {T("reset")}
-            </button>
-          )}
+          <div className={titleMode ? "contents" : "hidden"}>{colorRow("title_color", T("titleColor"))}</div>
+        </div>
+      </details>
+
+      {Object.keys(clean(draft)).length > 0 && (
+        <button
+          type="button"
+          onClick={() =>
+            update({
+              bg: "",
+              text: "",
+              font: "",
+              font_size: undefined,
+              font_weight: undefined,
+              align: undefined,
+              button_bg: "",
+              button_text: "",
+              rounded: undefined,
+              title_align: undefined,
+              title_size: undefined,
+              title_weight: undefined,
+              title_italic: false,
+              title_color: "",
+              title_position: undefined,
+            })
+          }
+          className="inline-flex items-center gap-1.5 self-start rounded-lg border border-app-border px-2.5 py-1.5 text-[11px] font-semibold text-app-ink hover:bg-app-surface-2"
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+          {T("reset")}
+        </button>
+      )}
     </>
   );
 

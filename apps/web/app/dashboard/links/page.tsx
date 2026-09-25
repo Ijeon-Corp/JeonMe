@@ -4451,7 +4451,6 @@ export default function DashboardLinksPage() {
               >
                 {link.block_type === "link" && (
                   <section className="flex flex-col gap-3 border-b border-app-border pb-5">
-                    <h3 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.linkCard.buttonStyle.trigger")}</h3>
                     <ButtonStyleMenu
                       inline
                       link={link}

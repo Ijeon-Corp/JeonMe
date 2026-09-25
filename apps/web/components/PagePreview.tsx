@@ -2230,7 +2230,16 @@ export function renderLinkOrBlock(
 ): React.ReactNode {
   const props = blockStyleProps(link.blockStyle);
   if (!props) return renderLinkOrBlockInner(link, theme, data, interactive, canBuy, onOpenCatalog);
-  const styledTheme = link.blockStyle?.button_bg || link.blockStyle?.button_text ? { ...theme, buyButton: `${theme.buyButton} jeon-bs-btn` } : theme;
+  // Penanda kelas di theme: kartu blok (theme.card/productCard) & tombol di
+  // dalam blok (buyButton) -- banyak renderer membungkus kartunya dgn div
+  // luar (mis. list: div > ListBlock > kartu), jadi `.jeon-bs > *` saja
+  // salah sasaran (latar jatuh ke pembungkus, kartu tetap warna tema).
+  const styledTheme = {
+    ...theme,
+    card: `${theme.card} jeon-bs-card`,
+    productCard: `${theme.productCard} jeon-bs-card`,
+    buyButton: link.blockStyle?.button_bg || link.blockStyle?.button_text ? `${theme.buyButton} jeon-bs-btn` : theme.buyButton,
+  };
   const inner = renderLinkOrBlockInner(link, styledTheme, data, interactive, canBuy, onOpenCatalog);
   if (!inner) return inner;
   return (

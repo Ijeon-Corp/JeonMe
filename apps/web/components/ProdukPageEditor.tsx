@@ -2562,7 +2562,6 @@ function BlockSection({
                   <div role="tabpanel" className="flex flex-col gap-5 rounded-lg border border-app-border bg-app-surface p-3">
                     {link.block_type === "link" && (
                       <section className="flex flex-col gap-3 border-b border-app-border pb-5">
-                        <h3 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.linkCard.buttonStyle.trigger")}</h3>
                         <ButtonStyleMenu inline link={link} chipClassName="" activeClassName="" idleClassName="" onChange={(patch) => handleButtonStyleChange(link, patch)} />
                       </section>
                     )}
