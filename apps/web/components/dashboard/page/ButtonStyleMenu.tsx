@@ -22,12 +22,17 @@ export default function ButtonStyleMenu({
   chipClassName,
   activeClassName,
   idleClassName,
+  inline = false,
   onChange,
 }: {
   link: LinkItem;
   chipClassName: string;
   activeClassName: string;
   idleClassName: string;
+  // inline -- tampil sebagai panel biasa (tab "Desain" editor blok, 25
+  // September 2026: "daripada menumpuk dibawah style dan design lebih
+  // bagus dibuat di tab baru"), tanpa tombol pemicu & popover.
+  inline?: boolean;
   onChange: (patch: ButtonStylePatch) => void;
 }) {
   const { t } = useLocale();
@@ -71,27 +76,8 @@ export default function ButtonStyleMenu({
 
   const active = Boolean(link.accent_color || link.badge_text);
 
-  return (
-    <div ref={menuRef} className="sm:relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="true"
-        aria-expanded={open}
-        title={T("trigger")}
-        className={`${chipClassName} ${open || active ? activeClassName : idleClassName}`}
-      >
-        {link.accent_color ? (
-          <span className="h-4 w-4 flex-shrink-0 rounded-full border border-[#111111]" style={{ backgroundColor: link.accent_color }} aria-hidden />
-        ) : (
-          <PaintBucket className="h-4 w-4 flex-shrink-0" aria-hidden />
-        )}
-        {T("trigger")}
-        <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
-      </button>
-      {open && (
-        <div className="absolute inset-x-0 top-full z-30 mt-1.5 flex flex-col gap-3 rounded-xl border border-app-border bg-app-surface p-3 shadow-soft sm:inset-x-auto sm:left-0 sm:w-72">
+  const panelBody = (
+    <>
           <div>
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">{T("colorLabel")}</p>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -155,7 +141,32 @@ export default function ButtonStyleMenu({
             />
             <p className="mt-1 text-[10.5px] text-app-muted">{T("badgeHelp")}</p>
           </div>
-        </div>
+    </>
+  );
+
+  if (inline) return <div className="flex flex-col gap-3">{panelBody}</div>;
+
+  return (
+    <div ref={menuRef} className="sm:relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        title={T("trigger")}
+        className={`${chipClassName} ${open || active ? activeClassName : idleClassName}`}
+      >
+        {link.accent_color ? (
+          <span className="h-4 w-4 flex-shrink-0 rounded-full border border-[#111111]" style={{ backgroundColor: link.accent_color }} aria-hidden />
+        ) : (
+          <PaintBucket className="h-4 w-4 flex-shrink-0" aria-hidden />
+        )}
+        {T("trigger")}
+        <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="absolute inset-x-0 top-full z-30 mt-1.5 flex flex-col gap-3 rounded-xl border border-app-border bg-app-surface p-3 shadow-soft sm:inset-x-auto sm:left-0 sm:w-72">{panelBody}</div>
       )}
     </div>
   );

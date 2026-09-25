@@ -32,6 +32,7 @@ export default function BlockDesignMenu({
   chipClassName,
   activeClassName,
   idleClassName,
+  inline = false,
   onPreview,
   onCommit,
 }: {
@@ -39,6 +40,10 @@ export default function BlockDesignMenu({
   chipClassName: string;
   activeClassName: string;
   idleClassName: string;
+  // inline -- tampil sebagai panel biasa (tab "Desain" editor blok, 25
+  // September 2026: "daripada menumpuk dibawah style dan design lebih
+  // bagus dibuat di tab baru"), tanpa tombol pemicu & popover.
+  inline?: boolean;
   onPreview: (style: BlockStyle) => void;
   onCommit: (style: BlockStyle) => void;
 }) {
@@ -177,27 +182,8 @@ export default function BlockDesignMenu({
     );
   }
 
-  return (
-    <div ref={menuRef} className="sm:relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="true"
-        aria-expanded={open}
-        title={T("title")}
-        className={`${chipClassName} ${open || active ? activeClassName : idleClassName}`}
-      >
-        {saved.bg ? (
-          <span className="h-4 w-4 flex-shrink-0 rounded-full border border-[#111111]" style={{ backgroundColor: saved.bg }} aria-hidden />
-        ) : (
-          <Palette className="h-4 w-4 flex-shrink-0" aria-hidden />
-        )}
-        {T("trigger")}
-        <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
-      </button>
-      {open && (
-        <div className="absolute inset-x-0 top-full z-30 mt-1.5 flex max-h-[70vh] flex-col gap-3 overflow-y-auto rounded-xl border border-app-border bg-app-surface p-3 shadow-soft sm:inset-x-auto sm:left-0 sm:w-80">
+  const panelBody = (
+    <>
           <div>
             <p className="text-sm font-bold text-app-ink">{T("title")}</p>
             <p className="text-[11px] text-app-muted">{T("intro")}</p>
@@ -256,7 +242,32 @@ export default function BlockDesignMenu({
               {T("reset")}
             </button>
           )}
-        </div>
+    </>
+  );
+
+  if (inline) return <div className="flex flex-col gap-3">{panelBody}</div>;
+
+  return (
+    <div ref={menuRef} className="sm:relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        title={T("title")}
+        className={`${chipClassName} ${open || active ? activeClassName : idleClassName}`}
+      >
+        {saved.bg ? (
+          <span className="h-4 w-4 flex-shrink-0 rounded-full border border-[#111111]" style={{ backgroundColor: saved.bg }} aria-hidden />
+        ) : (
+          <Palette className="h-4 w-4 flex-shrink-0" aria-hidden />
+        )}
+        {T("trigger")}
+        <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="absolute inset-x-0 top-full z-30 mt-1.5 flex max-h-[70vh] flex-col gap-3 overflow-y-auto rounded-xl border border-app-border bg-app-surface p-3 shadow-soft sm:inset-x-auto sm:left-0 sm:w-80">{panelBody}</div>
       )}
     </div>
   );

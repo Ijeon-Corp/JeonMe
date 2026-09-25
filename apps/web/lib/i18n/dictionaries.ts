@@ -1021,6 +1021,10 @@ export const dictionaries = {
           // inline di kartu, TIDAK ikut pindah ke sini).
           contentEditorPage: {
             back: "Kembali",
+            tabsLabel: "Bagian editor blok",
+            tabContent: "Konten",
+            tabDesign: "Desain",
+            tabTools: "Alat",
             // discardDraft* -- bug UI/UX ditemukan 21 September 2026: klik
             // "Kembali"/"Batal" sebelumnya membuang draft yang sudah diketik
             // tanpa peringatan sama sekali untuk 10 tipe blok berbasis buffer.
@@ -4384,6 +4388,10 @@ export const dictionaries = {
           },
           contentEditorPage: {
             back: "Back",
+            tabsLabel: "Block editor sections",
+            tabContent: "Content",
+            tabDesign: "Design",
+            tabTools: "Tools",
             discardDraftTitle: "Discard changes?",
             discardDraftText: "Unsaved changes to this block will be lost.",
             discardDraftConfirm: "Yes, Discard",

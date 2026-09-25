@@ -74,6 +74,8 @@ import FormField from "@/components/FormField";
 import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import BlockToolsStrip from "@/components/dashboard/page/BlockToolsStrip";
+import ButtonStyleMenu from "@/components/dashboard/page/ButtonStyleMenu";
+import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
 import Toggle from "@/components/Toggle";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -449,6 +451,11 @@ export default function DashboardLinksPage() {
   // Agustus 2026): unggah foto/audio langsung dari kartu blok (bukan lewat
   // form pembuatan blok, lihat catatan CONTENT_TILES) -- id blok yang
   // sedang mengunggah, null berarti tidak ada unggahan berjalan.
+  // blockEditorTab -- tab "Konten"/"Desain" editor blok (25 September 2026,
+  // permintaan langsung pengguna: "daripada menumpuk dibawah style dan
+  // design lebih bagus dibuat di tab baru"). Kembali ke "content" tiap blok
+  // lain dibuka (openContentEdit).
+  const [blockEditorTab, setBlockEditorTab] = useState<"content" | "design">("content");
   const [galleryUploadingId, setGalleryUploadingId] = useState<string | null>(null);
   // "Foto di dalam foto" (permintaan langsung pengguna, 21 September 2026) --
   // `nestedPanelOpenFor` menyimpan URL foto UTAMA yang panel "kelola foto
@@ -2043,6 +2050,7 @@ export default function DashboardLinksPage() {
 
   function openContentEdit(link: LinkItem) {
     setContentEditId(link.id);
+    setBlockEditorTab("content");
     loadContentEditBuffers(link);
   }
 
@@ -3393,7 +3401,32 @@ export default function DashboardLinksPage() {
                 {link.title || blockTypeLabel[link.block_type] || link.block_type}
               </h2>
             </div>
-            <div className="flex flex-col gap-4 rounded-jmd border border-app-border bg-app-surface p-4 shadow-card">
+            <div role="tablist" aria-label={t("dashboard.pages.links.contentEditorPage.tabsLabel")} className="flex gap-1 rounded-full border-2 border-[#111111] bg-app-surface p-1 self-start">
+              {(["content", "design"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  id={`block-tab-${tab}`}
+                  aria-selected={blockEditorTab === tab}
+                  aria-controls={`block-panel-${tab}`}
+                  onClick={() => setBlockEditorTab(tab)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                    blockEditorTab === tab ? "bg-[#111111] text-white" : "text-app-ink hover:bg-app-surface-2"
+                  }`}
+                >
+                  {t(`dashboard.pages.links.contentEditorPage.tab${tab === "content" ? "Content" : "Design"}`)}
+                </button>
+              ))}
+            </div>
+            {/* Tab Konten TIDAK di-unmount saat tab Desain aktif (cuma
+                disembunyikan) -- editan isi yang belum disimpan tetap utuh. */}
+            <div
+              id="block-panel-content"
+              role="tabpanel"
+              aria-labelledby="block-tab-content"
+              className={`${blockEditorTab === "content" ? "flex" : "hidden"} flex-col gap-4 rounded-jmd border border-app-border bg-app-surface p-4 shadow-card`}
+            >
                       {link.block_type === "link" && (
                         <div className="flex items-center gap-1.5">
                           {editingField?.id === link.id && editingField.field === "url" ? (
@@ -3529,9 +3562,6 @@ export default function DashboardLinksPage() {
                 onOpenIconGallery={() => setIconPickerLinkId(link.id)}
                 onIconColorChange={(color) => handleIconColorChange(link, color)}
                 onClearIconColor={() => handleClearIconColor(link)}
-                onButtonStyleChange={(patch) => handleButtonStyleChange(link, patch)}
-                onBlockStylePreview={(style) => handleBlockStylePreview(link, style)}
-                onBlockStyleCommit={(style) => handleBlockStyleCommit(link, style)}
                 onRemoveIcon={() => handleRemoveIcon(link)}
                 onToggleFeatured={() => handleToggleFeatured(link)}
                 hideFeaturedToggle
@@ -4345,6 +4375,37 @@ export default function DashboardLinksPage() {
                 </div>
               )}
             </div>
+            {blockEditorTab === "design" && (
+              <div
+                id="block-panel-design"
+                role="tabpanel"
+                aria-labelledby="block-tab-design"
+                className="flex flex-col gap-5 rounded-jmd border border-app-border bg-app-surface p-4 shadow-card"
+              >
+                {link.block_type === "link" && (
+                  <section className="flex flex-col gap-3 border-b border-app-border pb-5">
+                    <h3 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.linkCard.buttonStyle.trigger")}</h3>
+                    <ButtonStyleMenu
+                      inline
+                      link={link}
+                      chipClassName=""
+                      activeClassName=""
+                      idleClassName=""
+                      onChange={(patch) => handleButtonStyleChange(link, patch)}
+                    />
+                  </section>
+                )}
+                <BlockDesignMenu
+                  inline
+                  link={link}
+                  chipClassName=""
+                  activeClassName=""
+                  idleClassName=""
+                  onPreview={(style) => handleBlockStylePreview(link, style)}
+                  onCommit={(style) => handleBlockStyleCommit(link, style)}
+                />
+              </div>
+            )}
           </div>
         );
       })()}
