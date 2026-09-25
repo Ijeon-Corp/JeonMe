@@ -78,6 +78,7 @@ import type { PagePreviewData } from "@/components/PagePreview";
 import type { SocialPlatformKey } from "@/lib/social-links";
 import type { ProfileExtras } from "@/lib/api-client";
 import { detectLinkIcon } from "@/lib/link-icons";
+import { THEME_CTA_COLORS } from "@/lib/theme-cta-colors";
 import {
   IconBadgeCheck,
   IconBook,
@@ -541,34 +542,21 @@ export interface OrderedTemplateItem {
   linkBadgeText?: string;
 }
 
-// CATEGORY_ACCENT_PALETTE + inferTemplateIconKey -- permintaan langsung
-// pengguna 25 September 2026 (hasil audit visual template: cuma 18/148
-// template yg tombolnya berwarna & berikon, 12 template masih jatuh ke
-// ikon rantai generik): "give every template gallery icons and per-button
-// colours, using a palette per category". Diterapkan TERPUSAT di
-// orderedTemplateItems (bukan ditulis ulang di 130+ template satu per
-// satu) sehingga pratinjau & hasil "Terapkan Template" otomatis identik.
-// Template yang SUDAH mengatur gaya tombolnya sendiri (Profil Kreator,
-// kartu homepage -- ada accentColor/iconKey eksplisit) tidak disentuh.
-// Warna diambil dari keluarga warna jeon.id (lime/lavender/pink/koral/
-// langit/mint); teks di atasnya dipilih readableTextOn (PagePreview.tsx)
-// berdasarkan rasio kontras WCAG, jadi warna terang maupun pekat aman.
-const CATEGORY_ACCENT_PALETTE: Record<string, string[]> = {
-  creator: ["#ffafd0", "#d9ceff", "#d7ff60"],
-  business: ["#8ad5ff", "#d9ceff", "#e2e8f0"],
-  shop: ["#ff6448", "#ffd166", "#ffafd0"],
-  education: ["#ffd166", "#8ad5ff", "#83f98b"],
-  entertainment: ["#5b3fe0", "#ff6448", "#ffafd0"],
-  local: ["#ffb86b", "#83f98b", "#ffd166"],
-  tourism: ["#5eead4", "#8ad5ff", "#ffd166"],
-  lifestyle: ["#ffafd0", "#ffd6c9", "#d9ceff"],
-  special: ["#d7ff60", "#ffafd0", "#8ad5ff"],
-  health: ["#83f98b", "#8ad5ff", "#d9ceff"],
-  sports: ["#ff6448", "#d7ff60", "#8ad5ff"],
-  coaching: ["#d9ceff", "#ffd166", "#83f98b"],
-  digital: ["#5b3fe0", "#d7ff60", "#8ad5ff"],
-  marketing: ["#ff6448", "#ffd166", "#5b3fe0"],
-};
+// Warna tombol + inferTemplateIconKey -- permintaan langsung pengguna 25
+// September 2026 (hasil audit visual template: cuma 18/148 template yg
+// tombolnya berwarna & berikon, 12 template masih jatuh ke ikon rantai
+// generik). Diterapkan TERPUSAT di orderedTemplateItems (bukan ditulis
+// ulang di 130+ template satu per satu) sehingga pratinjau & hasil
+// "Terapkan Template" otomatis identik. Template yang SUDAH mengatur gaya
+// tombolnya sendiri (Profil Kreator, kartu homepage -- ada accentColor/
+// iconKey eksplisit) tidak disentuh.
+//
+// Warna: versi pertama memakai palet tetap per kategori (koral/kuning/
+// ungu dst) utk SETIAP tombol -- pengguna menilainya jelek ("kenapa semua
+// template quick setup berwarna orange dan kuning"), karena mengabaikan
+// tema (tombol oranye di atas foto laut biru, dst). Sekarang hanya tombol
+// PERTAMA yang diberi warna, yaitu warna tombol aksi tema itu sendiri
+// (lib/theme-cta-colors.ts); teks di atasnya dipilih readableTextOn.
 
 // Urutan penting: kata kunci yang lebih spesifik dicek lebih dulu (mis.
 // "newsletter" sebelum "baca/artikel", "menu" sebelum "paket").
@@ -624,14 +612,17 @@ export function orderedTemplateItems(t: QuickSetupTemplate): OrderedTemplateItem
     showcaseImagePath: b.showcaseImagePath,
   });
   const autoStyle = !t.links.some((l) => l.accentColor || l.iconKey);
-  const palette = autoStyle ? CATEGORY_ACCENT_PALETTE[t.category] : undefined;
+  // Hanya tombol PERTAMA (ajakan utama) yang diberi warna -- warna tombol
+  // aksi tema itu sendiri (THEME_CTA_COLORS), bukan palet tetap per
+  // kategori; tombol lain ikut gaya kartu tema.
+  const primaryAccent = autoStyle ? THEME_CTA_COLORS[t.theme] : undefined;
   const linkItems: OrderedTemplateItem[] = t.links.map((l, i) => ({
     title: l.title,
     blockType: "link" as const,
     url: l.url,
     description: l.description,
     iconKey: l.iconKey ?? (autoStyle ? inferTemplateIconKey(l.title, l.url) : undefined),
-    accentColor: l.accentColor ?? (palette ? palette[i % palette.length] : undefined),
+    accentColor: l.accentColor ?? (i === 0 ? primaryAccent : undefined),
     linkBadgeText: l.badgeText,
   }));
   if (t.showcaseFirst) {
