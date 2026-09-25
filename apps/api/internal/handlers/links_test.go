@@ -1287,3 +1287,87 @@ func TestLinksSubmitContactForm_NestedInSection(t *testing.T) {
 		}
 	})
 }
+
+// TestLinksUpdate_BlockStyle -- desain per blok (migrasi 000110): disimpan
+// utuh, divalidasi, TIDAK terhapus saat field lain diubah, ikut
+// terduplikasi, dan {} mengembalikan blok ke gaya tema.
+func TestLinksUpdate_BlockStyle(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.PATCH("/links/:id", links.Update)
+	g.GET("/links", links.List)
+	g.POST("/links/:id/duplicate", links.Duplicate)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{"title": "Blok Gaya", "url": "https://example.com/gaya"}, headers)
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	getStyle := func() map[string]string {
+		rec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+		var items []linkItem
+		if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+			t.Fatalf("decode list: %v", err)
+		}
+		for _, it := range items {
+			if it.ID == created.ID {
+				var m map[string]string
+				if err := json.Unmarshal(it.BlockStyle, &m); err != nil {
+					t.Fatalf("decode block_style %s: %v", it.BlockStyle, err)
+				}
+				return m
+			}
+		}
+		t.Fatalf("blok %s tidak ada di list", created.ID)
+		return nil
+	}
+
+	if s := getStyle(); len(s) != 0 {
+		t.Fatalf("blok baru harus block_style kosong, dapat %v", s)
+	}
+	style := map[string]string{"bg": "#111111", "text": "#ffffff", "font": "poppins", "font_size": "lg", "font_weight": "bold", "align": "center", "button_bg": "#d7ff60", "button_text": "#111111", "rounded": "full"}
+	if rec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"block_style": style}, headers); rec.Code != http.StatusOK {
+		t.Fatalf("simpan style gagal: %d %s", rec.Code, rec.Body.String())
+	}
+	if s := getStyle(); s["bg"] != "#111111" || s["font_size"] != "lg" || s["rounded"] != "full" || len(s) != len(style) {
+		t.Fatalf("style tersimpan = %v", s)
+	}
+	if rec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"block_style": map[string]string{"bg": "red"}}, headers); rec.Code != http.StatusBadRequest {
+		t.Fatalf("warna tidak valid harus 400, dapat %d", rec.Code)
+	}
+	if rec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"title": "Judul Baru"}, headers); rec.Code != http.StatusOK {
+		t.Fatalf("update judul gagal: %d", rec.Code)
+	}
+	if s := getStyle(); s["bg"] != "#111111" {
+		t.Fatalf("style hilang setelah update field lain: %v", s)
+	}
+	dupRec := doJSON(t, router, http.MethodPost, "/links/"+created.ID+"/duplicate", nil, headers)
+	if dupRec.Code >= 300 {
+		t.Fatalf("duplikasi gagal: %d %s", dupRec.Code, dupRec.Body.String())
+	}
+	listRec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items []linkItem
+	_ = json.Unmarshal(listRec.Body.Bytes(), &items)
+	copied := 0
+	for _, it := range items {
+		if it.ID != created.ID && strings.Contains(string(it.BlockStyle), "#111111") {
+			copied++
+		}
+	}
+	if copied != 1 {
+		t.Fatalf("salinan blok harus membawa block_style, items=%d", len(items))
+	}
+	if rec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"block_style": map[string]string{}}, headers); rec.Code != http.StatusOK {
+		t.Fatalf("reset style gagal: %d", rec.Code)
+	}
+	if s := getStyle(); len(s) != 0 {
+		t.Fatalf("setelah reset style harus kosong, dapat %v", s)
+	}
+}

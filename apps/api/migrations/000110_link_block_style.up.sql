@@ -1,0 +1,20 @@
+-- Desain per blok -- permintaan langsung pengguna, 25 September 2026:
+-- "tambahkan juga fitur design di tiap blok detail seperti warna font
+-- background button dll seperti yang ada di menu design jadi bisa edit
+-- individual", disusul "lalu juga ada ukuran font tipe font dll juga".
+-- Menu Desain (pages.custom_*) berlaku SEHALAMAN; kolom ini menimpa
+-- tampilan SATU blok saja: warna latar, warna teks, jenis/ukuran/tebal
+-- font, perataan teks, warna tombol & teks tombol di dalam blok, dan
+-- bentuk sudut. Bentuk (semua opsional, kosong = ikut tema):
+--   {"bg":"#rrggbb","text":"#rrggbb","font":"poppins","font_size":"lg",
+--    "font_weight":"bold","align":"center","button_bg":"#rrggbb",
+--    "button_text":"#rrggbb","rounded":"full"}
+--
+-- SATU kolom JSONB, BUKAN di dalam block_data: beberapa form edit isi blok
+-- mengirim ulang block_data utuh (mis. peta/teks), gaya yang disimpan di
+-- sana bisa ikut terhapus saat isi blok diedit. Divalidasi di handler
+-- (hex/enum), pola sama seperti accent_color (000109).
+--
+-- ADDITIVE dgn default '{}' -- aman dijalankan sebelum container lama
+-- diganti (aturan DROP/RENAME di CLAUDE.md); kode lama tidak membacanya.
+ALTER TABLE links ADD COLUMN IF NOT EXISTS block_style JSONB NOT NULL DEFAULT '{}'::jsonb;

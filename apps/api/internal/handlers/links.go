@@ -130,6 +130,8 @@ type linkItem struct {
 	// apa pun, dirender PagePreview.tsx.
 	AccentColor string `json:"accent_color"`
 	BadgeText   string `json:"badge_text"`
+	// BlockStyle -- desain per blok (migrasi 000110, lihat block_style.go).
+	BlockStyle json.RawMessage `json:"block_style"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): tautan
 	// tampil sebagai kartu thumbnail 16:9, bukan baris teks. ThumbnailURL
@@ -161,7 +163,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
-			l.icon_key, l.icon_color, l.is_featured, l.thumbnail_url, l.description, l.accent_color, l.badge_text,
+			l.icon_key, l.icon_color, l.is_featured, l.thumbnail_url, l.description, l.accent_color, l.badge_text, l.block_style,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -179,7 +181,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
 			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
-			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.Description, &it.AccentColor, &it.BadgeText, &it.ClickCount); err == nil {
+			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.Description, &it.AccentColor, &it.BadgeText, &it.BlockStyle, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -1932,6 +1934,9 @@ type updateLinkRequest struct {
 	// hex divalidasi manual di Update dgn alasan yang sama spt IconColor.
 	AccentColor *string `json:"accent_color" binding:"omitempty,max=7"`
 	BadgeText   *string `json:"badge_text" binding:"omitempty,max=24"`
+	// BlockStyle -- desain per blok (migrasi 000110), whole-replace: objek
+	// kosong {} = kembali ke tema. nil = tidak diubah.
+	BlockStyle *blockStyle `json:"block_style"`
 }
 
 // hexColorPattern -- format PERSIS yang dihasilkan <input type="color">
@@ -1960,6 +1965,15 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	if req.AccentColor != nil && *req.AccentColor != "" && !hexColorPattern.MatchString(*req.AccentColor) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "warna tombol wajib format hex #rrggbb"})
 		return
+	}
+	var blockStyleJSON []byte
+	if req.BlockStyle != nil {
+		b, err := validateBlockStyle(*req.BlockStyle)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		blockStyleJSON = b
 	}
 	if req.BadgeText != nil {
 		trimmed := strings.TrimSpace(*req.BadgeText)
@@ -2187,10 +2201,11 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			icon_color = COALESCE($13, icon_color),
 			description = COALESCE($14, description),
 			accent_color = COALESCE($15, accent_color),
-			badge_text = COALESCE($16, badge_text)
-		WHERE id = $17
+			badge_text = COALESCE($16, badge_text),
+			block_style = COALESCE($17, block_style)
+		WHERE id = $18
 	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON,
-		req.IsFeatured, autoThumbnail, req.IconKey, req.IconColor, req.Description, req.AccentColor, req.BadgeText, linkID)
+		req.IsFeatured, autoThumbnail, req.IconKey, req.IconColor, req.Description, req.AccentColor, req.BadgeText, blockStyleJSON, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
@@ -4270,11 +4285,11 @@ func (h *LinksHandler) Duplicate(c *gin.Context) {
 		INSERT INTO links (
 			id, page_id, title, url, position, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text, block_style
 		)
 		SELECT $1, page_id, LEFT(title || ' (Salinan)', 100), url, $2, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text, block_style
 		FROM links WHERE id = $3
 	`, newID, nextPosition, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menduplikasi blok"})
@@ -4563,7 +4578,7 @@ func (h *LinksHandler) ListForPage(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, title, url, position, is_active, starts_at, ends_at,
 			COALESCE(lock_type, ''), lock_code, lock_min_age, block_type, block_data, custom_icon_url,
-			icon_key, icon_color, is_featured, thumbnail_url, description, accent_color, badge_text
+			icon_key, icon_color, is_featured, thumbnail_url, description, accent_color, badge_text, block_style
 		FROM links WHERE page_id = $1
 		ORDER BY position ASC
 	`, pageID)
@@ -4578,7 +4593,7 @@ func (h *LinksHandler) ListForPage(c *gin.Context) {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
 			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
-			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.Description, &it.AccentColor, &it.BadgeText); err == nil {
+			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.Description, &it.AccentColor, &it.BadgeText, &it.BlockStyle); err == nil {
 			items = append(items, it)
 		}
 	}

@@ -166,6 +166,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             thumbnailUrl: l.thumbnail_url || undefined,
             description: l.description || undefined,
             accentColor: l.accent_color || undefined,
+            blockStyle: l.block_style,
             badgeText: l.badge_text || undefined,
           })),
           events: page.events.map((e) => ({

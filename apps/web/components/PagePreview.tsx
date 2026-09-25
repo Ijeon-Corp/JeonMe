@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useLocale } from "@/lib/locale-context";
-import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
+import { CUSTOM_FONT_OPTIONS, CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import type { FaqItem } from "@/components/FaqBlock";
 import type { ListBlockItem } from "@/components/ListBlock";
 import BuyProductButton from "@/components/BuyProductButton";
@@ -15,7 +15,7 @@ import TrackedLink from "@/components/TrackedLink";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
-import { CatalogItem, EmbeddedCatalogBlock, PageStickerData, ProfileExtras, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
+import { CatalogItem, EmbeddedCatalogBlock, PageStickerData, ProfileExtras, RecentPurchase, trackEvent, trackEventBySlug, type BlockStyle } from "@/lib/api-client";
 import {
   IconBadgeCheck,
   IconBox,
@@ -136,6 +136,8 @@ export interface PagePreviewLink {
   // warna latar tombol per tautan & chip harga/label di kanan kartu.
   accentColor?: string;
   badgeText?: string;
+  // blockStyle -- desain per blok (migrasi 000110), lihat blockStyleProps.
+  blockStyle?: BlockStyle;
 }
 
 export interface PagePreviewProduct {
@@ -573,6 +575,7 @@ export interface PreviewSourceLink {
   custom_icon_url?: string;
   icon_key?: string;
   icon_color?: string;
+  block_style?: BlockStyle;
   is_featured?: boolean;
   thumbnail_url?: string;
   description?: string;
@@ -2170,7 +2173,60 @@ function SensitiveContentGate({ theme, renderContent }: { theme: PageTheme; rend
   );
 }
 
+const BLOCK_RADIUS: Record<string, string> = { none: "0px", sm: "8px", md: "16px", full: "9999px" };
+
+// blockStyleProps -- atribut + variabel CSS utk pembungkus .jeon-bs
+// (aturan lengkap di globals.css). null = blok tanpa desain khusus
+// (tidak dibungkus sama sekali, DOM identik dgn sebelumnya).
+function blockStyleProps(bs: BlockStyle | undefined): Record<string, unknown> | null {
+  if (!bs) return null;
+  const vars: Record<string, string> = {};
+  const attrs: Record<string, string> = {};
+  const set = (attr: string, cssVar: string, value: string | undefined) => {
+    if (!value) return;
+    attrs[`data-bs-${attr}`] = "";
+    vars[cssVar] = value;
+  };
+  set("bg", "--bs-bg", bs.bg);
+  set("text", "--bs-text", bs.text);
+  set("font", "--bs-font", CUSTOM_FONT_OPTIONS.find((f) => f.value === bs.font)?.cssVar);
+  set("weight", "--bs-weight", bs.font_weight ? { normal: "400", semibold: "600", bold: "700" }[bs.font_weight] : undefined);
+  set("align", "--bs-align", bs.align);
+  set("rounded", "--bs-radius", bs.rounded ? BLOCK_RADIUS[bs.rounded] : undefined);
+  set("btn-bg", "--bs-btn-bg", bs.button_bg);
+  set("btn-text", "--bs-btn-text", bs.button_text);
+  if (bs.font_size && bs.font_size !== "base") attrs["data-bs-size"] = bs.font_size;
+  if (Object.keys(attrs).length === 0) return null;
+  return { ...attrs, style: vars as React.CSSProperties };
+}
+
+// renderLinkOrBlock -- pembungkus desain per blok di atas
+// renderLinkOrBlockInner (permintaan langsung pengguna, 25 September
+// 2026). Satu titik utk SEMUA tipe blok & semua pemanggil (halaman publik,
+// Toko, kanvas Builder, pratinjau dashboard). Tombol di dalam blok
+// ditandai lewat theme.buyButton + "jeon-bs-btn" supaya warna tombol blok
+// bisa menimpa warna tombol tema.
 export function renderLinkOrBlock(
+  link: PagePreviewLink,
+  theme: PageTheme,
+  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused" | "layoutVariant">,
+  interactive: boolean,
+  canBuy: boolean,
+  onOpenCatalog?: (link: PagePreviewLink) => void,
+): React.ReactNode {
+  const props = blockStyleProps(link.blockStyle);
+  if (!props) return renderLinkOrBlockInner(link, theme, data, interactive, canBuy, onOpenCatalog);
+  const styledTheme = link.blockStyle?.button_bg || link.blockStyle?.button_text ? { ...theme, buyButton: `${theme.buyButton} jeon-bs-btn` } : theme;
+  const inner = renderLinkOrBlockInner(link, styledTheme, data, interactive, canBuy, onOpenCatalog);
+  if (!inner) return inner;
+  return (
+    <div key={link.id} className="jeon-bs" {...props}>
+      {inner}
+    </div>
+  );
+}
+
+function renderLinkOrBlockInner(
   link: PagePreviewLink,
   theme: PageTheme,
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused" | "layoutVariant">,

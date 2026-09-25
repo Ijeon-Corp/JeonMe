@@ -6,8 +6,9 @@ import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, LayoutGrid, Palette, Shapes
 import { IconClock, IconCopy, IconLock, IconStar, IconTrash } from "@/components/icons";
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 import { useLocale } from "@/lib/locale-context";
-import type { LinkItem } from "@/lib/api-client";
+import type { BlockStyle, LinkItem } from "@/lib/api-client";
 import ButtonStyleMenu, { type ButtonStylePatch } from "@/components/dashboard/page/ButtonStyleMenu";
+import BlockDesignMenu from "@/components/dashboard/page/BlockDesignMenu";
 
 // BlockToolsStrip -- alat kelola per blok (jadwal/kunci/sensitif/ikon/
 // featured/urutan/duplikat/hapus), dipakai bersama dashboard/links/page.tsx
@@ -156,6 +157,8 @@ export default function BlockToolsStrip({
   onDuplicate,
   onDelete,
   onButtonStyleChange,
+  onBlockStylePreview,
+  onBlockStyleCommit,
 }: {
   link: LinkItem;
   iconUploading: boolean;
@@ -185,6 +188,10 @@ export default function BlockToolsStrip({
   // onButtonStyleChange -- warna tombol & label harga per tautan (migrasi
   // 000109). Opsional; menu cuma tampil utk block_type "link".
   onButtonStyleChange?: (patch: ButtonStylePatch) => void;
+  // onBlockStylePreview/onBlockStyleCommit -- desain per blok (migrasi
+  // 000110, BlockDesignMenu). Opsional; menu tampil utk semua tipe blok.
+  onBlockStylePreview?: (style: BlockStyle) => void;
+  onBlockStyleCommit?: (style: BlockStyle) => void;
 }) {
   const { t } = useLocale();
   const L = (key: string) => t(`dashboard.pages.links.linkCard.toolLabels.${key}`);
@@ -349,6 +356,16 @@ export default function BlockToolsStrip({
         </div>
         {onButtonStyleChange && link.block_type === "link" && (
           <ButtonStyleMenu link={link} chipClassName={CHIP_BASE} activeClassName={CHIP_ACTIVE} idleClassName={CHIP_IDLE} onChange={onButtonStyleChange} />
+        )}
+        {onBlockStylePreview && onBlockStyleCommit && (
+          <BlockDesignMenu
+            link={link}
+            chipClassName={CHIP_BASE}
+            activeClassName={CHIP_ACTIVE}
+            idleClassName={CHIP_IDLE}
+            onPreview={onBlockStylePreview}
+            onCommit={onBlockStyleCommit}
+          />
         )}
       </div>
 

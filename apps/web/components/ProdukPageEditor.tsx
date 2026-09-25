@@ -55,6 +55,7 @@ import {
 } from "@/components/icons";
 import { BLOCK_TILE_CLASS, blockPreviewFor, isBlockExpandable, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
+import type { BlockStyle } from "@/lib/api-client";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
@@ -1537,6 +1538,27 @@ function BlockSection({
     }
   }
 
+  // handleBlockStylePreview/Commit -- desain per blok (migrasi 000110,
+  // BlockDesignMenu). Preview mengubah state lokal saja (pratinjau langsung
+  // ikut berubah); Commit mengirim PATCH. savedBlockStyles menyimpan nilai
+  // terakhir yang dikonfirmasi server per blok, dipakai utk rollback kalau
+  // PATCH gagal (preview sudah mengubah `links` sebelum commit).
+  const savedBlockStyles = useRef<Map<string, BlockStyle>>(new Map());
+  function handleBlockStylePreview(link: LinkItem, style: BlockStyle) {
+    if (!savedBlockStyles.current.has(link.id)) savedBlockStyles.current.set(link.id, link.block_style ?? {});
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_style: style } : l)));
+  }
+  async function handleBlockStyleCommit(link: LinkItem, style: BlockStyle) {
+    try {
+      await updateLink(link.id, { block_style: style });
+      savedBlockStyles.current.set(link.id, style);
+    } catch (err) {
+      const revert = savedBlockStyles.current.get(link.id) ?? {};
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_style: revert } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.linkCard.blockDesign.saveFailed"));
+    }
+  }
+
   // handleButtonStyleChange -- warna tombol / label harga per tautan
   // (migrasi 000109, ButtonStyleMenu). Rollback per-field (hanya field yang
   // diubah dikembalikan), bukan snapshot seluruh `links`, supaya perubahan
@@ -2499,6 +2521,8 @@ function BlockSection({
                 onIconColorChange={(color) => handleIconColorChange(link, color)}
                 onClearIconColor={() => handleClearIconColor(link)}
                 onButtonStyleChange={(patch) => handleButtonStyleChange(link, patch)}
+                onBlockStylePreview={(style) => handleBlockStylePreview(link, style)}
+                onBlockStyleCommit={(style) => handleBlockStyleCommit(link, style)}
                 onRemoveIcon={() => handleRemoveIcon(link)}
                 onToggleFeatured={() => handleToggleFeatured(link)}
                 onDuplicate={() => handleDuplicate(link)}

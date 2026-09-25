@@ -292,6 +292,22 @@ export function consumeSessionExpiredFlag(): boolean {
 
 // ---------- Halaman publik ----------
 
+// BlockStyle -- desain per blok (migrasi 000110, permintaan langsung
+// pengguna 25 September 2026). Semua opsional; kosong = ikut tema/menu
+// Desain. Divalidasi backend (block_style.go): warna #rrggbb, font dari
+// daftar menu Desain, sisanya enum di bawah.
+export interface BlockStyle {
+  bg?: string;
+  text?: string;
+  font?: string;
+  font_size?: "sm" | "base" | "lg" | "xl";
+  font_weight?: "normal" | "semibold" | "bold";
+  align?: "left" | "center" | "right";
+  button_bg?: string;
+  button_text?: string;
+  rounded?: "none" | "sm" | "md" | "full";
+}
+
 export interface PublicLink {
   id: string;
   title: string;
@@ -319,6 +335,9 @@ export interface PublicLink {
   // harga/label kecil di kanan kartu ("Mulai Rp3jt", "Gratis").
   accent_color: string;
   badge_text: string;
+  // block_style -- desain per blok (migrasi 000110), {} = ikut tema.
+  // Opsional di tipe: respons dari API lama/cache belum membawanya.
+  block_style?: BlockStyle;
   // is_featured/thumbnail_url -- Modul "Featured Link" (permintaan langsung
   // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
   // is_featured true DAN thumbnail_url terisi, tautan dirender sebagai
@@ -1277,6 +1296,7 @@ export interface LinkItem {
   // accent_color/badge_text -- lihat catatan di PublicLink.
   accent_color: string;
   badge_text: string;
+  block_style?: BlockStyle;
   // is_featured/thumbnail_url -- Modul "Featured Link", lihat catatan
   // lengkap di PublicLink.
   is_featured: boolean;
@@ -1329,6 +1349,7 @@ export function updateLink(
     description: string;
     accent_color: string;
     badge_text: string;
+    block_style: BlockStyle;
   }>
 ) {
   return apiFetch<{ message: string }>(

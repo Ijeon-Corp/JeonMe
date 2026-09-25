@@ -1118,3 +1118,69 @@ h1, h2, h3, h4, h5 {
 .jeon-drill-in {
   animation: jeon-drill-in 0.24s ease-out backwards;
 }
+
+/* Desain per blok -- permintaan langsung pengguna, 25 September 2026
+   ("fitur design di tiap blok ... warna font background button dll",
+   "ukuran font tipe font dll juga"). links.block_style (migrasi 000110)
+   diterapkan lewat SATU pembungkus generik .jeon-bs di renderLinkOrBlock
+   (PagePreview.tsx) -- berlaku utk tipe blok apa pun tanpa mengubah tiap
+   renderer. !important sengaja: harus menang atas kelas tema & warna
+   tombol inline (accent_color). Tombol di dalam blok ditandai .jeon-bs-btn
+   (ditambahkan ke theme.buyButton hanya utk blok bergaya). */
+.jeon-bs[data-bs-bg] > * { background: var(--bs-bg) !important; }
+.jeon-bs[data-bs-text], .jeon-bs[data-bs-text] * { color: var(--bs-text) !important; }
+.jeon-bs[data-bs-font], .jeon-bs[data-bs-font] * { font-family: var(--bs-font) !important; }
+.jeon-bs[data-bs-weight] * { font-weight: var(--bs-weight) !important; }
+.jeon-bs[data-bs-align] * { text-align: var(--bs-align) !important; }
+.jeon-bs[data-bs-rounded] > * { border-radius: var(--bs-radius) !important; }
+.jeon-bs[data-bs-btn-bg] .jeon-bs-btn { background: var(--bs-btn-bg) !important; border-color: var(--bs-btn-bg) !important; }
+.jeon-bs[data-bs-btn-text] .jeon-bs-btn, .jeon-bs[data-bs-btn-text] .jeon-bs-btn * { color: var(--bs-btn-text) !important; }
+/* Ukuran font: kelas Tailwind memakai ukuran tetap (bukan em), jadi tiap
+   kelas ukuran yang dipakai renderer blok dipetakan ulang per skala --
+   hierarki judul/deskripsi tetap, tanpa efek berlipat pada elemen
+   bersarang. Tambahkan kelas baru di sini kalau renderer memakainya. */
+.jeon-bs[data-bs-size="sm"] .text-\[8px\] { font-size: 7.04px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[9px\] { font-size: 7.92px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[10px\] { font-size: 8.8px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[10\.5px\] { font-size: 9.24px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[11px\] { font-size: 9.68px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[12px\] { font-size: 10.56px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[13px\] { font-size: 11.44px !important; }
+.jeon-bs[data-bs-size="sm"] .text-\[17px\] { font-size: 14.96px !important; }
+.jeon-bs[data-bs-size="sm"] .text-xs { font-size: 10.56px !important; }
+.jeon-bs[data-bs-size="sm"] .text-sm { font-size: 12.32px !important; }
+.jeon-bs[data-bs-size="sm"] .text-base { font-size: 14.08px !important; }
+.jeon-bs[data-bs-size="sm"] .text-lg { font-size: 15.84px !important; }
+.jeon-bs[data-bs-size="sm"] .text-xl { font-size: 17.6px !important; }
+.jeon-bs[data-bs-size="sm"] .text-2xl { font-size: 21.12px !important; }
+.jeon-bs[data-bs-size="sm"] { font-size: 12.32px; }
+.jeon-bs[data-bs-size="lg"] .text-\[8px\] { font-size: 9.2px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[9px\] { font-size: 10.35px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[10px\] { font-size: 11.5px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[10\.5px\] { font-size: 12.07px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[11px\] { font-size: 12.65px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[12px\] { font-size: 13.8px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[13px\] { font-size: 14.95px !important; }
+.jeon-bs[data-bs-size="lg"] .text-\[17px\] { font-size: 19.55px !important; }
+.jeon-bs[data-bs-size="lg"] .text-xs { font-size: 13.8px !important; }
+.jeon-bs[data-bs-size="lg"] .text-sm { font-size: 16.1px !important; }
+.jeon-bs[data-bs-size="lg"] .text-base { font-size: 18.4px !important; }
+.jeon-bs[data-bs-size="lg"] .text-lg { font-size: 20.7px !important; }
+.jeon-bs[data-bs-size="lg"] .text-xl { font-size: 23.0px !important; }
+.jeon-bs[data-bs-size="lg"] .text-2xl { font-size: 27.6px !important; }
+.jeon-bs[data-bs-size="lg"] { font-size: 16.1px; }
+.jeon-bs[data-bs-size="xl"] .text-\[8px\] { font-size: 10.4px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[9px\] { font-size: 11.7px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[10px\] { font-size: 13.0px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[10\.5px\] { font-size: 13.65px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[11px\] { font-size: 14.3px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[12px\] { font-size: 15.6px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[13px\] { font-size: 16.9px !important; }
+.jeon-bs[data-bs-size="xl"] .text-\[17px\] { font-size: 22.1px !important; }
+.jeon-bs[data-bs-size="xl"] .text-xs { font-size: 15.6px !important; }
+.jeon-bs[data-bs-size="xl"] .text-sm { font-size: 18.2px !important; }
+.jeon-bs[data-bs-size="xl"] .text-base { font-size: 20.8px !important; }
+.jeon-bs[data-bs-size="xl"] .text-lg { font-size: 23.4px !important; }
+.jeon-bs[data-bs-size="xl"] .text-xl { font-size: 26.0px !important; }
+.jeon-bs[data-bs-size="xl"] .text-2xl { font-size: 31.2px !important; }
+.jeon-bs[data-bs-size="xl"] { font-size: 18.2px; }

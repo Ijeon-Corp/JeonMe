@@ -405,6 +405,8 @@ type publicLink struct {
 	// (links.go).
 	AccentColor string `json:"accent_color"`
 	BadgeText   string `json:"badge_text"`
+	// BlockStyle -- desain per blok (migrasi 000110, block_style.go).
+	BlockStyle json.RawMessage `json:"block_style"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): kalau true
 	// DAN ThumbnailURL terisi, tautan dirender sebagai kartu thumbnail 16:9
@@ -737,7 +739,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		resp.Links = []publicLink{}
 		rows, err := h.DB.Query(gctx, `
 			SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
-				icon_key, icon_color, is_featured, thumbnail_url, description, accent_color, badge_text
+				icon_key, icon_color, is_featured, thumbnail_url, description, accent_color, badge_text, block_style
 			FROM links
 			WHERE page_id = $1
 			AND is_active = true
@@ -750,7 +752,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			for rows.Next() {
 				var l publicLink
 				if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
-					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL, &l.Description, &l.AccentColor, &l.BadgeText); err == nil {
+					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL, &l.Description, &l.AccentColor, &l.BadgeText, &l.BlockStyle); err == nil {
 					// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 					// komentar di definisi struct publicLink.
 					if l.LockType != "" {
@@ -2198,11 +2200,11 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 				INSERT INTO links (
 					page_id, title, url, position, is_active, starts_at, ends_at,
 					lock_type, lock_code, lock_min_age, block_type, block_data,
-					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text, block_style
 				)
 				SELECT $1, title, url, position, is_active, starts_at, ends_at,
 					lock_type, lock_code, lock_min_age, block_type, block_data,
-					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description, accent_color, badge_text, block_style
 				FROM links WHERE page_id = $2
 			`, pageID, duplicateFromPageID)
 		}

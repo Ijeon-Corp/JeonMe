@@ -83,6 +83,7 @@ import { getLibraryIcon, libraryIconColor } from "@/lib/icon-library";
 // bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
 import { BLOCK_TILE_CLASS, blockPreviewFor, buildBlockTypeLabel, linkHostname, maxGalleryImages, maxNestedGalleryImages, showsClickCount } from "@/lib/block-preview";
 import { uploadFilesSequentially, type MultiUploadOutcome } from "@/lib/multi-upload";
+import type { BlockStyle } from "@/lib/api-client";
 import { normalizeGalleryDisplay } from "@/lib/gallery-display";
 import GalleryDisplayPicker from "@/components/dashboard/page/GalleryDisplayPicker";
 import LinkDisplayModePicker from "@/components/dashboard/page/LinkDisplayModePicker";
@@ -1245,6 +1246,27 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeIconColorFailed"));
+    }
+  }
+
+  // handleBlockStylePreview/Commit -- desain per blok (migrasi 000110,
+  // BlockDesignMenu). Preview mengubah state lokal saja (pratinjau langsung
+  // ikut berubah); Commit mengirim PATCH. savedBlockStyles menyimpan nilai
+  // terakhir yang dikonfirmasi server per blok, dipakai utk rollback kalau
+  // PATCH gagal (preview sudah mengubah `links` sebelum commit).
+  const savedBlockStyles = useRef<Map<string, BlockStyle>>(new Map());
+  function handleBlockStylePreview(link: LinkItem, style: BlockStyle) {
+    if (!savedBlockStyles.current.has(link.id)) savedBlockStyles.current.set(link.id, link.block_style ?? {});
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_style: style } : l)));
+  }
+  async function handleBlockStyleCommit(link: LinkItem, style: BlockStyle) {
+    try {
+      await updateLink(link.id, { block_style: style });
+      savedBlockStyles.current.set(link.id, style);
+    } catch (err) {
+      const revert = savedBlockStyles.current.get(link.id) ?? {};
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_style: revert } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.linkCard.blockDesign.saveFailed"));
     }
   }
 
@@ -3508,6 +3530,8 @@ export default function DashboardLinksPage() {
                 onIconColorChange={(color) => handleIconColorChange(link, color)}
                 onClearIconColor={() => handleClearIconColor(link)}
                 onButtonStyleChange={(patch) => handleButtonStyleChange(link, patch)}
+                onBlockStylePreview={(style) => handleBlockStylePreview(link, style)}
+                onBlockStyleCommit={(style) => handleBlockStyleCommit(link, style)}
                 onRemoveIcon={() => handleRemoveIcon(link)}
                 onToggleFeatured={() => handleToggleFeatured(link)}
                 hideFeaturedToggle
