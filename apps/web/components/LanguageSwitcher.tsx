@@ -7,7 +7,10 @@ import { useLocale } from "@/lib/locale-context";
 // cuma 2 pilihan, pil langsung terlihat lebih cepat diklik daripada buka
 // menu dulu. className dioper dari pemanggil (lihat catatan sama di
 // ThemeToggle.tsx).
-export default function LanguageSwitcher({ className }: { className?: string }) {
+// flat -- tanpa bingkai hitam & bayangan pada pill aktif (top bar dashboard,
+// 26 September 2026: "hilangkan border hitam di navbar ini"). Homepage tetap
+// memakai gaya btn-primary neo-brutalis bawaannya.
+export default function LanguageSwitcher({ className, flat = false }: { className?: string; flat?: boolean }) {
   const { locale, setLocale } = useLocale();
 
   return (
@@ -19,7 +22,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
           onClick={() => setLocale(l)}
           aria-pressed={locale === l}
           className={`rounded-full px-2 py-1 uppercase transition-colors ${
-            locale === l ? "btn-primary text-white" : "text-app-muted hover:text-app-ink"
+            locale === l ? (flat ? "bg-jeon-purple text-white" : "btn-primary text-white") : "text-app-muted hover:text-app-ink"
           }`}
         >
           {l}

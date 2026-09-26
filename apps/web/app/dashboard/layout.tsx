@@ -604,7 +604,7 @@ export default function DashboardLayout({
             Akun tetap bisa dibuka dari kedua sisi (avatar topbar desktop,
             atau menu Pengaturan di drawer mobile). */}
         <div className="flex items-center justify-between gap-2 px-3 md:hidden">
-          <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
+          <LanguageSwitcher flat className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white" />
         </div>
       </div>
@@ -801,11 +801,11 @@ export default function DashboardLayout({
                     className dioper eksplisit di sini supaya cocok gaya
                     tombol ikon bulat topbar dashboard (border+bg-app-surface),
                     bukan gaya bawaannya sendiri. */}
-                <LanguageSwitcher className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
+                <LanguageSwitcher flat className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
                 {/* §6.5: di bawah lg tema pindah ke dropdown akun
                     (mengurangi kepadatan topbar). */}
                 <ThemeToggle
-                  className="hidden h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple lg:flex"
+                  className="hidden h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple lg:flex"
                 />
                 {/* Tutorial & Pengaturan (ikon bulat topbar) dihapus dari
                     navbar (permintaan langsung pengguna, 13 September 2026:
@@ -842,7 +842,7 @@ export default function DashboardLayout({
                     type="button"
                     onClick={handleCopyLink}
                     title={t("dashboard.copyLink")}
-                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     {/* Teks domain penuh cuma tampil mulai lg: (>=1024px,
                         sama seperti label GlobalSearch) -- di rentang
@@ -873,7 +873,7 @@ export default function DashboardLayout({
                       title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
                       aria-haspopup="menu"
                       aria-expanded={profileMenuOpen}
-                      className="flex items-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
+                      className="flex items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
                     >
                       {/* Lencana bintang di sudut avatar + pil "Premium" di
                           sebelah @username -- permintaan langsung pengguna:
@@ -930,8 +930,8 @@ export default function DashboardLayout({
                         {/* §6.5: bahasa & tema masuk dropdown akun di bawah
                             lg (inline-nya disembunyikan di lebar itu). */}
                         <div className="flex items-center justify-between gap-2 border-t border-app-border px-4 py-2 lg:hidden">
-                          <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
-                          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
+                          <LanguageSwitcher flat className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
+                          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                         </div>
                         <button
                           type="button"

@@ -98,7 +98,7 @@ export default function NotificationBell() {
         onClick={handleToggle}
         title={t("dashboard.components.notificationBell.title")}
         aria-label={t("dashboard.components.notificationBell.title")}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconBell className="h-4 w-4" />
         {/* Badge di POJOK LUAR tombol (-top/-right), bukan di dalam --
