@@ -35,6 +35,13 @@ import { useLocale } from "@/lib/locale-context";
 // diperbarui (teksnya baked-in di raster, bukan string i18n).
 export default function Hero() {
   const { t } = useLocale();
+  // Ukuran judul dari kata TERPANJANG & lebar kolom (26 September 2026):
+  // SEBELUMNYA clamp(...,10vw,9rem) tetap -- versi Indonesia "kehadiranmu."
+  // (~6,2em) jauh lebih lebar dari kolomnya sehingga patah jadi
+  // "kehadira / nmu.". 0,58em/huruf = hasil ukur font display (~0,51) +
+  // cadangan; batas atas 8rem utk judul pendek.
+  const longestWord = Math.max(...`${t("hero.title1")} ${t("hero.titleGradient")}`.split(/\s+/).map((w) => w.length));
+  const titleFontSize = `min(8rem, ${(100 / (longestWord * 0.58)).toFixed(1)}cqi)`;
 
   return (
     <section className="relative overflow-hidden bg-jeon-paper pb-20 pt-28 md:pb-28 md:pt-40" aria-label="Hero">
@@ -75,11 +82,17 @@ export default function Hero() {
             lebar pada clamp(...,9rem), jadi 1.2fr dipertahankan supaya
             gambar dapat porsi maksimal alih-alih basa-basi rasio yang
             tidak menyelamatkan apa pun di headline. */}
-        <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-8">
-          <div className="text-center lg:text-left">
+        <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-6">
+          {/* [container-type:inline-size] -- ukuran judul dihitung dari
+              lebar kolom INI (satuan cqi), lihat heroTitleFontSize. */}
+          <div className="text-center [container-type:inline-size] lg:text-left">
             <h1 className="reveal mb-7 break-words font-display font-extrabold leading-[0.88] tracking-[-0.03em] text-jeon-ink">
-              <span className="block text-[clamp(3.5rem,10vw,9rem)]">{t("hero.title1")}</span>
-              <span className="block text-[clamp(3.5rem,10vw,9rem)] text-jeon-purple">{t("hero.titleGradient")}</span>
+              <span className="block" style={{ fontSize: titleFontSize }}>
+                {t("hero.title1")}
+              </span>
+              <span className="block text-jeon-purple" style={{ fontSize: titleFontSize }}>
+                {t("hero.titleGradient")}
+              </span>
             </h1>
 
             <p className="reveal mx-auto mb-9 max-w-lg text-lg leading-relaxed text-jeon-muted sm:text-xl lg:mx-0" style={{ transitionDelay: "0.1s" }}>
@@ -159,8 +172,8 @@ export default function Hero() {
               height={1024}
               loading="eager"
               fetchPriority="high"
-              sizes="(max-width: 680px) 100vw, 640px"
-              className="h-auto w-full max-w-[640px]"
+              sizes="(max-width: 1024px) 100vw, 800px"
+              className="h-auto w-full max-w-[720px] lg:-mr-[8%] lg:w-[108%] lg:max-w-none"
             />
           </div>
         </div>
