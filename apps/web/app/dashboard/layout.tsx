@@ -462,6 +462,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!profileMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
+      // [data-floating-menu] -- menu yang dirender lewat portal DARI DALAM
+      // dropdown ini (pilihan bahasa, 26 September 2026) secara DOM ada di
+      // luar profileMenuRef; tanpa pengecualian ini menekan pilihannya
+      // menutup dropdown profil lebih dulu & pilihan tidak pernah tercatat.
+      if ((e.target as Element).closest?.("[data-floating-menu]")) return;
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setProfileMenuOpen(false);
       }
@@ -604,7 +609,7 @@ export default function DashboardLayout({
             Akun tetap bisa dibuka dari kedua sisi (avatar topbar desktop,
             atau menu Pengaturan di drawer mobile). */}
         <div className="flex items-center justify-between gap-2 px-3 md:hidden">
-          <LanguageSwitcher flat className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
+          <LanguageSwitcher triggerClassName="flex h-8 items-center gap-1 rounded-full border border-white/20 px-2.5 text-[11px] font-bold text-white/70 hover:bg-white/10 hover:text-white" />
           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white" />
         </div>
       </div>
@@ -801,7 +806,7 @@ export default function DashboardLayout({
                     className dioper eksplisit di sini supaya cocok gaya
                     tombol ikon bulat topbar dashboard (border+bg-app-surface),
                     bukan gaya bawaannya sendiri. */}
-                <LanguageSwitcher flat className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
+                <LanguageSwitcher className="hidden lg:block" triggerClassName="flex h-8 items-center gap-1 rounded-full border border-app-border bg-app-surface px-2.5 text-[11px] font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                 {/* §6.5: di bawah lg tema pindah ke dropdown akun
                     (mengurangi kepadatan topbar). */}
                 <ThemeToggle
@@ -930,7 +935,7 @@ export default function DashboardLayout({
                         {/* §6.5: bahasa & tema masuk dropdown akun di bawah
                             lg (inline-nya disembunyikan di lebar itu). */}
                         <div className="flex items-center justify-between gap-2 border-t border-app-border px-4 py-2 lg:hidden">
-                          <LanguageSwitcher flat className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
+                          <LanguageSwitcher triggerClassName="flex h-8 items-center gap-1 rounded-full border border-app-border bg-app-surface px-2.5 text-[11px] font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                         </div>
                         <button
